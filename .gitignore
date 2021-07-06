@@ -1,0 +1,17 @@
+node_modules
+
+#Hardhat files
+cache
+artifacts
+typechain
+
+coverage
+coverage.json
+
+.idea
+
+.env.dev
+.env.prod
+.env.*
+
+dist
