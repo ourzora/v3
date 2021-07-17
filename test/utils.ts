@@ -1,6 +1,7 @@
 import { ethers } from 'hardhat';
 import { BaseModuleProxy, TestModuleProxy, TestModuleV1 } from '../typechain';
 import { Contract } from 'ethers';
+import { BytesLike } from '@ethersproject/bytes';
 
 export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
@@ -31,7 +32,8 @@ export const connectAs = async <T extends unknown>(
 
 export const registerVersion = async (
   zora: BaseModuleProxy,
-  moduleAddress: string
+  moduleAddress: string,
+  callData: BytesLike = []
 ) => {
-  await zora.registerVersion(moduleAddress);
+  await zora.registerVersion(moduleAddress, callData);
 };

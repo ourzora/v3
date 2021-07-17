@@ -21,7 +21,11 @@ library LibVersionRegistry {
         }
     }
 
-    function addVersion(uint256 _version, address _impl) internal {
+    function addVersion(
+        uint256 _version,
+        address _impl,
+        bytes memory _calldata
+    ) internal {
         VersionStorage storage s = versionStorage();
         require(
             s.implementationAddressToVersion[_impl] == 0,
@@ -31,6 +35,20 @@ library LibVersionRegistry {
             s.versionToImplementationAddress[_version] == address(0),
             "LibVersionRegistry::addVersion version already in use"
         );
+
+        if (_calldata.length != 0) {
+            (bool success, bytes memory returnData) = _impl.call(_calldata);
+            require(
+                success,
+                string(
+                    abi.encodePacked(
+                        "LibVersionRegistry::addVersion _impl call failed: ",
+                        returnData
+                    )
+                )
+            );
+        }
+
         s.implementationAddressToVersion[_impl] = _version;
         s.versionToImplementationAddress[_version] = _impl;
     }

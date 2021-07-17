@@ -6,9 +6,12 @@ import {LibVersionRegistry} from "../libraries/LibVersionRegistry.sol";
 import {IModuleProxy} from "../interfaces/IModuleProxy.sol";
 
 contract BaseModuleProxy is IModuleProxy {
-    function registerVersion(address _impl) public override {
+    function registerVersion(address _impl, bytes memory _calldata)
+        public
+        override
+    {
         uint256 version = IModule(_impl).version();
-        LibVersionRegistry.addVersion(version, _impl);
+        LibVersionRegistry.addVersion(version, _impl, _calldata);
     }
 
     function versionToImplementationAddress(uint256 _version)
