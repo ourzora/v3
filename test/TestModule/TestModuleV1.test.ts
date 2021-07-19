@@ -1,13 +1,13 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
-import { TestModuleProxy, TestModuleV1 } from '../typechain';
+import { TestModuleProxy, TestModuleV1 } from '../../typechain';
 import {
   connectAs,
   deployTestModule,
   deployTestModuleProxy,
   registerVersion,
-} from './utils';
+} from '../utils';
 import { Signer } from 'ethers';
 
 chai.use(asPromised);

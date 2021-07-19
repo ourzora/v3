@@ -39,6 +39,10 @@ contract BaseModuleProxy is IModuleProxy {
     }
 
     function _unpackVersionFromCallData() private pure returns (uint256) {
+        require(
+            msg.data.length >= 36,
+            "BaseModuleProxy::_unpackVersionFromCallData msg data too short to have a version"
+        );
         return abi.decode(msg.data[4:36], (uint256));
     }
 

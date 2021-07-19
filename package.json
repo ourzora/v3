@@ -21,7 +21,8 @@
     "typescript": "^4.3.4"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.2.0"
+    "@openzeppelin/contracts": "^4.2.0",
+    "@zoralabs/core": "^1.0.5"
   },
   "lint-staged": {
     "*.{ts,js,css,md,sol}": "prettier --write"

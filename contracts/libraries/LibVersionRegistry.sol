@@ -37,7 +37,9 @@ library LibVersionRegistry {
         );
 
         if (_calldata.length != 0) {
-            (bool success, bytes memory returnData) = _impl.call(_calldata);
+            (bool success, bytes memory returnData) = _impl.delegatecall(
+                _calldata
+            );
             require(
                 success,
                 string(

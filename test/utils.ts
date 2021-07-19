@@ -1,10 +1,26 @@
 import { ethers } from 'hardhat';
-import { BaseModuleProxy, TestModuleProxy, TestModuleV1 } from '../typechain';
+import {
+  BaseModuleProxy,
+  ReserveAuctionProxy,
+  ReserveAuctionV1,
+  TestModuleProxy,
+  TestModuleV1,
+} from '../typechain';
 import { Contract } from 'ethers';
 import { BytesLike } from '@ethersproject/bytes';
+import { MarketFactory, MediaFactory } from '@zoralabs/core/dist/typechain';
 
 export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
+
+export const deployBaseModuleProxy = async () => {
+  const BaseModuleProxyFactory = await ethers.getContractFactory(
+    'BaseModuleProxy'
+  );
+  const baseModuleProxy = await BaseModuleProxyFactory.deploy();
+  await baseModuleProxy.deployed();
+  return baseModuleProxy as BaseModuleProxy;
+};
 
 export const deployTestModuleProxy = async () => {
   const TestModuleProxyFactory = await ethers.getContractFactory(
@@ -22,6 +38,34 @@ export const deployTestModule = async () => {
   return testModule as TestModuleV1;
 };
 
+export const deployZoraProtocol = async () => {
+  const [deployer] = await ethers.getSigners();
+  const market = await (await new MarketFactory(deployer).deploy()).deployed();
+  const media = await (
+    await new MediaFactory(deployer).deploy(market.address)
+  ).deployed();
+  await market.configure(media.address);
+  return { market, media };
+};
+
+export const deployReserveAuctionProxy = async () => {
+  const ReserveAuctionProxyFactory = await ethers.getContractFactory(
+    'ReserveAuctionProxy'
+  );
+  const reserveAuctionProxy = await ReserveAuctionProxyFactory.deploy();
+  await reserveAuctionProxy.deployed();
+  return reserveAuctionProxy as ReserveAuctionProxy;
+};
+
+export const deployReserveAuctionV1 = async (proxyAddr: string) => {
+  const ReserveAuctionV1Factory = await ethers.getContractFactory(
+    'ReserveAuctionV1'
+  );
+  const reserveAuction = await ReserveAuctionV1Factory.deploy(proxyAddr);
+  await reserveAuction.deployed();
+  return reserveAuction as ReserveAuctionV1;
+};
+
 export const connectAs = async <T extends unknown>(
   proxy: Contract,
   moduleName: string
@@ -31,9 +75,9 @@ export const connectAs = async <T extends unknown>(
 };
 
 export const registerVersion = async (
-  zora: BaseModuleProxy,
+  proxy: BaseModuleProxy,
   moduleAddress: string,
   callData: BytesLike = []
 ) => {
-  await zora.registerVersion(moduleAddress, callData);
+  await proxy.registerVersion(moduleAddress, callData);
 };

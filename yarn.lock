@@ -1023,6 +1023,13 @@
   resolved "https://registry.yarnpkg.com/@yarnpkg/lockfile/-/lockfile-1.1.0.tgz#e77a97fbd345b76d83245edcd17d393b1b41fb31"
   integrity sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==
 
+"@zoralabs/core@^1.0.5":
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/@zoralabs/core/-/core-1.0.5.tgz#4b487e90c7aeda0d0ba33fdcc2f4246a94dbc4c5"
+  integrity sha512-tiww0kI4lxhtP6X2499sz5upummBKiRzA5fdYW56lAFR45sl0j1gITir3pssb5nBG60l+aXiGdpgOhiLK/nEFg==
+  dependencies:
+    ethers "^5.0.19"
+
 abort-controller@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/abort-controller/-/abort-controller-3.0.0.tgz#eaf54d53b62bae4138e809ca225c8439a6efb392"
@@ -3472,7 +3479,7 @@ ethereumjs-wallet@0.6.5:
     utf8 "^3.0.0"
     uuid "^3.3.2"
 
-ethers@^5.0.0, ethers@^5.0.1, ethers@^5.0.2, ethers@^5.4.1:
+ethers@^5.0.0, ethers@^5.0.1, ethers@^5.0.19, ethers@^5.0.2, ethers@^5.4.1:
   version "5.4.1"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.4.1.tgz#bcff1e9f45bf1a061bf313ec04e8d9881d2d53f9"
   integrity sha512-SrcddMdCgP1hukDvCPd87Aipbf4NWjQvdfAbZ65XSZGbfyuYPtIrUJPDH5B1SBRsdlfiEgX3eoz28DdBDzMNFg==

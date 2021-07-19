@@ -2,24 +2,23 @@ import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
+  deployBaseModuleProxy,
   deployTestModule,
-  deployTestModuleProxy,
   registerVersion,
-  revert,
 } from './utils';
 import { Signer } from 'ethers';
-import { TestModuleProxy } from '../typechain';
+import { BaseModuleProxy, TestModuleProxy } from '../typechain';
 
 chai.use(asPromised);
 
-describe('TestModuleProxy', () => {
-  let proxy: TestModuleProxy;
+describe('BaseModuleProxy', () => {
+  let proxy: BaseModuleProxy;
   let deployer: Signer;
   let proposer: Signer;
   let otherUser: Signer;
 
   beforeEach(async () => {
-    proxy = await deployTestModuleProxy();
+    proxy = await deployBaseModuleProxy();
     const signers = await ethers.getSigners();
     deployer = signers[0];
     proposer = signers[1];
