@@ -6,8 +6,6 @@ import {
   connectAs,
   deployReserveAuctionProxy,
   deployReserveAuctionV1,
-  deployTestModule,
-  deployTestModuleProxy,
   deployZoraProtocol,
   registerVersion,
 } from '../utils';
