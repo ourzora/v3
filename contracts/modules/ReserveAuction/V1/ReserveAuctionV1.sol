@@ -82,8 +82,8 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         uint256 timeBuffer,
         uint8 minimumIncrementPercentage,
         uint256 reservePrice,
-        address tokenOwner,
         address curator,
+        address fundsRecipient,
         uint8 curatorFeePercentage,
         address auctionCurrency
     );
@@ -204,28 +204,35 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         return VERSION;
     }
 
+    function auctions(uint256, uint256 _auctionId)
+        external
+        view
+        returns (Auction memory)
+    {
+        ReserveAuctionStorage storage s = _reserveAuctionStorage();
+        return s.auctions[_auctionId];
+    }
+
     function initialize(address _zoraV1ProtocolMedia, address _wethAddress)
         external
     {
-        // This call should technically be internal, but we must make it external to add it to the table of functions
-        // so it can be called via delegatecall.
-        // Hence, we ensure below that the method can only be called by itself.
-        require(
-            msg.sender == address(this),
-            "ReserveAuctionV1::initialize can not be called by external address"
-        );
+        // TODO: verify the security of keeping this call external. It must be external so it can be added to
+        // the function table and thus callable via delegatecall. However, there may be a better practice
         ReserveAuctionStorage storage s = _reserveAuctionStorage();
+        require(
+            s.initialized != true,
+            "ReserveAuctionV1::initialize already initialized"
+        );
         s.zoraV1ProtocolMedia = _zoraV1ProtocolMedia;
         s.zoraV1ProtocolMarket = IMedia(_zoraV1ProtocolMedia).marketContract();
         s.wethAddress = _wethAddress;
         s.initialized = true;
     }
 
-    function createAuction(AuctionCreationParams memory _params)
-        public
-        nonReentrant
-        returns (uint256)
-    {
+    function createAuction(
+        uint256, /*_version*/
+        AuctionCreationParams memory _params
+    ) public nonReentrant returns (uint256) {
         require(
             IERC165(_params.tokenContract).supportsInterface(interfaceId),
             "ReserveAuctionV1::createAuction tokenContract does not support ERC721 interface"
@@ -233,6 +240,10 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         require(
             _params.curatorFeePercentage < 100,
             "ReserveAuctionV1::createAuction curatorFeePercentage must be less than 100"
+        );
+        require(
+            _params.fundsRecipient != address(0),
+            "ReserveAuctionV1::createAuction fundsRecipient cannot be 0 address"
         );
         address tokenOwner = IERC721(_params.tokenContract).ownerOf(
             _params.tokenId
@@ -280,11 +291,15 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
             _params.timeBuffer,
             _params.minimumIncrementPercentage,
             _params.reservePrice,
-            tokenOwner,
             _params.curator,
+            _params.fundsRecipient,
             _params.curatorFeePercentage,
             _params.auctionCurrency
         );
+
+        if (_params.curator == tokenOwner || _params.curator == address(0)) {
+            _approveAuction(auctionId, true);
+        }
 
         return auctionId;
     }
