@@ -10,7 +10,7 @@ import {
   TestModuleV1,
   Weth,
 } from '../typechain';
-import { BigNumber, Contract } from 'ethers';
+import { BigNumber, BigNumberish, Contract } from 'ethers';
 import { BytesLike } from '@ethersproject/bytes';
 import {
   Erc721,
@@ -21,6 +21,8 @@ import {
 
 export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
+
+export const ONE_ETH = ethers.utils.parseEther('1');
 
 export const deployBaseModuleProxy = async () => {
   const BaseModuleProxyFactory = await ethers.getContractFactory(
@@ -143,3 +145,38 @@ export const approveNFTTransfer = async (
 ) => {
   await token.approve(spender, tokenId);
 };
+
+export async function createReserveAuction(
+  zoraV1: Media,
+  reserveAuction: ReserveAuctionV1,
+  fundsRecipient: string,
+  curator: string,
+  currency = ethers.constants.AddressZero
+) {
+  const tokenId = 0;
+  const duration = 60 * 60 * 24;
+  const reservePrice = BigNumber.from(10).pow(18).div(2);
+
+  await reserveAuction.createAuction(
+    1,
+    tokenId,
+    zoraV1.address,
+    duration,
+    reservePrice,
+    curator,
+    fundsRecipient,
+    5,
+    currency
+  );
+}
+
+export async function bid(
+  reserveAuction: ReserveAuctionV1,
+  auctionId: number,
+  amount: BigNumberish,
+  currency = ethers.constants.AddressZero
+) {
+  await reserveAuction.createBid(1, auctionId, amount, {
+    value: currency === ethers.constants.AddressZero ? amount : 0,
+  });
+}
