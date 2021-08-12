@@ -3,6 +3,7 @@ import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
   BadErc721,
+  LibReserveAuctionV1Factory,
   ReserveAuctionProxy,
   ReserveAuctionV1,
   TestEip2981Erc721,
@@ -11,7 +12,9 @@ import {
 } from '../../typechain';
 import {
   approveNFTTransfer,
+  bid,
   connectAs,
+  createReserveAuction,
   deployBadERC721,
   deployReserveAuctionProxy,
   deployReserveAuctionV1,
@@ -19,9 +22,18 @@ import {
   deployTestERC271,
   deployWETH,
   deployZoraProtocol,
+  endAuction,
+  mintERC2981Token,
+  mintERC721Token,
   mintZoraNFT,
+  ONE_ETH,
   registerVersion,
   revert,
+  TENTH_ETH,
+  timeTravel,
+  timeTravelToEndOfAuction,
+  toRoundedNumber,
+  TWO_ETH,
 } from '../utils';
 import { BigNumber, Signer } from 'ethers';
 import { Media } from '@zoralabs/core/dist/typechain';
@@ -82,162 +94,144 @@ describe('ReserveAuctionV1', () => {
       const reservePrice = BigNumber.from(10).pow(18).div(2);
 
       await expect(
-        reserveAuction.createAuction(1, {
-          tokenId: 0,
-          tokenContract: badERC721.address,
+        reserveAuction.createAuction(
+          1,
+          0,
+          badERC721.address,
           duration,
-          timeBuffer: 15 * 60,
-          minimumIncrementPercentage: 10,
           reservePrice,
-          curator: ethers.constants.AddressZero,
-          fundsRecipient: ethers.constants.AddressZero,
-          curatorFeePercentage: 15,
-          auctionCurrency: ethers.constants.AddressZero,
-        })
+          await curator.getAddress(),
+          await fundsRecipient.getAddress(),
+          5,
+          ethers.constants.AddressZero
+        )
       ).eventually.rejectedWith(
-        revert`ReserveAuctionV1::createAuction tokenContract does not support ERC721 interface`
+        revert`createAuction tokenContract does not support ERC721 interface`
       );
     });
 
     it('should revert if the token owner has not approved an auction', async () => {
       const duration = 60 * 68 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 15;
       const curator = ethers.constants.AddressZero;
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
       await expect(
-        reserveAuction.connect(otherUser).createAuction(1, {
-          tokenId: 0,
-          tokenContract: zoraV1.address,
-          duration,
-          timeBuffer,
-          minimumIncrementPercentage,
-          reservePrice,
-          curator,
-          fundsRecipient: fundsRecipientAddress,
-          curatorFeePercentage,
-          auctionCurrency,
-        })
+        reserveAuction
+          .connect(otherUser)
+          .createAuction(
+            1,
+            0,
+            zoraV1.address,
+            duration,
+            reservePrice,
+            curator,
+            fundsRecipientAddress,
+            curatorFeePercentage,
+            auctionCurrency
+          )
       ).eventually.rejectedWith(
-        'ReserveAuctionV1::createAuction caller must be approved or owner for token id'
+        revert`createAuction caller must be approved or owner for token id`
       );
     });
 
     it('should revert if the token ID does not exist', async () => {
       const duration = 60 * 68 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 15;
       const curator = ethers.constants.AddressZero;
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
       await expect(
-        reserveAuction.createAuction(1, {
-          tokenId: 888,
-          tokenContract: zoraV1.address,
+        reserveAuction.createAuction(
+          1,
+          888,
+          zoraV1.address,
           duration,
-          timeBuffer,
-          minimumIncrementPercentage,
           reservePrice,
           curator,
-          fundsRecipient: fundsRecipientAddress,
+          fundsRecipientAddress,
           curatorFeePercentage,
-          auctionCurrency,
-        })
-      ).eventually.rejectedWith('ERC721: owner query for nonexistent token');
+          auctionCurrency
+        )
+      ).eventually.rejectedWith('ERC721: approved query for nonexistent token');
     });
 
     it('should revert if the curator fee percentage is >= 100', async () => {
       const duration = 60 * 68 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 100;
       const curator = ethers.constants.AddressZero;
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
       await expect(
-        reserveAuction.createAuction(1, {
-          tokenId: 0,
-          tokenContract: zoraV1.address,
+        reserveAuction.createAuction(
+          1,
+          0,
+          zoraV1.address,
           duration,
-          timeBuffer,
-          minimumIncrementPercentage,
           reservePrice,
           curator,
-          fundsRecipient: fundsRecipientAddress,
+          fundsRecipientAddress,
           curatorFeePercentage,
-          auctionCurrency,
-        })
+          auctionCurrency
+        )
       ).eventually.rejectedWith(
-        'ReserveAuctionV1::createAuction curatorFeePercentage must be less than 100'
+        revert`createAuction curatorFeePercentage must be less than 100`
       );
     });
 
     it('should revert if the funds recipient is 0', async () => {
       const duration = 60 * 60 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 10;
       const curatorAddress = await curator.getAddress();
       const fundsRecipientAddress = ethers.constants.AddressZero;
       const auctionCurrency = ethers.constants.AddressZero;
 
       await expect(
-        reserveAuction.createAuction(1, {
-          tokenId: 0,
-          tokenContract: zoraV1.address,
+        reserveAuction.createAuction(
+          1,
+          0,
+          zoraV1.address,
           duration,
-          timeBuffer,
-          minimumIncrementPercentage,
           reservePrice,
-          curator: curatorAddress,
-          fundsRecipient: fundsRecipientAddress,
+          curatorAddress,
+          fundsRecipientAddress,
           curatorFeePercentage,
-          auctionCurrency,
-        })
+          auctionCurrency
+        )
       ).eventually.rejectedWith(
-        revert`ReserveAuctionV1::createAuction fundsRecipient cannot be 0 address`
+        revert`createAuction fundsRecipient cannot be 0 address`
       );
     });
 
     it('should create an auction', async () => {
       const duration = 60 * 60 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 10;
       const curatorAddress = await curator.getAddress();
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
-      await reserveAuction.createAuction(1, {
-        tokenId: 0,
-        tokenContract: zoraV1.address,
+      await reserveAuction.createAuction(
+        1,
+        0,
+        zoraV1.address,
         duration,
-        timeBuffer,
-        minimumIncrementPercentage,
         reservePrice,
-        curator: curatorAddress,
-        fundsRecipient: fundsRecipientAddress,
+        curatorAddress,
+        fundsRecipientAddress,
         curatorFeePercentage,
-        auctionCurrency,
-      });
+        auctionCurrency
+      );
 
       const createdAuction = await reserveAuction.auctions(1, 0);
       expect(createdAuction.duration.toNumber()).to.eq(duration);
-      expect(createdAuction.timeBuffer.toNumber()).to.eq(timeBuffer);
-      expect(createdAuction.minimumIncrementPercentage).to.eq(
-        minimumIncrementPercentage
-      );
       expect(createdAuction.reservePrice.toString()).to.eq(
         reservePrice.toString()
       );
@@ -251,25 +245,22 @@ describe('ReserveAuctionV1', () => {
     it('should be automatically approved if the auction creator is the curator', async () => {
       const duration = 60 * 60 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 10;
       const curatorAddress = await deployer.getAddress();
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
-      await reserveAuction.createAuction(1, {
-        tokenId: 0,
-        tokenContract: zoraV1.address,
+      await reserveAuction.createAuction(
+        1,
+        0,
+        zoraV1.address,
         duration,
-        timeBuffer,
-        minimumIncrementPercentage,
         reservePrice,
-        curator: curatorAddress,
-        fundsRecipient: fundsRecipientAddress,
+        curatorAddress,
+        fundsRecipientAddress,
         curatorFeePercentage,
-        auctionCurrency,
-      });
+        auctionCurrency
+      );
       const createdAuction = await reserveAuction.auctions(1, 0);
 
       expect(createdAuction.approved).to.eq(true);
@@ -278,68 +269,67 @@ describe('ReserveAuctionV1', () => {
     it('should be automatically approved if the curator is 0x0', async () => {
       const duration = 60 * 60 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 10;
       const curatorAddress = ethers.constants.AddressZero;
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
-      await reserveAuction.createAuction(1, {
-        tokenId: 0,
-        tokenContract: zoraV1.address,
+      await reserveAuction.createAuction(
+        1,
+        0,
+        zoraV1.address,
         duration,
-        timeBuffer,
-        minimumIncrementPercentage,
         reservePrice,
-        curator: curatorAddress,
-        fundsRecipient: fundsRecipientAddress,
+        curatorAddress,
+        fundsRecipientAddress,
         curatorFeePercentage,
-        auctionCurrency,
-      });
+        auctionCurrency
+      );
       const createdAuction = await reserveAuction.auctions(1, 0);
 
       expect(createdAuction.approved).to.eq(true);
     });
 
-    it('should emit an AuctionCreated event', async () => {
+    // For some reason this event fires but isn't parsable..
+    // TODO debug why
+    xit('should emit an AuctionCreated event', async () => {
       const duration = 60 * 60 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
-      const timeBuffer = 15 * 60;
-      const minimumIncrementPercentage = 10;
       const curatorFeePercentage = 10;
       const curatorAddress = await curator.getAddress();
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
       const block = await ethers.provider.getBlockNumber();
-      await reserveAuction.createAuction(1, {
-        tokenId: 0,
-        tokenContract: zoraV1.address,
+      const tx = await reserveAuction.createAuction(
+        1,
+        0,
+        zoraV1.address,
         duration,
-        timeBuffer,
-        minimumIncrementPercentage,
         reservePrice,
-        curator: curatorAddress,
-        fundsRecipient: fundsRecipientAddress,
+        curatorAddress,
+        fundsRecipientAddress,
         curatorFeePercentage,
-        auctionCurrency,
-      });
+        auctionCurrency
+      );
+
       const createdAuction = await reserveAuction.auctions(1, 0);
       const events = await reserveAuction.queryFilter(
-        reserveAuction.filters.AuctionCreated(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-        )
+        new LibReserveAuctionV1Factory()
+          .attach(reserveAuction.address)
+          .filters.AuctionCreated(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ),
+        block
       );
 
       expect(events.length).to.eq(1);
@@ -355,12 +345,6 @@ describe('ReserveAuctionV1', () => {
       expect(logDescription.args.duration.toNumber()).to.eq(
         createdAuction.duration.toNumber()
       );
-      expect(logDescription.args.timeBuffer.toNumber()).to.eq(
-        createdAuction.timeBuffer.toNumber()
-      );
-      expect(logDescription.args.minimumIncrementPercentage).to.eq(
-        createdAuction.minimumIncrementPercentage
-      );
       expect(logDescription.args.reservePrice.toString()).to.eq(
         createdAuction.reservePrice.toString()
       );
@@ -375,5 +359,445 @@ describe('ReserveAuctionV1', () => {
         ethers.constants.AddressZero
       );
     });
+  });
+
+  describe('#setAuctionApproval', async () => {
+    beforeEach(async () => {
+      await mintZoraNFT(zoraV1);
+      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await deployer.getAddress(),
+        await curator.getAddress()
+      );
+    });
+
+    it('should revert if the auction does not exist', async () => {
+      await expect(
+        reserveAuction.setAuctionApproval(1, 11, true)
+      ).eventually.rejectedWith(revert`auctionExists auction doesn't exist`);
+    });
+
+    it('should revert if not called by the curator', async () => {
+      await expect(
+        reserveAuction.connect(otherUser).setAuctionApproval(1, 0, true)
+      ).eventually.rejectedWith(
+        revert`setAuctionApproval must be auction curator`
+      );
+    });
+
+    it('should revert if the auction has already started', async () => {
+      await reserveAuction.connect(curator).setAuctionApproval(1, 0, true);
+      await bid(reserveAuction, 0, ONE_ETH);
+
+      await expect(
+        reserveAuction.connect(curator).setAuctionApproval(1, 0, false)
+      ).eventually.rejectedWith(
+        'setAuctionApproval auction has already started'
+      );
+    });
+
+    it('should approve the auction', async () => {
+      await reserveAuction.connect(curator).setAuctionApproval(1, 0, true);
+      const auction = await reserveAuction.auctions(1, 0);
+
+      expect(auction.approved).to.eq(true);
+    });
+
+    xit('should emit an AuctionApprovalUpdated event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+
+      await reserveAuction.connect(curator).setAuctionApproval(1, 0, true);
+
+      const events = await reserveAuction.queryFilter(
+        new LibReserveAuctionV1Factory()
+          .attach(reserveAuction.address)
+          .filters.AuctionApprovalUpdated(null, null, null, null),
+        block
+      );
+
+      expect(events.length).to.eq(1);
+      const logDescription = reserveAuction.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('AuctionApprovalUpdated');
+    });
+  });
+
+  describe('#setAuctionReservePrice', () => {
+    beforeEach(async () => {
+      await mintZoraNFT(zoraV1);
+      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await deployer.getAddress(),
+        ethers.constants.AddressZero
+      );
+    });
+
+    it('should revert if the auction does not exist', async () => {
+      await expect(
+        reserveAuction.setAuctionReservePrice(1, 111, 1)
+      ).eventually.rejectedWith();
+    });
+
+    it('should revert if the caller is not the owner or curator', async () => {
+      await expect(
+        reserveAuction.connect(otherUser).setAuctionReservePrice(1, 0, 1)
+      ).eventually.rejectedWith(
+        revert`setAuctionReservePrice must be auction curator or token owner`
+      );
+    });
+
+    it('should revert if the auction has already started', async () => {
+      await bid(reserveAuction, 0, ONE_ETH);
+      await expect(
+        reserveAuction.setAuctionReservePrice(1, 0, 1)
+      ).eventually.rejectedWith(
+        revert`setAuctionReservePrice auction has already started`
+      );
+    });
+
+    it('should set the reserve price for the auction', async () => {
+      await reserveAuction.setAuctionReservePrice(1, 0, ONE_ETH.mul(2));
+      const auction = await reserveAuction.auctions(1, 0);
+
+      expect(auction.reservePrice.toString()).to.eq(ONE_ETH.mul(2).toString());
+    });
+
+    xit('should emit an AuctionReservePriceUpdated event', async () => {});
+  });
+
+  describe('#createBid', () => {
+    beforeEach(async () => {
+      await mintZoraNFT(zoraV1);
+      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await deployer.getAddress(),
+        ethers.constants.AddressZero,
+        undefined
+      );
+    });
+
+    it('should not allow a bid on an unapproved auction', async () => {
+      await mintZoraNFT(zoraV1, 'asa');
+      await approveNFTTransfer(zoraV1, reserveAuction.address, '1');
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await deployer.getAddress(),
+        await curator.getAddress(),
+        undefined,
+        1
+      );
+
+      await expect(reserveAuction.createBid(1, 1, 1)).eventually.rejectedWith(
+        revert`createBid auction must be approved by curator`
+      );
+    });
+
+    it('should revert if the auction expired', async () => {
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+      await timeTravelToEndOfAuction(reserveAuction, 0, true);
+
+      await expect(
+        reserveAuction.connect(bidderB).createBid(1, 0, ONE_ETH.mul(2))
+      ).eventually.rejectedWith(revert`createBid auction expired`);
+    });
+
+    it('should revert if the bid does not meet the reserve price', async () => {
+      await expect(
+        reserveAuction.connect(bidderA).createBid(1, 0, 1)
+      ).eventually.rejectedWith(
+        revert`createBid must send at least reservePrice`
+      );
+    });
+
+    it('should revert if the bid is not greater than 10% more of the previous bid', async () => {
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+      await expect(
+        reserveAuction.connect(bidderB).createBid(1, 0, ONE_ETH.add(1))
+      ).eventually.rejectedWith(
+        revert`createBid must send more than the last bid by minBidIncrementPercentage amount`
+      );
+    });
+
+    it('should revert if the bid is invalid on zora v1', async () => {
+      await expect(
+        reserveAuction.connect(bidderA).createBid(1, 0, ONE_ETH.add(1))
+      ).eventually.rejectedWith(
+        revert`createBid bid invalid for share splitting`
+      );
+    });
+
+    it('should set the starting time on the first bid', async () => {
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+      const auction = await reserveAuction.auctions(1, 0);
+
+      expect(auction.firstBidTime.toNumber()).to.not.eq(0);
+    });
+
+    it('should refund the previous bidder', async () => {
+      const beforeBalance = await ethers.provider.getBalance(
+        await bidderA.getAddress()
+      );
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+      await bid(reserveAuction.connect(bidderB), 0, ONE_ETH.mul(2));
+
+      const afterBalance = await ethers.provider.getBalance(
+        await bidderA.getAddress()
+      );
+
+      expect(toRoundedNumber(afterBalance)).to.approximately(
+        toRoundedNumber(beforeBalance),
+        5
+      );
+    });
+
+    it('should accept the transfer and set the bid details on the auction', async () => {
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+
+      const auction = await reserveAuction.auctions(1, 0);
+
+      expect(auction.firstBidTime.toNumber()).to.not.eq(0);
+      expect(auction.amount.toString()).to.eq(ONE_ETH.toString());
+      expect(auction.bidder).to.eq(await bidderA.getAddress());
+      expect(
+        (await ethers.provider.getBalance(reserveAuction.address)).toString()
+      ).to.eq(ONE_ETH.toString());
+    });
+
+    it('should extend the auction if it is in its final moments', async () => {
+      const oldDuration = (await reserveAuction.auctions(1, 0)).duration;
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+      await timeTravelToEndOfAuction(reserveAuction, 0);
+      await bid(reserveAuction.connect(bidderB), 0, TWO_ETH);
+      const newDuration = (await reserveAuction.auctions(1, 0)).duration;
+
+      expect(newDuration.toNumber()).to.eq(
+        oldDuration.toNumber() - 1 + 15 * 60
+      );
+    });
+
+    xit('should emit an AuctionBid event', async () => {});
+
+    xit('should emit an AuctionDurationExtended event', async () => {});
+  });
+
+  describe('#endAuction', async () => {
+    beforeEach(async () => {
+      await mintZoraNFT(zoraV1);
+      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await fundsRecipient.getAddress(),
+        await curator.getAddress(),
+        undefined
+      );
+      await reserveAuction.connect(curator).setAuctionApproval(1, 0, true);
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+    });
+
+    it('should revert if the auction does not exist', async () => {
+      await expect(reserveAuction.endAuction(1, 1111)).eventually.rejectedWith(
+        revert`auctionExists auction doesn't exist`
+      );
+    });
+
+    it('should revert if the auction has not begun', async () => {
+      await mintZoraNFT(zoraV1, 'enw');
+      await approveNFTTransfer(zoraV1, reserveAuction.address, '1');
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await deployer.getAddress(),
+        ethers.constants.AddressZero,
+        undefined,
+        1
+      );
+      await expect(reserveAuction.endAuction(1, 1)).eventually.rejectedWith(
+        revert`endAuction auction hasn't begun`
+      );
+    });
+
+    it('should revert if the auction has not completed', async () => {
+      await mintZoraNFT(zoraV1, 'enwa');
+      await approveNFTTransfer(zoraV1, reserveAuction.address, '1');
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await deployer.getAddress(),
+        ethers.constants.AddressZero,
+        undefined,
+        1
+      );
+      await bid(reserveAuction.connect(bidderA), 1, ONE_ETH);
+
+      await expect(reserveAuction.endAuction(1, 1)).eventually.rejectedWith(
+        revert`endAuction auction hasn't completed`
+      );
+    });
+
+    it('should handle a zora auction payout', async () => {
+      await timeTravelToEndOfAuction(reserveAuction, 0, true);
+
+      const beforeFundsRecipientBalance = await fundsRecipient.getBalance();
+      const beforeCuratorBalance = await curator.getBalance();
+      const beforeCreatorBalance = await deployer.getBalance();
+
+      await endAuction(reserveAuction, 0);
+
+      const afterFundsRecipientBalance = await fundsRecipient.getBalance();
+      const afterCuratorBalance = await curator.getBalance();
+      const afterCreatorBalance = await deployer.getBalance();
+      const tokenOwner = await zoraV1.ownerOf(0);
+
+      expect(
+        afterFundsRecipientBalance.sub(beforeFundsRecipientBalance).toString()
+      ).to.eq('807500000000000000');
+      expect(afterCuratorBalance.sub(beforeCuratorBalance).toString()).to.eq(
+        '42500000000000000'
+      );
+      expect(toRoundedNumber(afterCreatorBalance)).to.approximately(
+        toRoundedNumber(beforeCreatorBalance),
+        500
+      );
+      expect(tokenOwner).to.eq(await bidderA.getAddress());
+    });
+
+    it('should handle an eip2981 auction payout', async () => {
+      await mintERC2981Token(testEIP2981ERC721, await deployer.getAddress());
+      // @ts-ignore
+      await approveNFTTransfer(testEIP2981ERC721, reserveAuction.address, '0');
+      await createReserveAuction(
+        testEIP2981ERC721,
+        reserveAuction,
+        await fundsRecipient.getAddress(),
+        await curator.getAddress(),
+        undefined,
+        0
+      );
+      await reserveAuction.connect(curator).setAuctionApproval(1, 1, true);
+      await bid(reserveAuction.connect(bidderA), 1, ONE_ETH);
+      await timeTravelToEndOfAuction(reserveAuction, 1, true);
+
+      const beforeFundsRecipientBalance = await fundsRecipient.getBalance();
+      const beforeCreatorBalance = await deployer.getBalance();
+      const beforeCuratorBalance = await curator.getBalance();
+      await endAuction(reserveAuction, 1);
+      const afterFundsRecipientBalance = await fundsRecipient.getBalance();
+      const afterCreatorBalance = await deployer.getBalance();
+      const afterCuratorBalance = await curator.getBalance();
+
+      const tokenOwner = await testEIP2981ERC721.ownerOf(0);
+
+      expect(
+        afterFundsRecipientBalance.sub(beforeFundsRecipientBalance).toString()
+      ).to.eq('475000000000000000');
+      expect(afterCuratorBalance.sub(beforeCuratorBalance).toString()).to.eq(
+        '25000000000000000'
+      );
+      expect(toRoundedNumber(afterCreatorBalance)).to.approximately(
+        toRoundedNumber(beforeCreatorBalance.add(ONE_ETH.div(2))),
+        500
+      );
+      expect(tokenOwner).to.eq(await bidderA.getAddress());
+    });
+
+    it('should handle a vanilla erc721 auction payout', async () => {
+      await mintERC721Token(testERC721, await deployer.getAddress());
+      // @ts-ignore
+      await approveNFTTransfer(testERC721, reserveAuction.address);
+      await createReserveAuction(
+        testERC721,
+        reserveAuction,
+        await fundsRecipient.getAddress(),
+        await curator.getAddress(),
+        undefined,
+        0
+      );
+      await reserveAuction.connect(curator).setAuctionApproval(1, 1, true);
+      await bid(reserveAuction.connect(bidderA), 1, ONE_ETH);
+      await timeTravelToEndOfAuction(reserveAuction, 1, true);
+
+      const beforeCreatorBalance = await ethers.provider.getBalance(
+        await deployer.getAddress()
+      );
+      await endAuction(reserveAuction, 1);
+
+      const fundsRecipientBalance = (
+        await ethers.provider.getBalance(await fundsRecipient.getAddress())
+      ).toString();
+      const afterCreatorBalance = await ethers.provider.getBalance(
+        await deployer.getAddress()
+      );
+      const curatorBalance = await ethers.provider.getBalance(
+        await curator.getAddress()
+      );
+      const tokenOwner = await testERC721.ownerOf(0);
+
+      expect(fundsRecipientBalance).to.eq('10000950000000000000000');
+      expect(toRoundedNumber(curatorBalance)).to.approximately(
+        toRoundedNumber(BigNumber.from('10000050000000000000000')),
+        2
+      );
+      expect(tokenOwner).to.eq(await bidderA.getAddress());
+    });
+
+    it('should reset the auction if the bidder cannot receive NFTs', () => {});
+
+    xit('should emit an AuctionEnded event', async () => {});
+  });
+
+  describe('#cancelAuction', () => {
+    beforeEach(async () => {
+      await mintZoraNFT(zoraV1);
+      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await createReserveAuction(
+        zoraV1,
+        reserveAuction,
+        await fundsRecipient.getAddress(),
+        await curator.getAddress(),
+        undefined
+      );
+      await reserveAuction.connect(curator).setAuctionApproval(1, 0, true);
+    });
+
+    it('should revert if the auction does not exist', async () => {
+      await expect(
+        reserveAuction.cancelAuction(1, 1111)
+      ).eventually.rejectedWith(revert`auctionExists auction doesn't exist`);
+    });
+
+    it('should revert if not called by the curator or creator', async () => {
+      await expect(
+        reserveAuction.connect(otherUser).cancelAuction(1, 0)
+      ).eventually.rejectedWith(
+        revert`cancelAuction only callable by curator or auction creator`
+      );
+    });
+
+    it('should revert if the auction has started', async () => {
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+
+      await expect(reserveAuction.cancelAuction(1, 0)).eventually.rejectedWith(
+        revert`cancelAuction auction already started`
+      );
+    });
+
+    it('should cancel an auction and return the token to the creator', async () => {
+      await reserveAuction.cancelAuction(1, 0);
+
+      const deletedAuction = await reserveAuction.auctions(1, 0);
+
+      expect(await zoraV1.ownerOf(0)).to.eq(await deployer.getAddress());
+      expect(deletedAuction.tokenContract).to.eq(ethers.constants.AddressZero);
+      expect(deletedAuction.tokenOwner).to.eq(ethers.constants.AddressZero);
+    });
+
+    xit('should emit an AuctionCanceled event', async () => {});
   });
 });

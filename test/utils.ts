@@ -10,7 +10,7 @@ import {
   TestModuleV1,
   Weth,
 } from '../typechain';
-import { BigNumber, Contract } from 'ethers';
+import { BigNumber, BigNumberish, Contract } from 'ethers';
 import { BytesLike } from '@ethersproject/bytes';
 import {
   Erc721,
@@ -21,6 +21,15 @@ import {
 
 export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
+
+export const ONE_ETH = ethers.utils.parseEther('1');
+export const TWO_ETH = ethers.utils.parseEther('2');
+export const TENTH_ETH = ethers.utils.parseEther('0.1');
+export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
+
+// Helper function to parse numbers and do approximate number calculations
+export const toRoundedNumber = (bn: BigNumber) =>
+  bn.div(THOUSANDTH_ETH).toNumber();
 
 export const deployBaseModuleProxy = async () => {
   const BaseModuleProxyFactory = await ethers.getContractFactory(
@@ -117,8 +126,8 @@ export const registerVersion = async (
   await proxy.registerVersion(moduleAddress, callData);
 };
 
-export const mintZoraNFT = async (zoraV1Media: Media) => {
-  const metadataHex = ethers.utils.formatBytes32String('{}');
+export const mintZoraNFT = async (zoraV1Media: Media, seed = '') => {
+  const metadataHex = ethers.utils.formatBytes32String(seed);
   const metadataHash = ethers.utils.sha256(metadataHex);
   const hash = ethers.utils.arrayify(metadataHash);
   await zoraV1Media.mint(
@@ -143,3 +152,68 @@ export const approveNFTTransfer = async (
 ) => {
   await token.approve(spender, tokenId);
 };
+
+export async function createReserveAuction(
+  tokenContract: Contract,
+  reserveAuction: ReserveAuctionV1,
+  fundsRecipient: string,
+  curator: string,
+  currency = ethers.constants.AddressZero,
+  tokenId = 0
+) {
+  const duration = 60 * 60 * 24;
+  const reservePrice = BigNumber.from(10).pow(18).div(2);
+
+  await reserveAuction.createAuction(
+    1,
+    tokenId,
+    tokenContract.address,
+    duration,
+    reservePrice,
+    curator,
+    fundsRecipient,
+    5,
+    currency
+  );
+}
+
+export async function bid(
+  reserveAuction: ReserveAuctionV1,
+  auctionId: number,
+  amount: BigNumberish,
+  currency = ethers.constants.AddressZero
+) {
+  await reserveAuction.createBid(1, auctionId, amount, {
+    value: currency === ethers.constants.AddressZero ? amount : 0,
+  });
+}
+
+export async function timeTravel(to: number) {
+  await ethers.provider.send('evm_setNextBlockTimestamp', [to]);
+}
+
+export async function timeTravelToEndOfAuction(
+  reserveAuction: ReserveAuctionV1,
+  auctionId: number,
+  afterEnd = false
+) {
+  const auction = await reserveAuction.auctions(1, auctionId);
+  const base = auction.firstBidTime.add(auction.duration);
+  const target = afterEnd ? base : base.sub(1);
+  await timeTravel(target.toNumber());
+}
+
+export async function endAuction(
+  reserveAuction: ReserveAuctionV1,
+  auctionId: number
+) {
+  await reserveAuction.endAuction(1, auctionId);
+}
+
+export async function mintERC2981Token(eip2981: TestEip2981Erc721, to: string) {
+  await eip2981.mint(to, 0);
+}
+
+export async function mintERC721Token(erc721: TestErc721, to: string) {
+  await erc721.mint(to, 0);
+}
