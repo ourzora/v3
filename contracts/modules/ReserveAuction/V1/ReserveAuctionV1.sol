@@ -10,7 +10,7 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
     using LibReserveAuctionV1 for LibReserveAuctionV1.ReserveAuctionStorage;
 
     uint256 internal constant VERSION = 1;
-    bytes32 internal constant STORAGE_POSITION = keccak256("ReserveAuction.V1");
+    bytes32 internal constant STORAGE_POSITION = keccak256("ReserveAuction.V1"); // OPTIMIZATION(@izqui): pre-compute hash to avoid performing the hash every time STORAGE_POSITION is used
 
     function version() external pure override returns (uint256) {
         return VERSION;
@@ -29,6 +29,8 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
     {
         // TODO: verify the security of keeping this call external. It must be external so it can be added to
         // the function table and thus callable via delegatecall. However, there may be a better practice
+        // @izqui: this is the standard practice and totally fine IMO. Just need to be careful and always pass initialization data when
+        // adding a new version to make it an atomic operation (and avoid someone frontrunning initialization if it were done in 2 txs)
         _reserveAuctionStorage().init(_zoraV1ProtocolMedia, _wethAddress);
     }
 

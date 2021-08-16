@@ -5,6 +5,8 @@ import {IModule} from "../interfaces/IModule.sol";
 import {LibVersionRegistry} from "../libraries/LibVersionRegistry.sol";
 import {IModuleProxy} from "../interfaces/IModuleProxy.sol";
 
+// NOTE(@izqui): Since this contract won't be able to conform to EIP-897 (since `implementation()` depends on the version specified in the calldata),
+// it won't be compatible with Etherscan's read/write from proxy
 contract BaseModuleProxy is IModuleProxy {
     function registerVersion(address _impl, bytes memory _calldata)
         public
@@ -21,7 +23,7 @@ contract BaseModuleProxy is IModuleProxy {
         returns (address)
     {
         LibVersionRegistry.VersionStorage storage s = LibVersionRegistry
-        .versionStorage();
+        .versionStorage(); // NIT(@izqui): thoughts about increasing the allowed line width in the linter? this line break reads weird
 
         return s.versionToImplementationAddress[_version];
     }
@@ -47,7 +49,7 @@ contract BaseModuleProxy is IModuleProxy {
     }
 
     fallback() external payable {
-        LibVersionRegistry.VersionStorage storage s;
+        LibVersionRegistry.VersionStorage storage s; // Q(@izqui): Any reason for not using `LibVersionRegistry.versionStorage()` as in the functions above?
         bytes32 position = LibVersionRegistry.VERSION_REGISTRY_STORAGE_POSITION;
         assembly {
             s.slot := position
@@ -79,5 +81,5 @@ contract BaseModuleProxy is IModuleProxy {
         }
     }
 
-    receive() external payable {}
+    receive() external payable {} // Q(@izqui): When would this contract just receive ETH without calling a function? WETH unwrapping?
 }
