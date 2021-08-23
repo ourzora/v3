@@ -2,18 +2,19 @@
 pragma solidity 0.8.5;
 
 library LibVersionRegistry {
+    // keccak256("core.registry")
     bytes32 constant VERSION_REGISTRY_STORAGE_POSITION =
-        keccak256("version.registry");
+        0x3f3af226decc9238e7d7bff3a1fe46f3dba86ecfd6aa03cf2d9fb8c9ffddf485;
 
-    struct VersionStorage {
+    struct RegistryStorage {
         mapping(uint256 => address) versionToImplementationAddress;
         mapping(address => uint256) implementationAddressToVersion;
     }
 
-    function versionStorage()
+    function registryStorage()
         internal
         pure
-        returns (LibVersionRegistry.VersionStorage storage s)
+        returns (LibVersionRegistry.RegistryStorage storage s)
     {
         bytes32 position = VERSION_REGISTRY_STORAGE_POSITION;
         assembly {
@@ -26,7 +27,7 @@ library LibVersionRegistry {
         address _impl,
         bytes memory _calldata
     ) internal {
-        VersionStorage storage s = versionStorage();
+        RegistryStorage storage s = registryStorage();
         require(
             s.implementationAddressToVersion[_impl] == 0,
             "LibVersionRegistry::addVersion implementation address already in use"
@@ -44,8 +45,7 @@ library LibVersionRegistry {
                 success,
                 string(
                     abi.encodePacked(
-                        "LibVersionRegistry::addVersion _impl call failed: ",
-                        returnData
+                        "LibVersionRegistry::addVersion _impl call failed"
                     )
                 )
             );

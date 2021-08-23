@@ -20,8 +20,8 @@ contract BaseModuleProxy is IModuleProxy {
         override
         returns (address)
     {
-        LibVersionRegistry.VersionStorage storage s = LibVersionRegistry
-        .versionStorage();
+        LibVersionRegistry.RegistryStorage storage s = LibVersionRegistry
+        .registryStorage();
 
         return s.versionToImplementationAddress[_version];
     }
@@ -32,8 +32,8 @@ contract BaseModuleProxy is IModuleProxy {
         override
         returns (uint256)
     {
-        LibVersionRegistry.VersionStorage storage s = LibVersionRegistry
-        .versionStorage();
+        LibVersionRegistry.RegistryStorage storage s = LibVersionRegistry
+        .registryStorage();
 
         return s.implementationAddressToVersion[_impl];
     }
@@ -47,11 +47,8 @@ contract BaseModuleProxy is IModuleProxy {
     }
 
     fallback() external payable {
-        LibVersionRegistry.VersionStorage storage s;
-        bytes32 position = LibVersionRegistry.VERSION_REGISTRY_STORAGE_POSITION;
-        assembly {
-            s.slot := position
-        }
+        LibVersionRegistry.RegistryStorage storage s = LibVersionRegistry
+        .registryStorage();
         uint256 version = _unpackVersionFromCallData();
         address implementation = s.versionToImplementationAddress[version];
         require(
@@ -78,6 +75,4 @@ contract BaseModuleProxy is IModuleProxy {
             }
         }
     }
-
-    receive() external payable {}
 }
