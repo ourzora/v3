@@ -16,17 +16,11 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         return VERSION;
     }
 
-    function auctions(uint256, uint256 _auctionId)
-        external
-        view
-        returns (LibReserveAuctionV1.Auction memory)
-    {
+    function auctions(uint256, uint256 _auctionId) external view returns (LibReserveAuctionV1.Auction memory) {
         return _reserveAuctionStorage().auctions[_auctionId];
     }
 
-    function initialize(address _zoraV1ProtocolMedia, address _wethAddress)
-        external
-    {
+    function initialize(address _zoraV1ProtocolMedia, address _wethAddress) external {
         // TODO: verify the security of keeping this call external. It must be external so it can be added to
         // the function table and thus callable via delegatecall. However, there may be a better practice
         _reserveAuctionStorage().init(_zoraV1ProtocolMedia, _wethAddress);
@@ -69,10 +63,7 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         uint256 _auctionId,
         uint256 _reservePrice
     ) external {
-        _reserveAuctionStorage().setAuctionReservePrice(
-            _auctionId,
-            _reservePrice
-        );
+        _reserveAuctionStorage().setAuctionReservePrice(_auctionId, _reservePrice);
     }
 
     function createBid(
@@ -97,11 +88,7 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         _reserveAuctionStorage().cancelAuction(_auctionId);
     }
 
-    function _reserveAuctionStorage()
-        internal
-        pure
-        returns (LibReserveAuctionV1.ReserveAuctionStorage storage s)
-    {
+    function _reserveAuctionStorage() internal pure returns (LibReserveAuctionV1.ReserveAuctionStorage storage s) {
         bytes32 position = STORAGE_POSITION;
         assembly {
             s.slot := position

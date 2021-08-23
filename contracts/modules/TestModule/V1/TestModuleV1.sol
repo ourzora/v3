@@ -7,8 +7,7 @@ import "hardhat/console.sol";
 
 contract TestModuleV1 is IModule {
     uint256 internal constant VERSION = 1;
-    bytes32 internal constant TEST_MODULE_STORAGE_POSITION =
-        keccak256("TestModule.V1");
+    bytes32 internal constant TEST_MODULE_STORAGE_POSITION = keccak256("TestModule.V1");
 
     struct TestModuleStorage {
         uint256 magicNumber;
@@ -18,11 +17,7 @@ contract TestModuleV1 is IModule {
         return VERSION;
     }
 
-    function testModuleStorage()
-        internal
-        pure
-        returns (TestModuleStorage storage s)
-    {
+    function testModuleStorage() internal pure returns (TestModuleStorage storage s) {
         bytes32 position = TEST_MODULE_STORAGE_POSITION;
         assembly {
             s.slot := position

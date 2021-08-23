@@ -3,6 +3,7 @@
 // FOR TEST PURPOSES ONLY. NOT PRODUCTION SAFE
 // Source: https://github.com/gnosis/canonical-weth/blob/0dd1ea3e295eef916d0c6223ec63141137d22d67/contracts/WETH9.sol
 pragma solidity 0.8.5;
+
 import "hardhat/console.sol";
 
 contract WETH {
@@ -59,9 +60,7 @@ contract WETH {
     ) public returns (bool) {
         require(balanceOf[src] >= wad);
 
-        if (
-            src != msg.sender && allowance[src][msg.sender] != type(uint128).max
-        ) {
+        if (src != msg.sender && allowance[src][msg.sender] != type(uint128).max) {
             require(allowance[src][msg.sender] >= wad);
             allowance[src][msg.sender] -= wad;
         }

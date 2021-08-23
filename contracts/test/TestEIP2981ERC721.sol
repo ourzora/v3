@@ -20,24 +20,12 @@ contract TestEIP2981ERC721 is ERC721 {
         _safeMint(to, tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return
-            interfaceId == _INTERFACE_ID_ERC2981 ||
-            super.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == _INTERFACE_ID_ERC2981 || super.supportsInterface(interfaceId);
     }
 
     // Test function – always return 50% of the given amount and the contract deployer
-    function royaltyInfo(uint256, uint256 _salePrice)
-        external
-        view
-        returns (address receiver, uint256 royaltyAmount)
-    {
+    function royaltyInfo(uint256, uint256 _salePrice) external view returns (address receiver, uint256 royaltyAmount) {
         return (royaltyRecipient, _salePrice.div(2));
     }
 }
