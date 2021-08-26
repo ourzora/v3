@@ -68,48 +68,76 @@ library LibReserveAuctionV1 {
         address auctionCurrency;
     }
 
-    event AuctionCreated(
-        uint256 indexed auctionId,
-        uint256 indexed tokenId,
-        address indexed tokenContract,
-        uint256 duration,
-        uint256 reservePrice,
-        address tokenOwner,
-        address curator,
-        address fundsRecipient,
-        uint8 curatorFeePercentage,
-        address auctionCurrency
-    );
+    struct AuctionCreatedEventData {
+        uint256 auctionId;
+        uint256 tokenId;
+        address tokenContract;
+        uint256 duration;
+        uint256 reservePrice;
+        address tokenOwner;
+        address curator;
+        address fundsRecipient;
+        uint8 curatorFeePercentage;
+        address auctionCurrency;
+    }
 
-    event AuctionApprovalUpdated(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, bool approved);
+    struct AuctionApprovalUpdatedEventData {
+        uint256 auctionId;
+        uint256 tokenId;
+        address tokenContract;
+        bool approved;
+    }
 
-    event AuctionReservePriceUpdated(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, uint256 reservePrice);
+    struct AuctionReservePriceUpdatedEventData {
+        uint256 auctionId;
+        uint256 tokenId;
+        address tokenContract;
+        uint256 reservePrice;
+    }
 
-    event AuctionBid(
-        uint256 indexed auctionId,
-        uint256 indexed tokenId,
-        address indexed tokenContract,
-        address sender,
-        uint256 value,
-        bool firstBid,
-        bool extended
-    );
+    struct AuctionBidEventData {
+        uint256 auctionId;
+        uint256 tokenId;
+        address tokenContract;
+        address sender;
+        uint256 value;
+        bool firstBid;
+        bool extended;
+    }
 
-    event AuctionDurationExtended(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, uint256 duration);
+    struct AuctionDurationExtendedEventData {
+        uint256 auctionId;
+        uint256 tokenId;
+        address tokenContract;
+        uint256 duration;
+    }
 
-    event AuctionEnded(
-        uint256 indexed auctionId,
-        uint256 indexed tokenId,
-        address indexed tokenContract,
-        address curator,
-        address winner,
-        address fundsRecipient,
-        uint256 amount,
-        uint256 curatorFee,
-        address auctionCurrency
-    );
+    struct AuctionEndedEventData {
+        uint256 auctionId;
+        uint256 tokenId;
+        address tokenContract;
+        address curator;
+        address winner;
+        address fundsRecipient;
+        uint256 amount;
+        uint256 curatorFee;
+        address auctionCurrency;
+    }
 
-    event AuctionCanceled(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, address tokenOwner);
+    struct AuctionCanceledEventData {
+        uint256 auctionId;
+        uint256 tokenId;
+        address tokenContract;
+        address tokenOwner;
+    }
+
+    event AuctionCreated(uint256 indexed version, AuctionCreatedEventData data);
+    event AuctionApprovalUpdated(uint256 indexed version, AuctionApprovalUpdatedEventData data);
+    event AuctionReservePriceUpdated(uint256 indexed version, AuctionReservePriceUpdatedEventData data);
+    event AuctionBid(uint256 indexed version, AuctionBidEventData data);
+    event AuctionDurationExtended(uint256 indexed version, AuctionDurationExtendedEventData data);
+    event AuctionEnded(uint256 indexed version, AuctionEndedEventData data);
+    event AuctionCanceled(uint256 indexed version, AuctionCanceledEventData data);
 
     /**
      * @notice Require that the specified auction exists
@@ -178,16 +206,19 @@ library LibReserveAuctionV1 {
         _self.auctionIdTracker.increment();
 
         emit AuctionCreated(
-            auctionId,
-            _tokenId,
-            _tokenContract,
-            _duration,
-            _reservePrice,
-            tokenOwner,
-            _curator,
-            _fundsRecipient,
-            _curatorFeePercentage,
-            _auctionCurrency
+            _self.version,
+            AuctionCreatedEventData(
+                auctionId,
+                _tokenId,
+                _tokenContract,
+                _duration,
+                _reservePrice,
+                tokenOwner,
+                _curator,
+                _fundsRecipient,
+                _curatorFeePercentage,
+                _auctionCurrency
+            )
         );
 
         if (_self.auctions[auctionId].curator == address(0) || _curator == tokenOwner) {
@@ -230,7 +261,10 @@ library LibReserveAuctionV1 {
 
         _self.auctions[_auctionId].reservePrice = _reservePrice;
 
-        emit AuctionReservePriceUpdated(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _reservePrice);
+        emit AuctionReservePriceUpdated(
+            _self.version,
+            AuctionReservePriceUpdatedEventData(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _reservePrice)
+        );
     }
 
     /**
@@ -293,21 +327,27 @@ library LibReserveAuctionV1 {
         }
 
         emit AuctionBid(
-            _auctionId,
-            _self.auctions[_auctionId].tokenId,
-            _self.auctions[_auctionId].tokenContract,
-            msg.sender,
-            _amount,
-            lastBidder == address(0), // firstBid boolean
-            extended
+            _self.version,
+            AuctionBidEventData(
+                _auctionId,
+                _self.auctions[_auctionId].tokenId,
+                _self.auctions[_auctionId].tokenContract,
+                msg.sender,
+                _amount,
+                lastBidder == address(0), // firstBid boolean
+                extended
+            )
         );
 
         if (extended) {
             emit AuctionDurationExtended(
-                _auctionId,
-                _self.auctions[_auctionId].tokenId,
-                _self.auctions[_auctionId].tokenContract,
-                _self.auctions[_auctionId].duration
+                _self.version,
+                AuctionDurationExtendedEventData(
+                    _auctionId,
+                    _self.auctions[_auctionId].tokenId,
+                    _self.auctions[_auctionId].tokenContract,
+                    _self.auctions[_auctionId].duration
+                )
             );
         }
     }
@@ -332,15 +372,18 @@ library LibReserveAuctionV1 {
         }
 
         emit AuctionEnded(
-            _auctionId,
-            _self.auctions[_auctionId].tokenId,
-            _self.auctions[_auctionId].tokenContract,
-            _self.auctions[_auctionId].curator,
-            _self.auctions[_auctionId].bidder,
-            _self.auctions[_auctionId].fundsRecipient,
-            fundsRecipientProfit,
-            curatorFee,
-            _self.auctions[_auctionId].auctionCurrency
+            _self.version,
+            AuctionEndedEventData(
+                _auctionId,
+                _self.auctions[_auctionId].tokenId,
+                _self.auctions[_auctionId].tokenContract,
+                _self.auctions[_auctionId].curator,
+                _self.auctions[_auctionId].bidder,
+                _self.auctions[_auctionId].fundsRecipient,
+                fundsRecipientProfit,
+                curatorFee,
+                _self.auctions[_auctionId].auctionCurrency
+            )
         );
 
         delete _self.auctions[_auctionId];
@@ -362,7 +405,15 @@ library LibReserveAuctionV1 {
             _self.auctions[_auctionId].tokenOwner,
             _self.auctions[_auctionId].tokenId
         );
-        emit AuctionCanceled(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _self.auctions[_auctionId].tokenOwner);
+        emit AuctionCanceled(
+            _self.version,
+            AuctionCanceledEventData(
+                _auctionId,
+                _self.auctions[_auctionId].tokenId,
+                _self.auctions[_auctionId].tokenContract,
+                _self.auctions[_auctionId].tokenOwner
+            )
+        );
 
         delete _self.auctions[_auctionId];
     }
@@ -373,7 +424,10 @@ library LibReserveAuctionV1 {
         bool _approved
     ) private {
         _self.auctions[_auctionId].approved = _approved;
-        emit AuctionApprovalUpdated(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _approved);
+        emit AuctionApprovalUpdated(
+            _self.version,
+            AuctionApprovalUpdatedEventData(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _approved)
+        );
     }
 
     function _exists(ReserveAuctionStorage storage _self, uint256 _auctionId) private view returns (bool) {

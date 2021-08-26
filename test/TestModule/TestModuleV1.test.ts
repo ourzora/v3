@@ -1,7 +1,11 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
-import { BaseModuleProxy, TestModuleV1 } from '../../typechain';
+import {
+  BaseModuleProxy,
+  TestModuleV1,
+  TestModuleV1Factory,
+} from '../../typechain';
 import {
   connectAs,
   deployTestModule,
@@ -35,6 +39,24 @@ describe('TestModuleV1', () => {
       await testModule.setMagicNumber(1, 1337);
 
       expect((await testModule.getMagicNumber(1)).toNumber()).to.eq(1337);
+    });
+
+    it('emits an MagicNumberUpdated event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await testModule.setMagicNumber(1, 1337);
+
+      const events = await testModule.queryFilter(
+        new TestModuleV1Factory()
+          .attach(testModule.address)
+          .filters.MagicNumberUpdated(null, null),
+        block
+      );
+      const description = await testModule.interface.parseLog(events[0]);
+
+      expect(description.args.version.toNumber()).to.eq(1);
+      expect(
+        description.args.data.map((m) => m.toNumber())
+      ).to.have.ordered.members([1337]);
     });
   });
 });

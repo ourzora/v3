@@ -303,7 +303,7 @@ describe('ReserveAuctionV1', () => {
       const auctionCurrency = ethers.constants.AddressZero;
 
       const block = await ethers.provider.getBlockNumber();
-      const tx = await reserveAuction.createAuction(
+      await reserveAuction.createAuction(
         1,
         0,
         zoraV1.address,
@@ -319,18 +319,7 @@ describe('ReserveAuctionV1', () => {
       const events = await reserveAuction.queryFilter(
         new LibReserveAuctionV1Factory()
           .attach(reserveAuction.address)
-          .filters.AuctionCreated(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-          ),
+          .filters.AuctionCreated(null, null),
         block
       );
 
@@ -415,7 +404,7 @@ describe('ReserveAuctionV1', () => {
       const events = await reserveAuction.queryFilter(
         new LibReserveAuctionV1Factory()
           .attach(reserveAuction.address)
-          .filters.AuctionApprovalUpdated(null, null, null, null),
+          .filters.AuctionApprovalUpdated(null, null),
         block
       );
 
