@@ -7,5 +7,6 @@ pragma solidity 0.8.5;
  * @notice IModule provides the base methods required to register a module within Zora
  */
 interface IModule {
-    function version() external pure returns (uint256);
+    // Return the storage slot to be reserved for this module
+    function storageSlot() external pure returns (bytes32);
 }

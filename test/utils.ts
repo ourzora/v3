@@ -2,11 +2,9 @@ import { ethers } from 'hardhat';
 import {
   BadErc721,
   BaseModuleProxy,
-  ReserveAuctionProxy,
   ReserveAuctionV1,
   TestEip2981Erc721,
   TestErc721,
-  TestModuleProxy,
   TestModuleV1,
   Weth,
 } from '../typechain';
@@ -31,22 +29,13 @@ export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 export const toRoundedNumber = (bn: BigNumber) =>
   bn.div(THOUSANDTH_ETH).toNumber();
 
-export const deployBaseModuleProxy = async () => {
+export const deployBaseModuleProxy = async (registrar: string) => {
   const BaseModuleProxyFactory = await ethers.getContractFactory(
     'BaseModuleProxy'
   );
-  const baseModuleProxy = await BaseModuleProxyFactory.deploy();
+  const baseModuleProxy = await BaseModuleProxyFactory.deploy(registrar);
   await baseModuleProxy.deployed();
   return baseModuleProxy as BaseModuleProxy;
-};
-
-export const deployTestModuleProxy = async () => {
-  const TestModuleProxyFactory = await ethers.getContractFactory(
-    'TestModuleProxy'
-  );
-  const testModuleProxy = await TestModuleProxyFactory.deploy();
-  await testModuleProxy.deployed();
-  return testModuleProxy as TestModuleProxy;
 };
 
 export const deployTestModule = async () => {
@@ -92,15 +81,6 @@ export const deployWETH = async () => {
   return weth as Weth;
 };
 
-export const deployReserveAuctionProxy = async () => {
-  const ReserveAuctionProxyFactory = await ethers.getContractFactory(
-    'ReserveAuctionProxy'
-  );
-  const reserveAuctionProxy = await ReserveAuctionProxyFactory.deploy();
-  await reserveAuctionProxy.deployed();
-  return reserveAuctionProxy as ReserveAuctionProxy;
-};
-
 export const deployReserveAuctionV1 = async () => {
   const ReserveAuctionV1Factory = await ethers.getContractFactory(
     'ReserveAuctionV1'
@@ -118,12 +98,26 @@ export const connectAs = async <T extends unknown>(
   return Factory.attach(proxy.address) as T;
 };
 
-export const registerVersion = async (
+export const proposeVersion = async (
   proxy: BaseModuleProxy,
   moduleAddress: string,
   callData: BytesLike = []
 ) => {
-  await proxy.registerVersion(moduleAddress, callData);
+  await proxy.proposeVersion(moduleAddress, callData);
+};
+
+export const registerVersion = async (
+  proxy: BaseModuleProxy,
+  proposalID: number
+) => {
+  await proxy.registerVersion(proposalID);
+};
+
+export const cancelProposal = async (
+  proxy: BaseModuleProxy,
+  proposalID: number
+) => {
+  await proxy.cancelProposal(proposalID);
 };
 
 export const mintZoraNFT = async (zoraV1Media: Media, seed = '') => {

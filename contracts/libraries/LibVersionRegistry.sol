@@ -1,37 +1,111 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.5;
 
+import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
+import {IModule} from "../interfaces/IModule.sol";
+
 library LibVersionRegistry {
-    // keccak256("core.registry")
-    bytes32 constant VERSION_REGISTRY_STORAGE_POSITION = 0x3f3af226decc9238e7d7bff3a1fe46f3dba86ecfd6aa03cf2d9fb8c9ffddf485;
+    using Counters for Counters.Counter;
+
+    enum ProposalStatus {
+        Pending,
+        Passed,
+        Failed
+    }
+
+    struct VersionProposal {
+        address proposer;
+        address implementationAddress;
+        bytes initCallData;
+        ProposalStatus status;
+    }
 
     struct RegistryStorage {
+        address registrarAddress;
+        mapping(uint256 => VersionProposal) proposalIDToProposal;
+        mapping(address => uint256) proposalImplementationToProposalID;
         mapping(uint256 => address) versionToImplementationAddress;
         mapping(address => uint256) implementationAddressToVersion;
+        mapping(bytes32 => bool) reservedStorageSlots;
+        Counters.Counter proposalCounter;
+        Counters.Counter versionCounter;
+        bool initialized;
     }
 
-    function registryStorage() internal pure returns (LibVersionRegistry.RegistryStorage storage s) {
-        bytes32 position = VERSION_REGISTRY_STORAGE_POSITION;
-        assembly {
-            s.slot := position
-        }
-    }
-
-    function addVersion(
-        uint256 _version,
-        address _impl,
-        bytes memory _calldata
+    function init(
+        RegistryStorage storage _self,
+        address _registrarAddress,
+        bytes32 _reservedStorage
     ) internal {
-        RegistryStorage storage s = registryStorage();
-        require(s.implementationAddressToVersion[_impl] == 0, "LibVersionRegistry::addVersion implementation address already in use");
-        require(s.versionToImplementationAddress[_version] == address(0), "LibVersionRegistry::addVersion version already in use");
+        require(_self.initialized != true, "LibVersionRegistry already initialized");
 
-        if (_calldata.length != 0) {
-            (bool success, bytes memory returnData) = _impl.delegatecall(_calldata);
-            require(success, string(abi.encodePacked("LibVersionRegistry::addVersion _impl call failed")));
+        _self.registrarAddress = _registrarAddress;
+        _self.reservedStorageSlots[_reservedStorage] = true;
+        _self.initialized = true;
+    }
+
+    function proposeVersion(
+        RegistryStorage storage _self,
+        address _impl,
+        bytes memory _initCallData
+    ) internal returns (uint256) {
+        require(
+            _self.implementationAddressToVersion[_impl] == 0 && _self.proposalImplementationToProposalID[_impl] == 0,
+            "LibVersionRegistry::proposeVersion implementation address already in use"
+        );
+        require(_impl != address(0), "LibVersionRegistry::proposeVersion cannot propose zero address implementation");
+
+        _self.proposalCounter.increment();
+        uint256 proposalID = _self.proposalCounter.current();
+        _self.proposalIDToProposal[proposalID] = VersionProposal({
+            proposer: msg.sender,
+            implementationAddress: _impl,
+            initCallData: _initCallData,
+            status: ProposalStatus.Pending
+        });
+        _self.proposalImplementationToProposalID[_impl] = proposalID;
+
+        return proposalID;
+    }
+
+    function registerVersion(RegistryStorage storage _self, uint256 _proposalId) internal returns (uint256) {
+        require(msg.sender == _self.registrarAddress, "LibVersionRegistry::registerVersion only callable by registrar");
+        require(_self.proposalIDToProposal[_proposalId].implementationAddress != address(0), "LibVersionRegistry::registerVersion nonexistant proposal");
+        require(_self.proposalIDToProposal[_proposalId].status == ProposalStatus.Pending, "LibVersionRegistry::registerVersion proposal must be pending");
+
+        VersionProposal memory proposal = _self.proposalIDToProposal[_proposalId];
+        bytes32 storageSlot = IModule(proposal.implementationAddress).storageSlot();
+
+        require(
+            _self.implementationAddressToVersion[proposal.implementationAddress] == 0,
+            "LibVersionRegistry::registerVersion implementation address already in use"
+        );
+        require(_self.reservedStorageSlots[storageSlot] == false, "LibVersionRegistry::registerVersion storage slot already allocated");
+
+        if (proposal.initCallData.length != 0) {
+            (bool success, ) = proposal.implementationAddress.delegatecall(proposal.initCallData);
+            require(success, string(abi.encodePacked("LibVersionRegistry::registerVersion _impl call failed")));
         }
 
-        s.implementationAddressToVersion[_impl] = _version;
-        s.versionToImplementationAddress[_version] = _impl;
+        _self.versionCounter.increment();
+        uint256 version = _self.versionCounter.current();
+        _self.implementationAddressToVersion[proposal.implementationAddress] = version;
+        _self.versionToImplementationAddress[version] = proposal.implementationAddress;
+        _self.reservedStorageSlots[storageSlot] = true;
+        _self.proposalIDToProposal[_proposalId].status = ProposalStatus.Passed;
+
+        return version;
+    }
+
+    function cancelProposal(RegistryStorage storage _self, uint256 _proposalID) internal {
+        require(msg.sender == _self.registrarAddress, "LibVersionRegistry::cancelProposal only callable by registrar");
+        require(_self.proposalIDToProposal[_proposalID].implementationAddress != address(0), "LibVersionRegistry::cancelProposal proposal does not exist");
+        _self.proposalIDToProposal[_proposalID].status = ProposalStatus.Failed;
+    }
+
+    function setRegistrar(RegistryStorage storage _self, address _registrarAddress) internal {
+        require(msg.sender == _self.registrarAddress, "LibVersionRegistry::setRegistrar only callable by registrar");
+
+        _self.registrarAddress = _registrarAddress;
     }
 }

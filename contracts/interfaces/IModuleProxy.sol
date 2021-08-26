@@ -2,7 +2,13 @@
 pragma solidity 0.8.5;
 
 interface IModuleProxy {
-    function registerVersion(address _impl, bytes memory _calldata) external;
+    function proposeVersion(address _impl, bytes memory _calldata) external returns (uint256);
+
+    function registerVersion(uint256 _proposalId) external returns (uint256);
+
+    function cancelProposal(uint256 _proposalId) external;
+
+    function setRegistrar(address _registrarAddress) external;
 
     function versionToImplementationAddress(uint256 _version) external view returns (address);
 

@@ -3,8 +3,8 @@ import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
   BadErc721,
+  BaseModuleProxy,
   LibReserveAuctionV1Factory,
-  ReserveAuctionProxy,
   ReserveAuctionV1,
   TestEip2981Erc721,
   TestErc721,
@@ -16,7 +16,7 @@ import {
   connectAs,
   createReserveAuction,
   deployBadERC721,
-  deployReserveAuctionProxy,
+  deployBaseModuleProxy,
   deployReserveAuctionV1,
   deployTestEIP2981ERC721,
   deployTestERC271,
@@ -27,6 +27,7 @@ import {
   mintERC721Token,
   mintZoraNFT,
   ONE_ETH,
+  proposeVersion,
   registerVersion,
   revert,
   TENTH_ETH,
@@ -41,7 +42,7 @@ import { Media } from '@zoralabs/core/dist/typechain';
 chai.use(asPromised);
 
 describe('ReserveAuctionV1', () => {
-  let proxy: ReserveAuctionProxy;
+  let proxy: BaseModuleProxy;
   let reserveAuction: ReserveAuctionV1;
   let zoraV1: Media;
   let badERC721: BadErc721;
@@ -57,14 +58,6 @@ describe('ReserveAuctionV1', () => {
 
   beforeEach(async () => {
     await ethers.provider.send('hardhat_reset', []);
-    proxy = await deployReserveAuctionProxy();
-    const module = await deployReserveAuctionV1();
-    const zoraProtocol = await deployZoraProtocol();
-    zoraV1 = zoraProtocol.media;
-    badERC721 = await deployBadERC721();
-    testERC721 = await deployTestERC271();
-    testEIP2981ERC721 = await deployTestEIP2981ERC721();
-    weth = await deployWETH();
     const signers = await ethers.getSigners();
     deployer = signers[0];
     curator = signers[1];
@@ -72,11 +65,20 @@ describe('ReserveAuctionV1', () => {
     bidderB = signers[3];
     fundsRecipient = signers[4];
     otherUser = signers[5];
+    proxy = await deployBaseModuleProxy(await deployer.getAddress());
+    const module = await deployReserveAuctionV1();
+    const zoraProtocol = await deployZoraProtocol();
+    zoraV1 = zoraProtocol.media;
+    badERC721 = await deployBadERC721();
+    testERC721 = await deployTestERC271();
+    testEIP2981ERC721 = await deployTestEIP2981ERC721();
+    weth = await deployWETH();
     const initCallData = module.interface.encodeFunctionData('initialize', [
       zoraV1.address,
       weth.address,
     ]);
-    await registerVersion(proxy, module.address, initCallData);
+    await proposeVersion(proxy, module.address, initCallData);
+    await registerVersion(proxy, 1);
     reserveAuction = await connectAs<ReserveAuctionV1>(
       proxy,
       'ReserveAuctionV1'

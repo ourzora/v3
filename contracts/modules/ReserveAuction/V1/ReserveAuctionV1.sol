@@ -9,11 +9,10 @@ import {LibReserveAuctionV1} from "./LibReserveAuctionV1.sol";
 contract ReserveAuctionV1 is IModule, ReentrancyGuard {
     using LibReserveAuctionV1 for LibReserveAuctionV1.ReserveAuctionStorage;
 
-    uint256 internal constant VERSION = 1;
     bytes32 internal constant STORAGE_POSITION = keccak256("ReserveAuction.V1");
 
-    function version() external pure override returns (uint256) {
-        return VERSION;
+    function storageSlot() external pure override returns (bytes32) {
+        return STORAGE_POSITION;
     }
 
     function auctions(uint256, uint256 _auctionId) external view returns (LibReserveAuctionV1.Auction memory) {

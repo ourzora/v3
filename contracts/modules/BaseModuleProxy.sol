@@ -6,21 +6,45 @@ import {LibVersionRegistry} from "../libraries/LibVersionRegistry.sol";
 import {IModuleProxy} from "../interfaces/IModuleProxy.sol";
 
 contract BaseModuleProxy is IModuleProxy {
-    function registerVersion(address _impl, bytes memory _calldata) public override {
-        uint256 version = IModule(_impl).version();
-        LibVersionRegistry.addVersion(version, _impl, _calldata);
+    using LibVersionRegistry for LibVersionRegistry.RegistryStorage;
+
+    // keccak256("core.registry")
+    bytes32 constant VERSION_REGISTRY_STORAGE_POSITION = 0x3f3af226decc9238e7d7bff3a1fe46f3dba86ecfd6aa03cf2d9fb8c9ffddf485;
+
+    constructor(address _registrarAddress) {
+        _registryStorage().init(_registrarAddress, VERSION_REGISTRY_STORAGE_POSITION);
+    }
+
+    function proposeVersion(address _impl, bytes memory _calldata) public override returns (uint256) {
+        return _registryStorage().proposeVersion(_impl, _calldata);
+    }
+
+    function registerVersion(uint256 _proposalId) public override returns (uint256) {
+        return _registryStorage().registerVersion(_proposalId);
+    }
+
+    function cancelProposal(uint256 _proposalId) public override {
+        return _registryStorage().cancelProposal(_proposalId);
+    }
+
+    function setRegistrar(address _registrarAddress) public override {
+        return _registryStorage().setRegistrar(_registrarAddress);
     }
 
     function versionToImplementationAddress(uint256 _version) public view override returns (address) {
-        LibVersionRegistry.RegistryStorage storage s = LibVersionRegistry.registryStorage();
-
-        return s.versionToImplementationAddress[_version];
+        return _registryStorage().versionToImplementationAddress[_version];
     }
 
     function implementationAddressToVersion(address _impl) public view override returns (uint256) {
-        LibVersionRegistry.RegistryStorage storage s = LibVersionRegistry.registryStorage();
+        return _registryStorage().implementationAddressToVersion[_impl];
+    }
 
-        return s.implementationAddressToVersion[_impl];
+    function proposal(uint256 _proposalId) public view returns (LibVersionRegistry.VersionProposal memory) {
+        return _registryStorage().proposalIDToProposal[_proposalId];
+    }
+
+    function registrar() public view returns (address) {
+        return _registryStorage().registrarAddress;
     }
 
     function _unpackVersionFromCallData() private pure returns (uint256) {
@@ -28,8 +52,15 @@ contract BaseModuleProxy is IModuleProxy {
         return abi.decode(msg.data[4:36], (uint256));
     }
 
+    function _registryStorage() private pure returns (LibVersionRegistry.RegistryStorage storage s) {
+        bytes32 position = VERSION_REGISTRY_STORAGE_POSITION;
+        assembly {
+            s.slot := position
+        }
+    }
+
     fallback() external payable {
-        LibVersionRegistry.RegistryStorage storage s = LibVersionRegistry.registryStorage();
+        LibVersionRegistry.RegistryStorage storage s = _registryStorage();
         uint256 version = _unpackVersionFromCallData();
         address implementation = s.versionToImplementationAddress[version];
         require(implementation != address(0), "provided version does not have implementation");
