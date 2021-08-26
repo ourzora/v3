@@ -9,6 +9,7 @@ contract TestModuleV1 is IModule {
     bytes32 internal constant TEST_MODULE_STORAGE_POSITION = keccak256("TestModule.V1");
 
     struct TestModuleStorage {
+        uint256 version;
         uint256 magicNumber;
     }
 
@@ -16,7 +17,12 @@ contract TestModuleV1 is IModule {
         return TEST_MODULE_STORAGE_POSITION;
     }
 
-    function testModuleStorage() internal pure returns (TestModuleStorage storage s) {
+    function setVersion(uint256 _version) external override {
+        require(_testModuleStorage().version == 0, "version already set");
+        _testModuleStorage().version = _version;
+    }
+
+    function _testModuleStorage() internal pure returns (TestModuleStorage storage s) {
         bytes32 position = TEST_MODULE_STORAGE_POSITION;
         assembly {
             s.slot := position
@@ -24,12 +30,12 @@ contract TestModuleV1 is IModule {
     }
 
     function setMagicNumber(uint256, uint256 _num) external {
-        TestModuleStorage storage s = testModuleStorage();
+        TestModuleStorage storage s = _testModuleStorage();
         s.magicNumber = _num;
     }
 
     function getMagicNumber(uint256) external view returns (uint256) {
-        TestModuleStorage storage s = testModuleStorage();
+        TestModuleStorage storage s = _testModuleStorage();
         return s.magicNumber;
     }
 }

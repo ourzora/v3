@@ -24,6 +24,7 @@ library LibReserveAuctionV1 {
         address zoraV1ProtocolMarket;
         address wethAddress;
         Counters.Counter auctionIdTracker;
+        uint256 version;
         mapping(uint256 => Auction) auctions;
     }
 

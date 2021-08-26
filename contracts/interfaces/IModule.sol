@@ -9,4 +9,6 @@ pragma solidity 0.8.5;
 interface IModule {
     // Return the storage slot to be reserved for this module
     function storageSlot() external pure returns (bytes32);
+
+    function setVersion(uint256 _version) external;
 }

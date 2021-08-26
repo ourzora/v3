@@ -89,6 +89,10 @@ library LibVersionRegistry {
 
         _self.versionCounter.increment();
         uint256 version = _self.versionCounter.current();
+
+        (bool versionSetSuccess, ) = proposal.implementationAddress.delegatecall(abi.encodePacked(bytes4(keccak256("setVersion(uint256)")), version));
+        require(versionSetSuccess, "LibVersionRegistry::registerVersion could not set version");
+
         _self.implementationAddressToVersion[proposal.implementationAddress] = version;
         _self.versionToImplementationAddress[version] = proposal.implementationAddress;
         _self.reservedStorageSlots[storageSlot] = true;

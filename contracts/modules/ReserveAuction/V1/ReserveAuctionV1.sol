@@ -15,6 +15,11 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         return STORAGE_POSITION;
     }
 
+    function setVersion(uint256 _version) external override {
+        require(_reserveAuctionStorage().version == 0, "version already set");
+        _reserveAuctionStorage().version = _version;
+    }
+
     function auctions(uint256, uint256 _auctionId) external view returns (LibReserveAuctionV1.Auction memory) {
         return _reserveAuctionStorage().auctions[_auctionId];
     }
