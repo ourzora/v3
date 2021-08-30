@@ -12,6 +12,8 @@ import {IModule} from "../../../interfaces/IModule.sol";
 import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
+import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
+import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
 
 library LibReserveAuctionV1 {
     using Counters for Counters.Counter;
@@ -20,6 +22,8 @@ library LibReserveAuctionV1 {
 
     struct ReserveAuctionStorage {
         bool initialized;
+        address erc20TransferHelper;
+        address erc721TransferHelper;
         address zoraV1ProtocolMedia;
         address zoraV1ProtocolMarket;
         address wethAddress;
@@ -121,6 +125,8 @@ library LibReserveAuctionV1 {
 
     function init(
         ReserveAuctionStorage storage _self,
+        address _erc20TransferHelper,
+        address _erc721TransferHelper,
         address _zoraV1ProtocolMedia,
         address _wethAddress
     ) internal {
@@ -128,6 +134,8 @@ library LibReserveAuctionV1 {
         _self.zoraV1ProtocolMedia = _zoraV1ProtocolMedia;
         _self.zoraV1ProtocolMarket = IZoraV1Media(_zoraV1ProtocolMedia).marketContract();
         _self.wethAddress = _wethAddress;
+        _self.erc20TransferHelper = _erc20TransferHelper;
+        _self.erc721TransferHelper = _erc721TransferHelper;
         _self.initialized = true;
     }
 
@@ -173,7 +181,7 @@ library LibReserveAuctionV1 {
             auctionCurrency: _auctionCurrency
         });
 
-        IERC721(_tokenContract).transferFrom(tokenOwner, address(this), _tokenId);
+        ERC721TransferHelper(_self.erc721TransferHelper).transferFrom(_tokenContract, tokenOwner, address(this), _tokenId);
 
         _self.auctionIdTracker.increment();
 
@@ -270,7 +278,7 @@ library LibReserveAuctionV1 {
             _handleOutgoingTransfer(_self, lastBidder, _self.auctions[_auctionId].amount, _self.auctions[_auctionId].auctionCurrency);
         }
 
-        _handleIncomingTransfer(_amount, _self.auctions[_auctionId].auctionCurrency);
+        _handleIncomingTransfer(_self, _amount, _self.auctions[_auctionId].auctionCurrency);
 
         _self.auctions[_auctionId].amount = _amount;
         _self.auctions[_auctionId].bidder = payable(msg.sender);
@@ -422,7 +430,11 @@ library LibReserveAuctionV1 {
         IERC20(_currency).safeTransfer(_dest, _amount);
     }
 
-    function _handleIncomingTransfer(uint256 _amount, address _currency) private {
+    function _handleIncomingTransfer(
+        ReserveAuctionStorage storage _self,
+        uint256 _amount,
+        address _currency
+    ) private {
         if (_currency == address(0)) {
             require(msg.value >= _amount, "_handleIncomingTransfer msg value less than expected amount");
         } else {
@@ -431,7 +443,7 @@ library LibReserveAuctionV1 {
             // full amount to the market, resulting in potentally locked funds
             IERC20 token = IERC20(_currency);
             uint256 beforeBalance = token.balanceOf(address(this));
-            token.safeTransferFrom(msg.sender, address(this), _amount);
+            ERC20TransferHelper(_self.erc20TransferHelper).safeTransferFrom(_currency, msg.sender, address(this), _amount);
             uint256 afterBalance = token.balanceOf(address(this));
             require(beforeBalance.add(_amount) == afterBalance, "_handleIncomingERC20Transfer token transfer call did not transfer expected amount");
         }

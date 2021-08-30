@@ -3,6 +3,8 @@ import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
   BadErc721,
+  Erc20TransferHelper,
+  Erc721TransferHelper,
   LibReserveAuctionV1Factory,
   ReserveAuctionV1,
   TestEip2981Erc721,
@@ -15,19 +17,23 @@ import {
   bid,
   createReserveAuction,
   deployBadERC721,
+  deployERC20TransferHelper,
+  deployERC721TransferHelper,
   deployReserveAuctionV1,
   deployTestEIP2981ERC721,
   deployTestERC271,
   deployWETH,
+  deployZoraModuleApprovalsManager,
+  deployZoraProposalManager,
   deployZoraProtocol,
   endAuction,
   mintERC2981Token,
   mintERC721Token,
   mintZoraNFT,
   ONE_ETH,
+  proposeModule,
+  registerModule,
   revert,
-  TENTH_ETH,
-  timeTravel,
   timeTravelToEndOfAuction,
   toRoundedNumber,
   TWO_ETH,
@@ -51,6 +57,8 @@ describe('ReserveAuctionV1', () => {
   let bidderB: Signer;
   let fundsRecipient: Signer;
   let otherUser: Signer;
+  let erc20TransferHelper: Erc20TransferHelper;
+  let erc721TransferHelper: Erc721TransferHelper;
 
   beforeEach(async () => {
     await ethers.provider.send('hardhat_reset', []);
@@ -67,19 +75,39 @@ describe('ReserveAuctionV1', () => {
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     weth = await deployWETH();
-    reserveAuction = await deployReserveAuctionV1(zoraV1.address, weth.address);
-    // await proposeVersion(proxy, module.address, initCallData);
-    // await registerVersion(proxy, 1);
-    // reserveAuction = await connectAs<ReserveAuctionV1>(
-    //   proxy,
-    //   'ReserveAuctionV1'
-    // );
+    const proposalManager = await deployZoraProposalManager(
+      await deployer.getAddress()
+    );
+    const approvalManager = await deployZoraModuleApprovalsManager(
+      proposalManager.address
+    );
+    erc20TransferHelper = await deployERC20TransferHelper(
+      proposalManager.address,
+      approvalManager.address
+    );
+    erc721TransferHelper = await deployERC721TransferHelper(
+      proposalManager.address,
+      approvalManager.address
+    );
+    reserveAuction = await deployReserveAuctionV1(
+      erc20TransferHelper.address,
+      erc721TransferHelper.address,
+      zoraV1.address,
+      weth.address
+    );
+
+    await proposeModule(proposalManager, reserveAuction.address);
+    await registerModule(proposalManager, 1);
+
+    await approvalManager.setApprovalForAllModules(true);
+    await approvalManager.connect(bidderA).setApprovalForAllModules(true);
+    await approvalManager.connect(bidderB).setApprovalForAllModules(true);
   });
 
   describe('#createAuction', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
-      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
     });
 
     it('should revert if the 721 token does not support the ERC721 interface', async () => {
@@ -346,7 +374,7 @@ describe('ReserveAuctionV1', () => {
   describe('#setAuctionApproval', async () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
-      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
       await createReserveAuction(
         zoraV1,
         reserveAuction,
@@ -412,7 +440,7 @@ describe('ReserveAuctionV1', () => {
   describe('#setAuctionReservePrice', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
-      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
       await createReserveAuction(
         zoraV1,
         reserveAuction,
@@ -457,7 +485,7 @@ describe('ReserveAuctionV1', () => {
   describe('#createBid', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
-      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
       await createReserveAuction(
         zoraV1,
         reserveAuction,
@@ -469,7 +497,7 @@ describe('ReserveAuctionV1', () => {
 
     it('should not allow a bid on an unapproved auction', async () => {
       await mintZoraNFT(zoraV1, 'asa');
-      await approveNFTTransfer(zoraV1, reserveAuction.address, '1');
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address, '1');
       await createReserveAuction(
         zoraV1,
         reserveAuction,
@@ -575,7 +603,7 @@ describe('ReserveAuctionV1', () => {
   describe('#endAuction', async () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
-      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
       await createReserveAuction(
         zoraV1,
         reserveAuction,
@@ -595,7 +623,7 @@ describe('ReserveAuctionV1', () => {
 
     it('should revert if the auction has not begun', async () => {
       await mintZoraNFT(zoraV1, 'enw');
-      await approveNFTTransfer(zoraV1, reserveAuction.address, '1');
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address, '1');
       await createReserveAuction(
         zoraV1,
         reserveAuction,
@@ -611,7 +639,7 @@ describe('ReserveAuctionV1', () => {
 
     it('should revert if the auction has not completed', async () => {
       await mintZoraNFT(zoraV1, 'enwa');
-      await approveNFTTransfer(zoraV1, reserveAuction.address, '1');
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address, '1');
       await createReserveAuction(
         zoraV1,
         reserveAuction,
@@ -656,8 +684,12 @@ describe('ReserveAuctionV1', () => {
 
     it('should handle an eip2981 auction payout', async () => {
       await mintERC2981Token(testEIP2981ERC721, await deployer.getAddress());
-      // @ts-ignore
-      await approveNFTTransfer(testEIP2981ERC721, reserveAuction.address, '0');
+      await approveNFTTransfer(
+        // @ts-ignore
+        testEIP2981ERC721,
+        erc721TransferHelper.address,
+        '0'
+      );
       await createReserveAuction(
         testEIP2981ERC721,
         reserveAuction,
@@ -696,7 +728,7 @@ describe('ReserveAuctionV1', () => {
     it('should handle a vanilla erc721 auction payout', async () => {
       await mintERC721Token(testERC721, await deployer.getAddress());
       // @ts-ignore
-      await approveNFTTransfer(testERC721, reserveAuction.address);
+      await approveNFTTransfer(testERC721, erc721TransferHelper.address);
       await createReserveAuction(
         testERC721,
         reserveAuction,
@@ -741,7 +773,7 @@ describe('ReserveAuctionV1', () => {
   describe('#cancelAuction', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
-      await approveNFTTransfer(zoraV1, reserveAuction.address);
+      await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
       await createReserveAuction(
         zoraV1,
         reserveAuction,

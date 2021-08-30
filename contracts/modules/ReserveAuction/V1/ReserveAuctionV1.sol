@@ -10,8 +10,13 @@ contract ReserveAuctionV1 is ReentrancyGuard {
 
     LibReserveAuctionV1.ReserveAuctionStorage reserveAuctionStorage;
 
-    constructor(address _zoraV1ProtocolMedia, address _wethAddress) {
-        reserveAuctionStorage.init(_zoraV1ProtocolMedia, _wethAddress);
+    constructor(
+        address _erc20TransferHelper,
+        address _erc721TransferHelper,
+        address _zoraV1ProtocolMedia,
+        address _wethAddress
+    ) {
+        reserveAuctionStorage.init(_erc20TransferHelper, _erc721TransferHelper, _zoraV1ProtocolMedia, _wethAddress);
     }
 
     function auctions(uint256 _auctionId) external view returns (LibReserveAuctionV1.Auction memory) {
