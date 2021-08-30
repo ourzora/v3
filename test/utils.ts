@@ -162,11 +162,17 @@ export const deployWETH = async () => {
   return weth as Weth;
 };
 
-export const deployReserveAuctionV1 = async () => {
+export const deployReserveAuctionV1 = async (
+  zoraV1Media: string,
+  weth: string
+) => {
   const ReserveAuctionV1Factory = await ethers.getContractFactory(
     'ReserveAuctionV1'
   );
-  const reserveAuction = await ReserveAuctionV1Factory.deploy();
+  const reserveAuction = await ReserveAuctionV1Factory.deploy(
+    zoraV1Media,
+    weth
+  );
   await reserveAuction.deployed();
   return reserveAuction as ReserveAuctionV1;
 };
@@ -210,7 +216,6 @@ export async function createReserveAuction(
   const reservePrice = BigNumber.from(10).pow(18).div(2);
 
   await reserveAuction.createAuction(
-    1,
     tokenId,
     tokenContract.address,
     duration,
@@ -228,7 +233,7 @@ export async function bid(
   amount: BigNumberish,
   currency = ethers.constants.AddressZero
 ) {
-  await reserveAuction.createBid(1, auctionId, amount, {
+  await reserveAuction.createBid(auctionId, amount, {
     value: currency === ethers.constants.AddressZero ? amount : 0,
   });
 }
@@ -242,7 +247,7 @@ export async function timeTravelToEndOfAuction(
   auctionId: number,
   afterEnd = false
 ) {
-  const auction = await reserveAuction.auctions(1, auctionId);
+  const auction = await reserveAuction.auctions(auctionId);
   const base = auction.firstBidTime.add(auction.duration);
   const target = afterEnd ? base : base.sub(1);
   await timeTravel(target.toNumber());
@@ -252,7 +257,7 @@ export async function endAuction(
   reserveAuction: ReserveAuctionV1,
   auctionId: number
 ) {
-  await reserveAuction.endAuction(1, auctionId);
+  await reserveAuction.endAuction(auctionId);
 }
 
 export async function mintERC2981Token(eip2981: TestEip2981Erc721, to: string) {
