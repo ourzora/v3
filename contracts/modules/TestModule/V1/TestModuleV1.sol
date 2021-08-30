@@ -1,48 +1,65 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.5;
 
-import {IModule} from "../../../interfaces/IModule.sol";
+import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
+import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 
 import "hardhat/console.sol";
 
-contract TestModuleV1 is IModule {
-    bytes32 internal constant TEST_MODULE_STORAGE_POSITION = keccak256("TestModule.V1");
+contract TestModuleV1 {
+    address erc20TransferHelper;
+    address erc721TransferHelper;
 
-    struct TestModuleStorage {
-        uint256 version;
-        uint256 magicNumber;
+    constructor(address _erc20TransferHelper, address _erc721TransferHelper) {
+        erc20TransferHelper = _erc20TransferHelper;
+        erc721TransferHelper = _erc721TransferHelper;
     }
 
-    struct MagicNumberUpdatedEventData {
-        uint256 magicNumber;
+    function depositERC20(
+        address _tokenContract,
+        address _from,
+        uint256 _amount
+    ) public {
+        ERC20TransferHelper(erc20TransferHelper).safeTransferFrom(_tokenContract, _from, address(this), _amount);
     }
 
-    event MagicNumberUpdated(uint256 indexed version, MagicNumberUpdatedEventData data);
-
-    function storageSlot() external pure override returns (bytes32) {
-        return TEST_MODULE_STORAGE_POSITION;
+    function safeDepositERC721(
+        address _tokenContract,
+        address _from,
+        uint256 _tokenID
+    ) public {
+        ERC721TransferHelper(erc721TransferHelper).safeTransferFrom(_tokenContract, _from, address(this), _tokenID);
     }
 
-    function setVersion(uint256 _version) external override {
-        require(_testModuleStorage().version == 0, "version already set");
-        _testModuleStorage().version = _version;
+    function depositERC721(
+        address _tokenContract,
+        address _from,
+        uint256 _tokenID
+    ) public {
+        ERC721TransferHelper(erc721TransferHelper).transferFrom(_tokenContract, _from, address(this), _tokenID);
     }
 
-    function setMagicNumber(uint256, uint256 _num) external {
-        TestModuleStorage storage s = _testModuleStorage();
-        s.magicNumber = _num;
-        emit MagicNumberUpdated(s.version, MagicNumberUpdatedEventData(_num));
+    function withdrawERC20(
+        address _tokenContract,
+        address _to,
+        uint256 _amount
+    ) public {
+        ERC20TransferHelper(erc20TransferHelper).safeTransferFrom(_tokenContract, address(this), _to, _amount);
     }
 
-    function _testModuleStorage() internal pure returns (TestModuleStorage storage s) {
-        bytes32 position = TEST_MODULE_STORAGE_POSITION;
-        assembly {
-            s.slot := position
-        }
+    function withdrawERC721(
+        address _tokenContract,
+        address _to,
+        uint256 _tokenID
+    ) public {
+        ERC721TransferHelper(erc721TransferHelper).transferFrom(_tokenContract, address(this), _to, _tokenID);
     }
 
-    function getMagicNumber(uint256) external view returns (uint256) {
-        TestModuleStorage storage s = _testModuleStorage();
-        return s.magicNumber;
+    function safeWithdrawERC721(
+        address _tokenContract,
+        address _to,
+        uint256 _tokenID
+    ) public {
+        ERC721TransferHelper(erc721TransferHelper).safeTransferFrom(_tokenContract, address(this), _to, _tokenID);
     }
 }

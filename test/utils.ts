@@ -1,15 +1,18 @@
 import { ethers } from 'hardhat';
 import {
   BadErc721,
-  BaseModuleProxy,
   ReserveAuctionV1,
   TestEip2981Erc721,
   TestErc721,
   TestModuleV1,
   Weth,
+  ZoraProposalManager,
+  ZoraModuleApprovalsManager,
+  Erc20TransferHelper,
+  Erc721TransferHelper,
+  SimpleModule,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
-import { BytesLike } from '@ethersproject/bytes';
 import {
   Erc721,
   MarketFactory,
@@ -29,20 +32,98 @@ export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 export const toRoundedNumber = (bn: BigNumber) =>
   bn.div(THOUSANDTH_ETH).toNumber();
 
-export const deployBaseModuleProxy = async (registrar: string) => {
-  const BaseModuleProxyFactory = await ethers.getContractFactory(
-    'BaseModuleProxy'
+export const deployZoraProposalManager = async (registrar: string) => {
+  const ZoraProposalManagerFactory = await ethers.getContractFactory(
+    'ZoraProposalManager'
   );
-  const baseModuleProxy = await BaseModuleProxyFactory.deploy(registrar);
-  await baseModuleProxy.deployed();
-  return baseModuleProxy as BaseModuleProxy;
+  const proposalManager = await ZoraProposalManagerFactory.deploy(registrar);
+  await proposalManager.deployed();
+  return proposalManager as ZoraProposalManager;
 };
 
-export const deployTestModule = async () => {
+export const proposeModule = async (
+  manager: ZoraProposalManager,
+  moduleAddr: string
+) => {
+  return manager.proposeModule(moduleAddr);
+};
+
+export const registerModule = async (
+  manager: ZoraProposalManager,
+  proposalID: number
+) => {
+  return manager.registerModule(proposalID);
+};
+
+export const cancelModule = async (
+  manager: ZoraProposalManager,
+  proposalID: number
+) => {
+  return manager.cancelProposal(proposalID);
+};
+
+export const deployZoraModuleApprovalsManager = async (
+  proposalManagerAddr: string
+) => {
+  const ZoraModuleApprovalsManager = await ethers.getContractFactory(
+    'ZoraModuleApprovalsManager'
+  );
+  const approvalsManager = await ZoraModuleApprovalsManager.deploy(
+    proposalManagerAddr
+  );
+  await approvalsManager.deployed();
+
+  return approvalsManager as ZoraModuleApprovalsManager;
+};
+
+export const deployERC20TransferHelper = async (
+  proposalManager: string,
+  approvalsManager: string
+) => {
+  const ERC20TransferHelperFactory = await ethers.getContractFactory(
+    'ERC20TransferHelper'
+  );
+  const transferHelper = await ERC20TransferHelperFactory.deploy(
+    proposalManager,
+    approvalsManager
+  );
+  await transferHelper.deployed();
+
+  return transferHelper as Erc20TransferHelper;
+};
+
+export const deployERC721TransferHelper = async (
+  proposalManager: string,
+  approvalsManager: string
+) => {
+  const ERC721TransferHelperFactory = await ethers.getContractFactory(
+    'ERC721TransferHelper'
+  );
+  const transferHelper = await ERC721TransferHelperFactory.deploy(
+    proposalManager,
+    approvalsManager
+  );
+  await transferHelper.deployed();
+
+  return transferHelper as Erc721TransferHelper;
+};
+
+export const deployTestModule = async (
+  erc20Helper: string,
+  erc721Helper: string
+) => {
   const TestModuleFactory = await ethers.getContractFactory('TestModuleV1');
-  const testModule = await TestModuleFactory.deploy();
+  const testModule = await TestModuleFactory.deploy(erc20Helper, erc721Helper);
   await testModule.deployed();
   return testModule as TestModuleV1;
+};
+
+export const deploySimpleModule = async () => {
+  const SimpleModuleFactory = await ethers.getContractFactory('SimpleModule');
+  const simpleModule = await SimpleModuleFactory.deploy();
+  await simpleModule.deployed();
+
+  return simpleModule as SimpleModule;
 };
 
 export const deployZoraProtocol = async () => {
@@ -88,36 +169,6 @@ export const deployReserveAuctionV1 = async () => {
   const reserveAuction = await ReserveAuctionV1Factory.deploy();
   await reserveAuction.deployed();
   return reserveAuction as ReserveAuctionV1;
-};
-
-export const connectAs = async <T extends unknown>(
-  proxy: Contract,
-  moduleName: string
-) => {
-  const Factory = await ethers.getContractFactory(moduleName);
-  return Factory.attach(proxy.address) as T;
-};
-
-export const proposeVersion = async (
-  proxy: BaseModuleProxy,
-  moduleAddress: string,
-  callData: BytesLike = []
-) => {
-  await proxy.proposeVersion(moduleAddress, callData);
-};
-
-export const registerVersion = async (
-  proxy: BaseModuleProxy,
-  proposalID: number
-) => {
-  await proxy.registerVersion(proposalID);
-};
-
-export const cancelProposal = async (
-  proxy: BaseModuleProxy,
-  proposalID: number
-) => {
-  await proxy.cancelProposal(proposalID);
 };
 
 export const mintZoraNFT = async (zoraV1Media: Media, seed = '') => {

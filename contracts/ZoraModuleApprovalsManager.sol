@@ -15,6 +15,10 @@ contract ZoraModuleApprovalsManager {
     // user address => module address => approved
     mapping(address => mapping(address => bool)) public userApprovals;
 
+    constructor(address _proposalManager) {
+        proposalManager = _proposalManager;
+    }
+
     function setApprovalForAllModules(bool _approved) public {
         approvedForAll[msg.sender] = _approved;
 

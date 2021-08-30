@@ -19,7 +19,7 @@ contract ZoraProposalManager {
         ProposalStatus status;
     }
 
-    address registrar;
+    address public registrar;
     mapping(address => uint256) public proposalImplementationToProposalID;
     mapping(uint256 => Proposal) public proposalIDToProposal;
     Counters.Counter proposalCounter;
@@ -57,7 +57,7 @@ contract ZoraProposalManager {
     }
 
     function registerModule(uint256 _proposalID) public onlyRegistrar {
-        Proposal memory proposal = proposalIDToProposal[_proposalID];
+        Proposal storage proposal = proposalIDToProposal[_proposalID];
 
         require(proposal.implementationAddress != address(0), "ZPM::registerModule proposal does not exist");
         require(proposal.status == ProposalStatus.Pending, "ZPM::registerModule can only register pending proposals");
@@ -71,7 +71,7 @@ contract ZoraProposalManager {
         require(proposalIDToProposal[proposalID].implementationAddress != address(0), "ZPM::cancelProposal proposal does not exist");
         require(proposalIDToProposal[proposalID].status == ProposalStatus.Pending, "ZPM::cancelProposal can only cancel pending proposals");
 
-        Proposal memory proposal = proposalIDToProposal[proposalID];
+        Proposal storage proposal = proposalIDToProposal[proposalID];
         proposal.status = ProposalStatus.Failed;
 
         // TODO: emit event
