@@ -1,15 +1,18 @@
 import { ethers } from 'hardhat';
 import {
   BadErc721,
-  BaseModuleProxy,
   ReserveAuctionV1,
   TestEip2981Erc721,
   TestErc721,
   TestModuleV1,
   Weth,
+  ZoraProposalManager,
+  ZoraModuleApprovalsManager,
+  Erc20TransferHelper,
+  Erc721TransferHelper,
+  SimpleModule,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
-import { BytesLike } from '@ethersproject/bytes';
 import {
   Erc721,
   MarketFactory,
@@ -20,6 +23,7 @@ import {
 export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
 
+export const ONE_DAY = 24 * 60 * 60;
 export const ONE_ETH = ethers.utils.parseEther('1');
 export const TWO_ETH = ethers.utils.parseEther('2');
 export const TENTH_ETH = ethers.utils.parseEther('0.1');
@@ -29,20 +33,98 @@ export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 export const toRoundedNumber = (bn: BigNumber) =>
   bn.div(THOUSANDTH_ETH).toNumber();
 
-export const deployBaseModuleProxy = async (registrar: string) => {
-  const BaseModuleProxyFactory = await ethers.getContractFactory(
-    'BaseModuleProxy'
+export const deployZoraProposalManager = async (registrar: string) => {
+  const ZoraProposalManagerFactory = await ethers.getContractFactory(
+    'ZoraProposalManager'
   );
-  const baseModuleProxy = await BaseModuleProxyFactory.deploy(registrar);
-  await baseModuleProxy.deployed();
-  return baseModuleProxy as BaseModuleProxy;
+  const proposalManager = await ZoraProposalManagerFactory.deploy(registrar);
+  await proposalManager.deployed();
+  return proposalManager as ZoraProposalManager;
 };
 
-export const deployTestModule = async () => {
+export const proposeModule = async (
+  manager: ZoraProposalManager,
+  moduleAddr: string
+) => {
+  return manager.proposeModule(moduleAddr);
+};
+
+export const registerModule = async (
+  manager: ZoraProposalManager,
+  proposalID: number
+) => {
+  return manager.registerModule(proposalID);
+};
+
+export const cancelModule = async (
+  manager: ZoraProposalManager,
+  proposalID: number
+) => {
+  return manager.cancelProposal(proposalID);
+};
+
+export const deployZoraModuleApprovalsManager = async (
+  proposalManagerAddr: string
+) => {
+  const ZoraModuleApprovalsManager = await ethers.getContractFactory(
+    'ZoraModuleApprovalsManager'
+  );
+  const approvalsManager = await ZoraModuleApprovalsManager.deploy(
+    proposalManagerAddr
+  );
+  await approvalsManager.deployed();
+
+  return approvalsManager as ZoraModuleApprovalsManager;
+};
+
+export const deployERC20TransferHelper = async (
+  proposalManager: string,
+  approvalsManager: string
+) => {
+  const ERC20TransferHelperFactory = await ethers.getContractFactory(
+    'ERC20TransferHelper'
+  );
+  const transferHelper = await ERC20TransferHelperFactory.deploy(
+    proposalManager,
+    approvalsManager
+  );
+  await transferHelper.deployed();
+
+  return transferHelper as Erc20TransferHelper;
+};
+
+export const deployERC721TransferHelper = async (
+  proposalManager: string,
+  approvalsManager: string
+) => {
+  const ERC721TransferHelperFactory = await ethers.getContractFactory(
+    'ERC721TransferHelper'
+  );
+  const transferHelper = await ERC721TransferHelperFactory.deploy(
+    proposalManager,
+    approvalsManager
+  );
+  await transferHelper.deployed();
+
+  return transferHelper as Erc721TransferHelper;
+};
+
+export const deployTestModule = async (
+  erc20Helper: string,
+  erc721Helper: string
+) => {
   const TestModuleFactory = await ethers.getContractFactory('TestModuleV1');
-  const testModule = await TestModuleFactory.deploy();
+  const testModule = await TestModuleFactory.deploy(erc20Helper, erc721Helper);
   await testModule.deployed();
   return testModule as TestModuleV1;
+};
+
+export const deploySimpleModule = async () => {
+  const SimpleModuleFactory = await ethers.getContractFactory('SimpleModule');
+  const simpleModule = await SimpleModuleFactory.deploy();
+  await simpleModule.deployed();
+
+  return simpleModule as SimpleModule;
 };
 
 export const deployZoraProtocol = async () => {
@@ -81,43 +163,23 @@ export const deployWETH = async () => {
   return weth as Weth;
 };
 
-export const deployReserveAuctionV1 = async () => {
+export const deployReserveAuctionV1 = async (
+  proposalManager: string,
+  approvalsManager: string,
+  zoraV1Media: string,
+  weth: string
+) => {
   const ReserveAuctionV1Factory = await ethers.getContractFactory(
     'ReserveAuctionV1'
   );
-  const reserveAuction = await ReserveAuctionV1Factory.deploy();
+  const reserveAuction = await ReserveAuctionV1Factory.deploy(
+    proposalManager,
+    approvalsManager,
+    zoraV1Media,
+    weth
+  );
   await reserveAuction.deployed();
   return reserveAuction as ReserveAuctionV1;
-};
-
-export const connectAs = async <T extends unknown>(
-  proxy: Contract,
-  moduleName: string
-) => {
-  const Factory = await ethers.getContractFactory(moduleName);
-  return Factory.attach(proxy.address) as T;
-};
-
-export const proposeVersion = async (
-  proxy: BaseModuleProxy,
-  moduleAddress: string,
-  callData: BytesLike = []
-) => {
-  await proxy.proposeVersion(moduleAddress, callData);
-};
-
-export const registerVersion = async (
-  proxy: BaseModuleProxy,
-  proposalID: number
-) => {
-  await proxy.registerVersion(proposalID);
-};
-
-export const cancelProposal = async (
-  proxy: BaseModuleProxy,
-  proposalID: number
-) => {
-  await proxy.cancelProposal(proposalID);
 };
 
 export const mintZoraNFT = async (zoraV1Media: Media, seed = '') => {
@@ -159,7 +221,6 @@ export async function createReserveAuction(
   const reservePrice = BigNumber.from(10).pow(18).div(2);
 
   await reserveAuction.createAuction(
-    1,
     tokenId,
     tokenContract.address,
     duration,
@@ -177,7 +238,7 @@ export async function bid(
   amount: BigNumberish,
   currency = ethers.constants.AddressZero
 ) {
-  await reserveAuction.createBid(1, auctionId, amount, {
+  await reserveAuction.createBid(auctionId, amount, {
     value: currency === ethers.constants.AddressZero ? amount : 0,
   });
 }
@@ -191,7 +252,7 @@ export async function timeTravelToEndOfAuction(
   auctionId: number,
   afterEnd = false
 ) {
-  const auction = await reserveAuction.auctions(1, auctionId);
+  const auction = await reserveAuction.auctions(auctionId);
   const base = auction.firstBidTime.add(auction.duration);
   const target = afterEnd ? base : base.sub(1);
   await timeTravel(target.toNumber());
@@ -201,7 +262,7 @@ export async function endAuction(
   reserveAuction: ReserveAuctionV1,
   auctionId: number
 ) {
-  await reserveAuction.endAuction(1, auctionId);
+  await reserveAuction.endAuction(auctionId);
 }
 
 export async function mintERC2981Token(eip2981: TestEip2981Erc721, to: string) {

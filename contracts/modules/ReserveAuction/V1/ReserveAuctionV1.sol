@@ -3,35 +3,27 @@ pragma solidity 0.8.5;
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-import {IModule} from "../../../interfaces/IModule.sol";
 import {LibReserveAuctionV1} from "./LibReserveAuctionV1.sol";
 
-contract ReserveAuctionV1 is IModule, ReentrancyGuard {
+contract ReserveAuctionV1 is ReentrancyGuard {
     using LibReserveAuctionV1 for LibReserveAuctionV1.ReserveAuctionStorage;
 
-    bytes32 internal constant STORAGE_POSITION = keccak256("ReserveAuction.V1");
+    LibReserveAuctionV1.ReserveAuctionStorage reserveAuctionStorage;
 
-    function storageSlot() external pure override returns (bytes32) {
-        return STORAGE_POSITION;
+    constructor(
+        address _erc20TransferHelper,
+        address _erc721TransferHelper,
+        address _zoraV1ProtocolMedia,
+        address _wethAddress
+    ) {
+        reserveAuctionStorage.init(_erc20TransferHelper, _erc721TransferHelper, _zoraV1ProtocolMedia, _wethAddress);
     }
 
-    function setVersion(uint256 _version) external override {
-        require(_reserveAuctionStorage().version == 0, "version already set");
-        _reserveAuctionStorage().version = _version;
-    }
-
-    function auctions(uint256, uint256 _auctionId) external view returns (LibReserveAuctionV1.Auction memory) {
-        return _reserveAuctionStorage().auctions[_auctionId];
-    }
-
-    function initialize(address _zoraV1ProtocolMedia, address _wethAddress) external {
-        // TODO: verify the security of keeping this call external. It must be external so it can be added to
-        // the function table and thus callable via delegatecall. However, there may be a better practice
-        _reserveAuctionStorage().init(_zoraV1ProtocolMedia, _wethAddress);
+    function auctions(uint256 _auctionId) external view returns (LibReserveAuctionV1.Auction memory) {
+        return reserveAuctionStorage.auctions[_auctionId];
     }
 
     function createAuction(
-        uint256, /*_version*/
         uint256 _tokenId,
         address _tokenContract,
         uint256 _duration,
@@ -42,7 +34,7 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
         address _auctionCurrency
     ) public nonReentrant returns (uint256) {
         return
-            _reserveAuctionStorage().createAuction(
+            reserveAuctionStorage.createAuction(
                 _tokenId,
                 _tokenContract,
                 _duration,
@@ -54,48 +46,23 @@ contract ReserveAuctionV1 is IModule, ReentrancyGuard {
             );
     }
 
-    function setAuctionApproval(
-        uint256, /*_version*/
-        uint256 _auctionId,
-        bool _approved
-    ) external {
-        _reserveAuctionStorage().setAuctionApproval(_auctionId, _approved);
+    function setAuctionApproval(uint256 _auctionId, bool _approved) external {
+        reserveAuctionStorage.setAuctionApproval(_auctionId, _approved);
     }
 
-    function setAuctionReservePrice(
-        uint256, /*_version*/
-        uint256 _auctionId,
-        uint256 _reservePrice
-    ) external {
-        _reserveAuctionStorage().setAuctionReservePrice(_auctionId, _reservePrice);
+    function setAuctionReservePrice(uint256 _auctionId, uint256 _reservePrice) external {
+        reserveAuctionStorage.setAuctionReservePrice(_auctionId, _reservePrice);
     }
 
-    function createBid(
-        uint256, /*_version*/
-        uint256 _auctionId,
-        uint256 _amount
-    ) external payable nonReentrant {
-        _reserveAuctionStorage().createBid(_auctionId, _amount);
+    function createBid(uint256 _auctionId, uint256 _amount) external payable nonReentrant {
+        reserveAuctionStorage.createBid(_auctionId, _amount);
     }
 
-    function endAuction(
-        uint256, /*_version*/
-        uint256 _auctionId
-    ) external nonReentrant {
-        _reserveAuctionStorage().endAuction(_auctionId);
+    function endAuction(uint256 _auctionId) external nonReentrant {
+        reserveAuctionStorage.endAuction(_auctionId);
     }
 
-    function cancelAuction(
-        uint256, /*_version*/
-        uint256 _auctionId
-    ) external nonReentrant {
-        _reserveAuctionStorage().cancelAuction(_auctionId);
-    }
-
-    function _reserveAuctionStorage() internal pure returns (LibReserveAuctionV1.ReserveAuctionStorage storage s) {
-        bytes32 position = STORAGE_POSITION;
-        assembly {
-            s.slot := position
-        }
+    function cancelAuction(uint256 _auctionId) external nonReentrant {
+        reserveAuctionStorage.cancelAuction(_auctionId);
     }
 }

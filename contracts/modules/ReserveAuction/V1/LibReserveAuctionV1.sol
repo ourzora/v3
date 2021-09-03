@@ -12,6 +12,8 @@ import {IModule} from "../../../interfaces/IModule.sol";
 import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
+import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
+import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
 
 library LibReserveAuctionV1 {
     using Counters for Counters.Counter;
@@ -20,6 +22,8 @@ library LibReserveAuctionV1 {
 
     struct ReserveAuctionStorage {
         bool initialized;
+        address erc20TransferHelper;
+        address erc721TransferHelper;
         address zoraV1ProtocolMedia;
         address zoraV1ProtocolMarket;
         address wethAddress;
@@ -68,76 +72,48 @@ library LibReserveAuctionV1 {
         address auctionCurrency;
     }
 
-    struct AuctionCreatedEventData {
-        uint256 auctionId;
-        uint256 tokenId;
-        address tokenContract;
-        uint256 duration;
-        uint256 reservePrice;
-        address tokenOwner;
-        address curator;
-        address fundsRecipient;
-        uint8 curatorFeePercentage;
-        address auctionCurrency;
-    }
+    event AuctionCreated(
+        uint256 indexed auctionId,
+        uint256 indexed tokenId,
+        address indexed tokenContract,
+        uint256 duration,
+        uint256 reservePrice,
+        address tokenOwner,
+        address curator,
+        address fundsRecipient,
+        uint8 curatorFeePercentage,
+        address auctionCurrency
+    );
 
-    struct AuctionApprovalUpdatedEventData {
-        uint256 auctionId;
-        uint256 tokenId;
-        address tokenContract;
-        bool approved;
-    }
+    event AuctionApprovalUpdated(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, bool approved);
 
-    struct AuctionReservePriceUpdatedEventData {
-        uint256 auctionId;
-        uint256 tokenId;
-        address tokenContract;
-        uint256 reservePrice;
-    }
+    event AuctionReservePriceUpdated(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, uint256 reservePrice);
 
-    struct AuctionBidEventData {
-        uint256 auctionId;
-        uint256 tokenId;
-        address tokenContract;
-        address sender;
-        uint256 value;
-        bool firstBid;
-        bool extended;
-    }
+    event AuctionBid(
+        uint256 indexed auctionId,
+        uint256 indexed tokenId,
+        address indexed tokenContract,
+        address sender,
+        uint256 value,
+        bool firstBid,
+        bool extended
+    );
 
-    struct AuctionDurationExtendedEventData {
-        uint256 auctionId;
-        uint256 tokenId;
-        address tokenContract;
-        uint256 duration;
-    }
+    event AuctionDurationExtended(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, uint256 duration);
 
-    struct AuctionEndedEventData {
-        uint256 auctionId;
-        uint256 tokenId;
-        address tokenContract;
-        address curator;
-        address winner;
-        address fundsRecipient;
-        uint256 amount;
-        uint256 curatorFee;
-        address auctionCurrency;
-    }
+    event AuctionEnded(
+        uint256 indexed auctionId,
+        uint256 indexed tokenId,
+        address indexed tokenContract,
+        address curator,
+        address winner,
+        address fundsRecipient,
+        uint256 amount,
+        uint256 curatorFee,
+        address auctionCurrency
+    );
 
-    struct AuctionCanceledEventData {
-        uint256 auctionId;
-        uint256 tokenId;
-        address tokenContract;
-        address tokenOwner;
-    }
-
-    event AuctionCreated(uint256 indexed version, AuctionCreatedEventData data);
-    event AuctionApprovalUpdated(uint256 indexed version, AuctionApprovalUpdatedEventData data);
-    event AuctionReservePriceUpdated(uint256 indexed version, AuctionReservePriceUpdatedEventData data);
-    event AuctionBid(uint256 indexed version, AuctionBidEventData data);
-    event AuctionDurationExtended(uint256 indexed version, AuctionDurationExtendedEventData data);
-    event AuctionEnded(uint256 indexed version, AuctionEndedEventData data);
-    event AuctionCanceled(uint256 indexed version, AuctionCanceledEventData data);
+    event AuctionCanceled(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, address tokenOwner);
 
     /**
      * @notice Require that the specified auction exists
@@ -149,6 +125,8 @@ library LibReserveAuctionV1 {
 
     function init(
         ReserveAuctionStorage storage _self,
+        address _erc20TransferHelper,
+        address _erc721TransferHelper,
         address _zoraV1ProtocolMedia,
         address _wethAddress
     ) internal {
@@ -156,6 +134,8 @@ library LibReserveAuctionV1 {
         _self.zoraV1ProtocolMedia = _zoraV1ProtocolMedia;
         _self.zoraV1ProtocolMarket = IZoraV1Media(_zoraV1ProtocolMedia).marketContract();
         _self.wethAddress = _wethAddress;
+        _self.erc20TransferHelper = _erc20TransferHelper;
+        _self.erc721TransferHelper = _erc721TransferHelper;
         _self.initialized = true;
     }
 
@@ -201,24 +181,21 @@ library LibReserveAuctionV1 {
             auctionCurrency: _auctionCurrency
         });
 
-        IERC721(_tokenContract).transferFrom(tokenOwner, address(this), _tokenId);
+        ERC721TransferHelper(_self.erc721TransferHelper).transferFrom(_tokenContract, tokenOwner, address(this), _tokenId);
 
         _self.auctionIdTracker.increment();
 
         emit AuctionCreated(
-            _self.version,
-            AuctionCreatedEventData(
-                auctionId,
-                _tokenId,
-                _tokenContract,
-                _duration,
-                _reservePrice,
-                tokenOwner,
-                _curator,
-                _fundsRecipient,
-                _curatorFeePercentage,
-                _auctionCurrency
-            )
+            auctionId,
+            _tokenId,
+            _tokenContract,
+            _duration,
+            _reservePrice,
+            tokenOwner,
+            _curator,
+            _fundsRecipient,
+            _curatorFeePercentage,
+            _auctionCurrency
         );
 
         if (_self.auctions[auctionId].curator == address(0) || _curator == tokenOwner) {
@@ -261,10 +238,7 @@ library LibReserveAuctionV1 {
 
         _self.auctions[_auctionId].reservePrice = _reservePrice;
 
-        emit AuctionReservePriceUpdated(
-            _self.version,
-            AuctionReservePriceUpdatedEventData(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _reservePrice)
-        );
+        emit AuctionReservePriceUpdated(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _reservePrice);
     }
 
     /**
@@ -304,7 +278,7 @@ library LibReserveAuctionV1 {
             _handleOutgoingTransfer(_self, lastBidder, _self.auctions[_auctionId].amount, _self.auctions[_auctionId].auctionCurrency);
         }
 
-        _handleIncomingTransfer(_amount, _self.auctions[_auctionId].auctionCurrency);
+        _handleIncomingTransfer(_self, _amount, _self.auctions[_auctionId].auctionCurrency);
 
         _self.auctions[_auctionId].amount = _amount;
         _self.auctions[_auctionId].bidder = payable(msg.sender);
@@ -327,27 +301,21 @@ library LibReserveAuctionV1 {
         }
 
         emit AuctionBid(
-            _self.version,
-            AuctionBidEventData(
-                _auctionId,
-                _self.auctions[_auctionId].tokenId,
-                _self.auctions[_auctionId].tokenContract,
-                msg.sender,
-                _amount,
-                lastBidder == address(0), // firstBid boolean
-                extended
-            )
+            _auctionId,
+            _self.auctions[_auctionId].tokenId,
+            _self.auctions[_auctionId].tokenContract,
+            msg.sender,
+            _amount,
+            lastBidder == address(0), // firstBid boolean
+            extended
         );
 
         if (extended) {
             emit AuctionDurationExtended(
-                _self.version,
-                AuctionDurationExtendedEventData(
-                    _auctionId,
-                    _self.auctions[_auctionId].tokenId,
-                    _self.auctions[_auctionId].tokenContract,
-                    _self.auctions[_auctionId].duration
-                )
+                _auctionId,
+                _self.auctions[_auctionId].tokenId,
+                _self.auctions[_auctionId].tokenContract,
+                _self.auctions[_auctionId].duration
             );
         }
     }
@@ -372,18 +340,15 @@ library LibReserveAuctionV1 {
         }
 
         emit AuctionEnded(
-            _self.version,
-            AuctionEndedEventData(
-                _auctionId,
-                _self.auctions[_auctionId].tokenId,
-                _self.auctions[_auctionId].tokenContract,
-                _self.auctions[_auctionId].curator,
-                _self.auctions[_auctionId].bidder,
-                _self.auctions[_auctionId].fundsRecipient,
-                fundsRecipientProfit,
-                curatorFee,
-                _self.auctions[_auctionId].auctionCurrency
-            )
+            _auctionId,
+            _self.auctions[_auctionId].tokenId,
+            _self.auctions[_auctionId].tokenContract,
+            _self.auctions[_auctionId].curator,
+            _self.auctions[_auctionId].bidder,
+            _self.auctions[_auctionId].fundsRecipient,
+            fundsRecipientProfit,
+            curatorFee,
+            _self.auctions[_auctionId].auctionCurrency
         );
 
         delete _self.auctions[_auctionId];
@@ -405,15 +370,7 @@ library LibReserveAuctionV1 {
             _self.auctions[_auctionId].tokenOwner,
             _self.auctions[_auctionId].tokenId
         );
-        emit AuctionCanceled(
-            _self.version,
-            AuctionCanceledEventData(
-                _auctionId,
-                _self.auctions[_auctionId].tokenId,
-                _self.auctions[_auctionId].tokenContract,
-                _self.auctions[_auctionId].tokenOwner
-            )
-        );
+        emit AuctionCanceled(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _self.auctions[_auctionId].tokenOwner);
 
         delete _self.auctions[_auctionId];
     }
@@ -424,10 +381,7 @@ library LibReserveAuctionV1 {
         bool _approved
     ) private {
         _self.auctions[_auctionId].approved = _approved;
-        emit AuctionApprovalUpdated(
-            _self.version,
-            AuctionApprovalUpdatedEventData(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _approved)
-        );
+        emit AuctionApprovalUpdated(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _approved);
     }
 
     function _exists(ReserveAuctionStorage storage _self, uint256 _auctionId) private view returns (bool) {
@@ -476,7 +430,11 @@ library LibReserveAuctionV1 {
         IERC20(_currency).safeTransfer(_dest, _amount);
     }
 
-    function _handleIncomingTransfer(uint256 _amount, address _currency) private {
+    function _handleIncomingTransfer(
+        ReserveAuctionStorage storage _self,
+        uint256 _amount,
+        address _currency
+    ) private {
         if (_currency == address(0)) {
             require(msg.value >= _amount, "_handleIncomingTransfer msg value less than expected amount");
         } else {
@@ -485,7 +443,7 @@ library LibReserveAuctionV1 {
             // full amount to the market, resulting in potentally locked funds
             IERC20 token = IERC20(_currency);
             uint256 beforeBalance = token.balanceOf(address(this));
-            token.safeTransferFrom(msg.sender, address(this), _amount);
+            ERC20TransferHelper(_self.erc20TransferHelper).safeTransferFrom(_currency, msg.sender, address(this), _amount);
             uint256 afterBalance = token.balanceOf(address(this));
             require(beforeBalance.add(_amount) == afterBalance, "_handleIncomingERC20Transfer token transfer call did not transfer expected amount");
         }
