@@ -30,4 +30,10 @@ contract ZoraModuleApprovalsManager {
 
         // TODO: emit event
     }
+
+    function setBatchApprovalForModules(address[] memory _moduleAddresses, bool _approved) public {
+        for (uint256 i = 0; i < _moduleAddresses.length; i++) {
+            setApprovalForModule(_moduleAddresses[i], _approved);
+        }
+    }
 }

@@ -61,4 +61,26 @@ describe('ZoraModuleApprovalsManager', () => {
       ).to.eq(true);
     });
   });
+
+  describe('#setBatchApprovalForModules', () => {
+    it('should approve an array of modules', async () => {
+      const modules = [
+        await deploySimpleModule(),
+        await deploySimpleModule(),
+        await deploySimpleModule(),
+        await deploySimpleModule(),
+      ].map((m) => m.address);
+      await manager
+        .connect(otherUser)
+        .setBatchApprovalForModules(modules, true);
+      await Promise.all(
+        modules.map((m) => {
+          return (async () =>
+            expect(
+              await manager.userApprovals(await otherUser.getAddress(), m)
+            ).to.eq(true))();
+        })
+      );
+    });
+  });
 });
