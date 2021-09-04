@@ -17,20 +17,11 @@ interface IZoraV1Market {
         Decimal owner;
     }
 
-    function isValidBid(uint256 tokenId, uint256 bidAmount)
-        external
-        view
-        returns (bool);
+    function isValidBid(uint256 tokenId, uint256 bidAmount) external view returns (bool);
 
-    function bidSharesForToken(uint256 tokenId)
-        external
-        view
-        returns (BidShares memory);
+    function bidSharesForToken(uint256 tokenId) external view returns (BidShares memory);
 
-    function splitShare(Decimal memory share, uint256 amount)
-        external
-        pure
-        returns (uint256);
+    function splitShare(Decimal memory share, uint256 amount) external pure returns (uint256);
 }
 
 interface IZoraV1Media is IERC721 {
@@ -38,8 +29,5 @@ interface IZoraV1Media is IERC721 {
 
     function tokenCreators(uint256 tokenId) external view returns (address);
 
-    function previousTokenOwner(uint256 tokenId)
-        external
-        view
-        returns (address);
+    function previousTokenOwner(uint256 tokenId) external view returns (address);
 }

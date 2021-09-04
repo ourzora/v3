@@ -11,6 +11,7 @@ import {
   Erc20TransferHelper,
   Erc721TransferHelper,
   SimpleModule,
+  ListingsV1,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -271,4 +272,21 @@ export async function mintERC2981Token(eip2981: TestEip2981Erc721, to: string) {
 
 export async function mintERC721Token(erc721: TestErc721, to: string) {
   await erc721.mint(to, 0);
+}
+
+export async function deployListingsV1(
+  erc20Helper: string,
+  erc721Helper: string,
+  zoraV1Media: string,
+  weth: string
+) {
+  const ListingsV1Factory = await ethers.getContractFactory('ListingsV1');
+  const listings = await ListingsV1Factory.deploy(
+    erc20Helper,
+    erc721Helper,
+    zoraV1Media,
+    weth
+  );
+  await listings.deployed();
+  return listings as ListingsV1;
 }
