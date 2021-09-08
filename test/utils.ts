@@ -64,6 +64,13 @@ export const cancelModule = async (
   return manager.cancelProposal(moduleAddress);
 };
 
+export const freezeModule = async (
+  manager: ZoraProposalManager,
+  moduleAddress: string
+) => {
+  return manager.freezeProposal(moduleAddress);
+};
+
 export const deployZoraModuleApprovalsManager = async (
   proposalManagerAddr: string
 ) => {

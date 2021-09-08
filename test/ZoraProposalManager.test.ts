@@ -7,6 +7,7 @@ import {
   cancelModule,
   deploySimpleModule,
   deployZoraProposalManager,
+  freezeModule,
   proposeModule,
   registerModule,
   revert,
@@ -55,6 +56,11 @@ describe('ZoraProposalManager', () => {
     });
 
     it('should return true if the proposal has passed', async () => {
+      expect(await manager.isPassedProposal(passedAddr)).to.eq(true);
+    });
+
+    it('should return true if the proposal has frozen', async () => {
+      await freezeModule(manager.connect(registrar), passedAddr);
       expect(await manager.isPassedProposal(passedAddr)).to.eq(true);
     });
 
@@ -187,6 +193,53 @@ describe('ZoraProposalManager', () => {
         cancelModule(manager.connect(registrar), module.address)
       ).eventually.rejectedWith(
         'ZPM::cancelProposal can only cancel pending proposals'
+      );
+    });
+  });
+
+  describe('#freezeProposal', async () => {
+    beforeEach(async () => {
+      await proposeModule(manager, module.address);
+    });
+
+    it('should freeze a registered proposal', async () => {
+      await registerModule(manager.connect(registrar), module.address);
+      await freezeModule(manager.connect(registrar), module.address);
+
+      const proposal = await manager.proposedModuleToProposal(module.address);
+
+      await expect(proposal.status).to.eq(3);
+    });
+
+    it('should revert if not called by the registrar', async () => {
+      await expect(
+        freezeModule(manager.connect(otherUser), module.address)
+      ).eventually.rejectedWith(revert`ZPM::onlyRegistrar must be registrar`);
+    });
+
+    it('should revert if the proposal does not exist', async () => {
+      await expect(
+        freezeModule(manager.connect(registrar), ethers.constants.AddressZero)
+      ).eventually.rejectedWith(
+        revert`ZPM::freezeProposal proposal does not exist`
+      );
+    });
+
+    it('should revert if the proposal has been cancelled', async () => {
+      await cancelModule(manager.connect(registrar), module.address);
+
+      await expect(
+        freezeModule(manager.connect(registrar), module.address)
+      ).eventually.rejectedWith(
+        'ZPM::freezeProposal can only freeze passed proposals'
+      );
+    });
+
+    it('should revert if the module is pending', async () => {
+      await expect(
+        freezeModule(manager.connect(registrar), module.address)
+      ).eventually.rejectedWith(
+        'ZPM::freezeProposal can only freeze passed proposals'
       );
     });
   });

@@ -28,8 +28,10 @@ contract ZoraProposalManager {
         registrar = _registrarAddress;
     }
 
+    // A proposal has passed if it is Passed or if it passed and was frozen
     function isPassedProposal(address _proposalImpl) public view returns (bool) {
-        return proposedModuleToProposal[_proposalImpl].status == ProposalStatus.Passed;
+        Proposal memory proposal = proposedModuleToProposal[_proposalImpl];
+        return (proposal.status == ProposalStatus.Passed || proposal.status == ProposalStatus.Frozen);
     }
 
     function proposeModule(address _impl) public {
@@ -68,6 +70,7 @@ contract ZoraProposalManager {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
         require(proposal.proposer != address(0), "ZPM::freezeProposal proposal does not exist");
+        require(proposal.status == ProposalStatus.Passed, "ZPM::freezeProposal can only freeze passed proposals");
 
         proposal.status = ProposalStatus.Frozen;
 
