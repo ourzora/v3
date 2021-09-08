@@ -80,7 +80,7 @@ describe('ListingsV1', () => {
     );
 
     await proposeModule(proposalManager, listings.address);
-    await registerModule(proposalManager, 1);
+    await registerModule(proposalManager, listings.address);
 
     await approvalManager.setApprovalForAllModules(true);
     await approvalManager.connect(buyerA).setApprovalForAllModules(true);

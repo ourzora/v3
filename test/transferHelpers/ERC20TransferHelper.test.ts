@@ -68,7 +68,7 @@ describe('ERC20TransferHelper', () => {
     );
     await proposeModule(proposalManager, module.address);
     await proposeModule(proposalManager, badModule.address);
-    await registerModule(proposalManager.connect(registrar), 1);
+    await registerModule(proposalManager.connect(registrar), module.address);
   });
 
   it('should allow transfers when the user has approved all modules', async () => {

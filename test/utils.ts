@@ -52,16 +52,16 @@ export const proposeModule = async (
 
 export const registerModule = async (
   manager: ZoraProposalManager,
-  proposalID: number
+  moduleAddress: string
 ) => {
-  return manager.registerModule(proposalID);
+  return manager.registerModule(moduleAddress);
 };
 
 export const cancelModule = async (
   manager: ZoraProposalManager,
-  proposalID: number
+  moduleAddress: string
 ) => {
-  return manager.cancelProposal(proposalID);
+  return manager.cancelProposal(moduleAddress);
 };
 
 export const deployZoraModuleApprovalsManager = async (
