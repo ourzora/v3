@@ -17,6 +17,16 @@ contract ZoraProposalManager {
     address public registrar;
     mapping(address => Proposal) public proposedModuleToProposal;
 
+    event ModuleProposed(address contractAddress, address proposer);
+
+    event ModuleRegistered(address contractAddress);
+
+    event ModuleCanceled(address contractAddress);
+
+    event ModuleFrozen(address contractAddress);
+
+    event RegistrarChanged(address newRegistrar);
+
     modifier onlyRegistrar() {
         require(msg.sender == registrar, "ZPM::onlyRegistrar must be registrar");
         _;
@@ -39,7 +49,7 @@ contract ZoraProposalManager {
         Proposal memory proposal = Proposal({proposer: msg.sender, status: ProposalStatus.Pending});
         proposedModuleToProposal[_impl] = proposal;
 
-        // TODO: emit proposal event
+        emit ModuleProposed(_impl, msg.sender);
     }
 
     function registerModule(address _proposalAddress) public onlyRegistrar {
@@ -50,7 +60,7 @@ contract ZoraProposalManager {
 
         proposal.status = ProposalStatus.Passed;
 
-        // TODO: emit event
+        emit ModuleRegistered(_proposalAddress);
     }
 
     function cancelProposal(address _proposalAddress) public onlyRegistrar {
@@ -61,7 +71,7 @@ contract ZoraProposalManager {
 
         proposal.status = ProposalStatus.Failed;
 
-        // TODO: emit event
+        emit ModuleCanceled(_proposalAddress);
     }
 
     function freezeProposal(address _proposalAddress) public onlyRegistrar {
@@ -72,13 +82,13 @@ contract ZoraProposalManager {
 
         proposal.status = ProposalStatus.Frozen;
 
-        // TODO: emit event
+        emit ModuleFrozen(_proposalAddress);
     }
 
     function setRegistrar(address _registrarAddress) public onlyRegistrar {
         require(_registrarAddress != address(0), "ZPM::setRegistrar must set registrar to non-zero address");
         registrar = _registrarAddress;
 
-        // TODO: emit event
+        emit RegistrarChanged(_registrarAddress);
     }
 }

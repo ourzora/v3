@@ -83,6 +83,19 @@ describe('ZoraProposalManager', () => {
       expect(proposal.proposer).to.eq(await deployer.getAddress());
     });
 
+    it('should emit a ModuleProposed event', async () => {
+      await proposeModule(manager, module.address);
+
+      const events = await manager.queryFilter(
+        manager.filters.ModuleProposed(null, null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ModuleProposed');
+      expect(logDescription.args.contractAddress).to.eq(module.address);
+      expect(logDescription.args.proposer).to.eq(await deployer.getAddress());
+    });
+
     it('should revert if the module has already been proposed', async () => {
       await proposeModule(manager, module.address);
 
@@ -113,6 +126,18 @@ describe('ZoraProposalManager', () => {
       const proposal = await manager.proposedModuleToProposal(module.address);
 
       expect(proposal.status).to.eq(1);
+    });
+
+    it('should emit a ModuleRegistered event', async () => {
+      await registerModule(manager.connect(registrar), module.address);
+
+      const events = await manager.queryFilter(
+        manager.filters.ModuleRegistered(null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ModuleRegistered');
+      expect(logDescription.args.contractAddress).to.eq(module.address);
     });
 
     it('should revert if not called by the registrar', async () => {
@@ -163,6 +188,18 @@ describe('ZoraProposalManager', () => {
       await expect(proposal.status).to.eq(2);
     });
 
+    it('should emit a ModuleCanceled event', async () => {
+      await cancelModule(manager.connect(registrar), module.address);
+
+      const events = await manager.queryFilter(
+        manager.filters.ModuleCanceled(null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ModuleCanceled');
+      expect(logDescription.args.contractAddress).to.eq(module.address);
+    });
+
     it('should revert if not called by the registrar', async () => {
       await expect(
         cancelModule(manager.connect(otherUser), module.address)
@@ -211,6 +248,19 @@ describe('ZoraProposalManager', () => {
       await expect(proposal.status).to.eq(3);
     });
 
+    it('should emit a ModuleFrozen event', async () => {
+      await registerModule(manager.connect(registrar), module.address);
+      await freezeModule(manager.connect(registrar), module.address);
+
+      const events = await manager.queryFilter(
+        manager.filters.ModuleFrozen(null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ModuleFrozen');
+      expect(logDescription.args.contractAddress).to.eq(module.address);
+    });
+
     it('should revert if not called by the registrar', async () => {
       await expect(
         freezeModule(manager.connect(otherUser), module.address)
@@ -251,6 +301,22 @@ describe('ZoraProposalManager', () => {
         .setRegistrar(await otherUser.getAddress());
 
       expect(await manager.registrar()).to.eq(await otherUser.getAddress());
+    });
+
+    it('should emit a RegistrarChanged event', async () => {
+      await manager
+        .connect(registrar)
+        .setRegistrar(await otherUser.getAddress());
+
+      const events = await manager.queryFilter(
+        manager.filters.RegistrarChanged(null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('RegistrarChanged');
+      expect(logDescription.args.newRegistrar).to.eq(
+        await otherUser.getAddress()
+      );
     });
 
     it('should revert if not called by the registrar', async () => {
