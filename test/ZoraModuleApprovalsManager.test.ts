@@ -8,9 +8,14 @@ import {
 } from '../typechain';
 import { Signer } from 'ethers';
 import {
+  cancelModule,
   deploySimpleModule,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
+  freezeModule,
+  proposeModule,
+  registerModule,
+  revert,
 } from './utils';
 
 chai.use(asPromised);
@@ -35,6 +40,8 @@ describe('ZoraModuleApprovalsManager', () => {
     );
     manager = await deployZoraModuleApprovalsManager(proposalManager.address);
     module = await deploySimpleModule();
+    await proposeModule(proposalManager, module.address);
+    await registerModule(proposalManager.connect(registrar), module.address);
   });
 
   describe('#setApprovalForAllModules', async () => {
@@ -60,6 +67,44 @@ describe('ZoraModuleApprovalsManager', () => {
         )
       ).to.eq(true);
     });
+
+    it('should not allow a user to approve a module that has not been proposed', async () => {
+      const m = await deploySimpleModule();
+
+      await expect(
+        manager.setApprovalForModule(m.address, true)
+      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
+    });
+
+    it('should not allow a user to approve a module that has a pending proposal', async () => {
+      const m = await deploySimpleModule();
+      await proposeModule(proposalManager.connect(registrar), m.address);
+
+      await expect(
+        manager.setApprovalForModule(m.address, true)
+      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
+    });
+
+    it('should not allow a user to approve a module that has failed', async () => {
+      const m = await deploySimpleModule();
+      await proposeModule(proposalManager.connect(registrar), m.address);
+      await cancelModule(proposalManager.connect(registrar), m.address);
+
+      await expect(
+        manager.setApprovalForModule(m.address, true)
+      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
+    });
+
+    it('should not allow a user to approve a module that has been frozen', async () => {
+      const m = await deploySimpleModule();
+      await proposeModule(proposalManager.connect(registrar), m.address);
+      await registerModule(proposalManager.connect(registrar), m.address);
+      await freezeModule(proposalManager.connect(registrar), m.address);
+
+      await expect(
+        manager.setApprovalForModule(m.address, true)
+      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
+    });
   });
 
   describe('#setBatchApprovalForModules', () => {
@@ -70,6 +115,12 @@ describe('ZoraModuleApprovalsManager', () => {
         await deploySimpleModule(),
         await deploySimpleModule(),
       ].map((m) => m.address);
+      await Promise.all(
+        modules.map(async (m) => {
+          await proposeModule(proposalManager.connect(registrar), m);
+          await registerModule(proposalManager.connect(registrar), m);
+        })
+      );
       await manager
         .connect(otherUser)
         .setBatchApprovalForModules(modules, true);

@@ -6,7 +6,7 @@ import {ZoraProposalManager} from "./ZoraProposalManager.sol";
 
 contract ZoraModuleApprovalsManager {
     // The address of the proposal manager, manages allowed modules
-    address public proposalManager;
+    ZoraProposalManager public proposalManager;
 
     // Map of users who approve all modules in the zora registry
     mapping(address => bool) public approvedForAll;
@@ -16,7 +16,7 @@ contract ZoraModuleApprovalsManager {
     mapping(address => mapping(address => bool)) public userApprovals;
 
     constructor(address _proposalManager) {
-        proposalManager = _proposalManager;
+        proposalManager = ZoraProposalManager(_proposalManager);
     }
 
     function isModuleApproved(address _module, address _user) external view returns (bool) {
@@ -30,6 +30,8 @@ contract ZoraModuleApprovalsManager {
     }
 
     function setApprovalForModule(address _moduleAddress, bool _approved) public {
+        require(proposalManager.isPassedProposal(_moduleAddress), "ZMAM::module must be approved");
+
         userApprovals[msg.sender][_moduleAddress] = _approved;
 
         // TODO: emit event
