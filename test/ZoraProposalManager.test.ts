@@ -59,9 +59,9 @@ describe('ZoraProposalManager', () => {
       expect(await manager.isPassedProposal(passedAddr)).to.eq(true);
     });
 
-    it('should return true if the proposal has frozen', async () => {
+    it('should return false if the proposal has frozen', async () => {
       await freezeModule(manager.connect(registrar), passedAddr);
-      expect(await manager.isPassedProposal(passedAddr)).to.eq(true);
+      expect(await manager.isPassedProposal(passedAddr)).to.eq(false);
     });
 
     it('should return false if the proposal is pending', async () => {

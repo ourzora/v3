@@ -85,15 +85,11 @@ export const deployZoraModuleApprovalsManager = async (
   return approvalsManager as ZoraModuleApprovalsManager;
 };
 
-export const deployERC20TransferHelper = async (
-  proposalManager: string,
-  approvalsManager: string
-) => {
+export const deployERC20TransferHelper = async (approvalsManager: string) => {
   const ERC20TransferHelperFactory = await ethers.getContractFactory(
     'ERC20TransferHelper'
   );
   const transferHelper = await ERC20TransferHelperFactory.deploy(
-    proposalManager,
     approvalsManager
   );
   await transferHelper.deployed();
@@ -101,15 +97,11 @@ export const deployERC20TransferHelper = async (
   return transferHelper as Erc20TransferHelper;
 };
 
-export const deployERC721TransferHelper = async (
-  proposalManager: string,
-  approvalsManager: string
-) => {
+export const deployERC721TransferHelper = async (approvalsManager: string) => {
   const ERC721TransferHelperFactory = await ethers.getContractFactory(
     'ERC721TransferHelper'
   );
   const transferHelper = await ERC721TransferHelperFactory.deploy(
-    proposalManager,
     approvalsManager
   );
   await transferHelper.deployed();

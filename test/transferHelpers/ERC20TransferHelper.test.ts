@@ -52,11 +52,9 @@ describe('ERC20TransferHelper', () => {
     );
 
     const erc721Helper = await deployERC721TransferHelper(
-      proposalManager.address,
       approvalsManager.address
     );
     const erc20Helper = await deployERC20TransferHelper(
-      proposalManager.address,
       approvalsManager.address
     );
 
@@ -105,15 +103,5 @@ describe('ERC20TransferHelper', () => {
     await expect(
       module.depositERC20(weth.address, await otherUser.getAddress(), ONE_ETH)
     ).eventually.rejectedWith(revert`module has not been approved by user`);
-  });
-
-  it('should not allow transfers from an unregistered module', async () => {
-    await expect(
-      badModule.depositERC20(
-        weth.address,
-        await otherUser.getAddress(),
-        ONE_ETH
-      )
-    ).eventually.rejectedWith(revert`only registered modules`);
   });
 });

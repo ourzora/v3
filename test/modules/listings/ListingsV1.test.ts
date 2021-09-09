@@ -65,11 +65,9 @@ describe('ListingsV1', () => {
       proposalManager.address
     );
     erc20TransferHelper = await deployERC20TransferHelper(
-      proposalManager.address,
       approvalManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      proposalManager.address,
       approvalManager.address
     );
     listings = await deployListingsV1(
