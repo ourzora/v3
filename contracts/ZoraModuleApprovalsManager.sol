@@ -15,6 +15,10 @@ contract ZoraModuleApprovalsManager {
     // user address => module address => approved
     mapping(address => mapping(address => bool)) public userApprovals;
 
+    event ModuleApprovalSet(address user, address module, bool approved);
+
+    event AllModulesApprovalSet(address user, bool approved);
+
     constructor(address _proposalManager) {
         proposalManager = ZoraProposalManager(_proposalManager);
     }
@@ -26,7 +30,7 @@ contract ZoraModuleApprovalsManager {
     function setApprovalForAllModules(bool _approved) public {
         approvedForAll[msg.sender] = _approved;
 
-        // TODO: emit event
+        emit AllModulesApprovalSet(msg.sender, _approved);
     }
 
     function setApprovalForModule(address _moduleAddress, bool _approved) public {
@@ -34,7 +38,7 @@ contract ZoraModuleApprovalsManager {
 
         userApprovals[msg.sender][_moduleAddress] = _approved;
 
-        // TODO: emit event
+        emit ModuleApprovalSet(msg.sender, _moduleAddress, _approved);
     }
 
     function setBatchApprovalForModules(address[] memory _moduleAddresses, bool _approved) public {

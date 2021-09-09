@@ -52,6 +52,19 @@ describe('ZoraModuleApprovalsManager', () => {
         true
       );
     });
+
+    it('should emit an AllModulesApprovalSet event', async () => {
+      await manager.connect(otherUser).setApprovalForAllModules(true);
+
+      const events = await manager.queryFilter(
+        manager.filters.AllModulesApprovalSet(null, null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('AllModulesApprovalSet');
+      expect(logDescription.args.user).to.eq(await otherUser.getAddress());
+      expect(logDescription.args.approved).to.eq(true);
+    });
   });
 
   describe('#setApprovalForModule', async () => {
@@ -66,6 +79,22 @@ describe('ZoraModuleApprovalsManager', () => {
           module.address
         )
       ).to.eq(true);
+    });
+
+    it('should emit a ModuleApprovalSet event', async () => {
+      await manager
+        .connect(otherUser)
+        .setApprovalForModule(module.address, true);
+
+      const events = await manager.queryFilter(
+        manager.filters.ModuleApprovalSet(null, null, null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ModuleApprovalSet');
+      expect(logDescription.args.user).to.eq(await otherUser.getAddress());
+      expect(logDescription.args.module).to.eq(module.address);
+      expect(logDescription.args.approved).to.eq(true);
     });
 
     it('should not allow a user to approve a module that has not been proposed', async () => {
