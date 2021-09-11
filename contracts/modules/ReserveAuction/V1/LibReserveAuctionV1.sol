@@ -180,8 +180,6 @@ library LibReserveAuctionV1 {
             auctionCurrency: _auctionCurrency
         });
 
-        ERC721TransferHelper(_self.erc721TransferHelper).transferFrom(_tokenContract, tokenOwner, address(this), _tokenId);
-
         _self.auctionIdTracker.increment();
 
         emit AuctionCreated(
@@ -267,6 +265,7 @@ library LibReserveAuctionV1 {
         // If it's not, then we should refund the last bidder
         if (auction.firstBidTime == 0) {
             auction.firstBidTime = block.timestamp;
+            ERC721TransferHelper(_self.erc721TransferHelper).transferFrom(auction.tokenContract, auction.tokenOwner, address(this), auction.tokenId);
         } else if (lastBidder != address(0)) {
             _handleOutgoingTransfer(_self, lastBidder, auction.amount, auction.auctionCurrency);
         }
@@ -343,14 +342,20 @@ library LibReserveAuctionV1 {
 
     /**
      * @notice Cancel an auction.
-     * @dev Transfers the NFT back to the auction creator and emits an AuctionCanceled event
+     * @dev emits an AuctionCanceled event
      */
     function cancelAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
-        require(auction.tokenOwner == msg.sender || auction.curator == msg.sender, "cancelAuction only callable by curator or auction creator");
-        require(auction.firstBidTime == 0, "cancelAuction auction already started");
 
-        IERC721(auction.tokenContract).transferFrom(address(this), auction.tokenOwner, auction.tokenId);
+        require(auction.firstBidTime == 0, "cancelAuction auction already started");
+        // If the auction creator has already transferred the token elsewhere, let anyone cancel the auction, since it is no longer valid.
+        // Otherwise, only allow the curator or token owner to cancel the auction
+        address currOwner = IERC721(auction.tokenContract).ownerOf(auction.tokenId);
+        require(
+            currOwner != auction.tokenOwner || auction.tokenOwner == msg.sender || auction.curator == msg.sender,
+            "cancelAuction only callable by curator or auction creator"
+        );
+
         emit AuctionCanceled(_auctionId, auction.tokenId, auction.tokenContract, auction.tokenOwner);
 
         delete _self.auctions[_auctionId];

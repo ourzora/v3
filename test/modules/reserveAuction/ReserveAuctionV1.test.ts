@@ -173,7 +173,7 @@ describe('ReserveAuctionV1', () => {
           curatorFeePercentage,
           auctionCurrency
         )
-      ).eventually.rejectedWith('ERC721: approved query for nonexistent token');
+      ).eventually.rejectedWith('ERC721: owner query for nonexistent token');
     });
 
     it('should revert if the curator fee percentage is >= 100', async () => {
@@ -593,6 +593,25 @@ describe('ReserveAuctionV1', () => {
       );
     });
 
+    it('should take the NFT into escrow after the first bid', async () => {
+      await bid(reserveAuction.connect(bidderA), 0, ONE_ETH);
+
+      expect(await zoraV1.ownerOf(0)).to.eq(reserveAuction.address);
+    });
+
+    it('should revert if the auction creator transfers the token before the first bid', async () => {
+      await zoraV1.transferFrom(
+        await deployer.getAddress(),
+        await otherUser.getAddress(),
+        0
+      );
+      await expect(
+        bid(reserveAuction.connect(bidderA), 0, ONE_ETH)
+      ).eventually.rejectedWith(
+        revert`ERC721: transfer caller is not owner nor approved`
+      );
+    });
+
     xit('should emit an AuctionBid event', async () => {});
 
     xit('should emit an AuctionDurationExtended event', async () => {});
@@ -763,8 +782,6 @@ describe('ReserveAuctionV1', () => {
       expect(tokenOwner).to.eq(await bidderA.getAddress());
     });
 
-    it('should reset the auction if the bidder cannot receive NFTs', () => {});
-
     xit('should emit an AuctionEnded event', async () => {});
   });
 
@@ -788,7 +805,7 @@ describe('ReserveAuctionV1', () => {
       );
     });
 
-    it('should revert if not called by the curator or creator', async () => {
+    it('should revert if not called by the curator or creator before the first bid', async () => {
       await expect(
         reserveAuction.connect(otherUser).cancelAuction(0)
       ).eventually.rejectedWith(
@@ -810,6 +827,19 @@ describe('ReserveAuctionV1', () => {
       const deletedAuction = await reserveAuction.auctions(0);
 
       expect(await zoraV1.ownerOf(0)).to.eq(await deployer.getAddress());
+      expect(deletedAuction.tokenContract).to.eq(ethers.constants.AddressZero);
+      expect(deletedAuction.tokenOwner).to.eq(ethers.constants.AddressZero);
+    });
+
+    it('should allow anyone to cancel an auction if the token is no longer owned by the creator', async () => {
+      await zoraV1.transferFrom(
+        await deployer.getAddress(),
+        await bidderA.getAddress(),
+        0
+      );
+      await reserveAuction.connect(otherUser).cancelAuction(0);
+
+      const deletedAuction = await reserveAuction.auctions(0);
       expect(deletedAuction.tokenContract).to.eq(ethers.constants.AddressZero);
       expect(deletedAuction.tokenOwner).to.eq(ethers.constants.AddressZero);
     });
