@@ -155,13 +155,13 @@ library LibReserveAuctionV1 {
         address _auctionCurrency
     ) internal returns (uint256) {
         require(IERC165(_tokenContract).supportsInterface(ERC721_INTERFACE_ID), "createAuction tokenContract does not support ERC721 interface");
+        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(_curatorFeePercentage < 100, "createAuction curatorFeePercentage must be less than 100");
         require(_fundsRecipient != address(0), "createAuction fundsRecipient cannot be 0 address");
         require(
-            IERC721(_tokenContract).getApproved(_tokenId) == msg.sender || IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender,
+            IERC721(_tokenContract).getApproved(_tokenId) == msg.sender || tokenOwner == msg.sender,
             "createAuction caller must be approved or owner for token id"
         );
-        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         uint256 auctionId = _self.auctionIdTracker.current();
 
         _self.auctions[auctionId] = Auction({
@@ -213,8 +213,9 @@ library LibReserveAuctionV1 {
         uint256 _auctionId,
         bool _approved
     ) internal auctionExists(_self, _auctionId) {
-        require(msg.sender == _self.auctions[_auctionId].curator, "setAuctionApproval must be auction curator");
-        require(_self.auctions[_auctionId].firstBidTime == 0, "setAuctionApproval auction has already started");
+        Auction storage auction = _self.auctions[_auctionId];
+        require(msg.sender == auction.curator, "setAuctionApproval must be auction curator");
+        require(auction.firstBidTime == 0, "setAuctionApproval auction has already started");
         _approveAuction(_self, _auctionId, _approved);
     }
 
@@ -229,15 +230,13 @@ library LibReserveAuctionV1 {
         uint256 _auctionId,
         uint256 _reservePrice
     ) internal auctionExists(_self, _auctionId) {
-        require(
-            msg.sender == _self.auctions[_auctionId].curator || msg.sender == _self.auctions[_auctionId].tokenOwner,
-            "setAuctionReservePrice must be auction curator or token owner"
-        );
-        require(_self.auctions[_auctionId].firstBidTime == 0, "setAuctionReservePrice auction has already started");
+        Auction storage auction = _self.auctions[_auctionId];
+        require(msg.sender == auction.curator || msg.sender == auction.tokenOwner, "setAuctionReservePrice must be auction curator or token owner");
+        require(auction.firstBidTime == 0, "setAuctionReservePrice auction has already started");
 
-        _self.auctions[_auctionId].reservePrice = _reservePrice;
+        auction.reservePrice = _reservePrice;
 
-        emit AuctionReservePriceUpdated(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _reservePrice);
+        emit AuctionReservePriceUpdated(_auctionId, auction.tokenId, auction.tokenContract, _reservePrice);
     }
 
     /**
@@ -249,60 +248,53 @@ library LibReserveAuctionV1 {
         uint256 _auctionId,
         uint256 _amount
     ) internal auctionExists(_self, _auctionId) {
-        address payable lastBidder = _self.auctions[_auctionId].bidder;
-        require(_self.auctions[_auctionId].approved, "createBid auction must be approved by curator");
+        Auction storage auction = _self.auctions[_auctionId];
+        address payable lastBidder = auction.bidder;
+        require(auction.approved, "createBid auction must be approved by curator");
+        require(auction.firstBidTime == 0 || block.timestamp < auction.firstBidTime.add(auction.duration), "createBid auction expired");
+        require(_amount >= auction.reservePrice, "createBid must send at least reservePrice");
         require(
-            _self.auctions[_auctionId].firstBidTime == 0 || block.timestamp < _self.auctions[_auctionId].firstBidTime.add(_self.auctions[_auctionId].duration),
-            "createBid auction expired"
-        );
-        require(_amount >= _self.auctions[_auctionId].reservePrice, "createBid must send at least reservePrice");
-        require(
-            _amount >= _self.auctions[_auctionId].amount.add(_self.auctions[_auctionId].amount.mul(minBidIncrementPercentage).div(100)),
+            _amount >= auction.amount.add(auction.amount.mul(minBidIncrementPercentage).div(100)),
             "createBid must send more than the last bid by minBidIncrementPercentage amount"
         );
 
         // For Zora V1 Protocol, ensure that the bid is valid for the current bidShare configuration
-        if (_self.auctions[_auctionId].tokenContract == _self.zoraV1ProtocolMedia) {
-            require(
-                IZoraV1Market(_self.zoraV1ProtocolMarket).isValidBid(_self.auctions[_auctionId].tokenId, _amount),
-                "createBid bid invalid for share splitting"
-            );
+        if (auction.tokenContract == _self.zoraV1ProtocolMedia) {
+            require(IZoraV1Market(_self.zoraV1ProtocolMarket).isValidBid(auction.tokenId, _amount), "createBid bid invalid for share splitting");
         }
 
-        // If this is the first valid bid, we should set the starting time now.
+        // If this is the first valid bid, we should set the starting time now and take the NFT into escrow
         // If it's not, then we should refund the last bidder
-        if (_self.auctions[_auctionId].firstBidTime == 0) {
-            _self.auctions[_auctionId].firstBidTime = block.timestamp;
+        if (auction.firstBidTime == 0) {
+            auction.firstBidTime = block.timestamp;
         } else if (lastBidder != address(0)) {
-            _handleOutgoingTransfer(_self, lastBidder, _self.auctions[_auctionId].amount, _self.auctions[_auctionId].auctionCurrency);
+            _handleOutgoingTransfer(_self, lastBidder, auction.amount, auction.auctionCurrency);
         }
 
-        _handleIncomingTransfer(_self, _amount, _self.auctions[_auctionId].auctionCurrency);
+        _handleIncomingTransfer(_self, _amount, auction.auctionCurrency);
 
-        _self.auctions[_auctionId].amount = _amount;
-        _self.auctions[_auctionId].bidder = payable(msg.sender);
+        auction.amount = _amount;
+        auction.bidder = payable(msg.sender);
 
         bool extended = false;
         // at this point we know that the timestamp is less than start + duration (since the auction would be over, otherwise)
         // we want to know by how much the timestamp is less than start + duration
         // if the difference is less than the timeBuffer, increase the duration by the timeBuffer
-        if (_self.auctions[_auctionId].firstBidTime.add(_self.auctions[_auctionId].duration).sub(block.timestamp) < timeBuffer) {
+        if (auction.firstBidTime.add(auction.duration).sub(block.timestamp) < timeBuffer) {
             // Playing code golf for gas optimization:
             // uint256 expectedEnd = auctions[auctionId].firstBidTime.add(auctions[auctionId].duration);
             // uint256 timeRemaining = expectedEnd.sub(block.timestamp);
             // uint256 timeToAdd = timeBuffer.sub(timeRemaining);
             // uint256 newDuration = auctions[auctionId].duration.add(timeToAdd);
-            uint256 oldDuration = _self.auctions[_auctionId].duration;
-            _self.auctions[_auctionId].duration = oldDuration.add(
-                timeBuffer.sub(_self.auctions[_auctionId].firstBidTime.add(oldDuration).sub(block.timestamp))
-            );
+            uint256 oldDuration = auction.duration;
+            auction.duration = oldDuration.add(timeBuffer.sub(auction.firstBidTime.add(oldDuration).sub(block.timestamp)));
             extended = true;
         }
 
         emit AuctionBid(
             _auctionId,
-            _self.auctions[_auctionId].tokenId,
-            _self.auctions[_auctionId].tokenContract,
+            auction.tokenId,
+            auction.tokenContract,
             msg.sender,
             _amount,
             lastBidder == address(0), // firstBid boolean
@@ -310,12 +302,7 @@ library LibReserveAuctionV1 {
         );
 
         if (extended) {
-            emit AuctionDurationExtended(
-                _auctionId,
-                _self.auctions[_auctionId].tokenId,
-                _self.auctions[_auctionId].tokenContract,
-                _self.auctions[_auctionId].duration
-            );
+            emit AuctionDurationExtended(_auctionId, auction.tokenId, auction.tokenContract, auction.duration);
         }
     }
 
@@ -325,14 +312,15 @@ library LibReserveAuctionV1 {
      * The auction is reset and the NFT is transferred back to the auction creator.
      */
     function endAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
-        require(_self.auctions[_auctionId].firstBidTime != 0, "endAuction auction hasn't begun");
-        require(block.timestamp >= _self.auctions[_auctionId].firstBidTime.add(_self.auctions[_auctionId].duration), "endAuction auction hasn't completed");
+        Auction storage auction = _self.auctions[_auctionId];
+        require(auction.firstBidTime != 0, "endAuction auction hasn't begun");
+        require(block.timestamp >= auction.firstBidTime.add(auction.duration), "endAuction auction hasn't completed");
 
         uint256 fundsRecipientProfit;
         uint256 curatorFee;
-        if (_self.auctions[_auctionId].tokenContract == _self.zoraV1ProtocolMedia) {
+        if (auction.tokenContract == _self.zoraV1ProtocolMedia) {
             (fundsRecipientProfit, curatorFee) = _handleZoraAuctionPayout(_self, _auctionId);
-        } else if (IERC165(_self.auctions[_auctionId].tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
+        } else if (IERC165(auction.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
             (fundsRecipientProfit, curatorFee) = _handleEIP2981AuctionPayout(_self, _auctionId);
         } else {
             (fundsRecipientProfit, curatorFee) = _handleVanillaAuctionPayout(_self, _auctionId);
@@ -340,14 +328,14 @@ library LibReserveAuctionV1 {
 
         emit AuctionEnded(
             _auctionId,
-            _self.auctions[_auctionId].tokenId,
-            _self.auctions[_auctionId].tokenContract,
-            _self.auctions[_auctionId].curator,
-            _self.auctions[_auctionId].bidder,
-            _self.auctions[_auctionId].fundsRecipient,
+            auction.tokenId,
+            auction.tokenContract,
+            auction.curator,
+            auction.bidder,
+            auction.fundsRecipient,
             fundsRecipientProfit,
             curatorFee,
-            _self.auctions[_auctionId].auctionCurrency
+            auction.auctionCurrency
         );
 
         delete _self.auctions[_auctionId];
@@ -358,18 +346,12 @@ library LibReserveAuctionV1 {
      * @dev Transfers the NFT back to the auction creator and emits an AuctionCanceled event
      */
     function cancelAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
-        require(
-            _self.auctions[_auctionId].tokenOwner == msg.sender || _self.auctions[_auctionId].curator == msg.sender,
-            "cancelAuction only callable by curator or auction creator"
-        );
-        require(_self.auctions[_auctionId].firstBidTime == 0, "cancelAuction auction already started");
+        Auction storage auction = _self.auctions[_auctionId];
+        require(auction.tokenOwner == msg.sender || auction.curator == msg.sender, "cancelAuction only callable by curator or auction creator");
+        require(auction.firstBidTime == 0, "cancelAuction auction already started");
 
-        IERC721(_self.auctions[_auctionId].tokenContract).transferFrom(
-            address(this),
-            _self.auctions[_auctionId].tokenOwner,
-            _self.auctions[_auctionId].tokenId
-        );
-        emit AuctionCanceled(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _self.auctions[_auctionId].tokenOwner);
+        IERC721(auction.tokenContract).transferFrom(address(this), auction.tokenOwner, auction.tokenId);
+        emit AuctionCanceled(_auctionId, auction.tokenId, auction.tokenContract, auction.tokenOwner);
 
         delete _self.auctions[_auctionId];
     }
