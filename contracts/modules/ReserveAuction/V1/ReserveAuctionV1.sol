@@ -46,10 +46,6 @@ contract ReserveAuctionV1 is ReentrancyGuard {
             );
     }
 
-    function setAuctionApproval(uint256 _auctionId, bool _approved) external {
-        reserveAuctionStorage.setAuctionApproval(_auctionId, _approved);
-    }
-
     function setAuctionReservePrice(uint256 _auctionId, uint256 _reservePrice) external {
         reserveAuctionStorage.setAuctionReservePrice(_auctionId, _reservePrice);
     }

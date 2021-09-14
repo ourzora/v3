@@ -48,7 +48,7 @@ describe('ReserveAuctionV1 integration', () => {
   let testEIP2981ERC721: TestEip2981Erc721;
   let weth: Weth;
   let deployer: Signer;
-  let curator: Signer;
+  let host: Signer;
   let bidderA: Signer;
   let bidderB: Signer;
   let fundsRecipient: Signer;
@@ -60,7 +60,7 @@ describe('ReserveAuctionV1 integration', () => {
     await ethers.provider.send('hardhat_reset', []);
     const signers = await ethers.getSigners();
     deployer = signers[0];
-    curator = signers[1];
+    host = signers[1];
     bidderA = signers[2];
     bidderB = signers[3];
     fundsRecipient = signers[4];
@@ -103,7 +103,7 @@ describe('ReserveAuctionV1 integration', () => {
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
     });
 
-    describe('ETH auction with no curator', async () => {
+    describe('ETH auction with no host', async () => {
       async function run() {
         await reserveAuction
           .connect(deployer)
@@ -179,7 +179,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('ETH auction with curator', () => {
+    describe('ETH auction with host', () => {
       async function run() {
         await reserveAuction
           .connect(deployer)
@@ -188,13 +188,12 @@ describe('ReserveAuctionV1 integration', () => {
             zoraV1.address,
             ONE_DAY,
             TENTH_ETH,
-            await curator.getAddress(),
+            await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
             ethers.constants.AddressZero
           );
 
-        await reserveAuction.connect(curator).setAuctionApproval(0, true);
         await reserveAuction
           .connect(bidderA)
           .createBid(0, ONE_ETH, { value: ONE_ETH });
@@ -236,7 +235,7 @@ describe('ReserveAuctionV1 integration', () => {
         const afterBalance = await fundsRecipient.getBalance();
 
         // 15% creator fee -> 2ETH * 85% = 1.7 ETH
-        // 20% curator fee -> 1.7 ETH * 80% = 1.36 ETH
+        // 20% host fee -> 1.7 ETH * 80% = 1.36 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1360))),
           10
@@ -256,7 +255,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('WETH auction with no curator', () => {
+    describe('WETH auction with no host', () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth
@@ -338,7 +337,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('WETH auction with curator', async () => {
+    describe('WETH auction with host', async () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth
@@ -358,12 +357,11 @@ describe('ReserveAuctionV1 integration', () => {
             zoraV1.address,
             ONE_DAY,
             TENTH_ETH,
-            await curator.getAddress(),
+            await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
             weth.address
           );
-        await reserveAuction.connect(curator).setAuctionApproval(0, true);
 
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
@@ -404,7 +402,7 @@ describe('ReserveAuctionV1 integration', () => {
         );
 
         // 15% creator fee -> 2ETH * 85% = 1.7 WETH
-        // 20% curator fee -> 1.7 ETH * 80% = 1.36 ETH
+        // 20% host fee -> 1.7 ETH * 80% = 1.36 ETH
         expect(toRoundedNumber(afterBalance)).to.eq(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1360)))
         );
@@ -434,7 +432,7 @@ describe('ReserveAuctionV1 integration', () => {
       );
     });
 
-    describe('ETH auction with no curator', async () => {
+    describe('ETH auction with no host', async () => {
       async function run() {
         await reserveAuction
           .connect(deployer)
@@ -512,7 +510,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('ETH auction with curator', () => {
+    describe('ETH auction with host', () => {
       async function run() {
         await reserveAuction
           .connect(deployer)
@@ -521,13 +519,12 @@ describe('ReserveAuctionV1 integration', () => {
             testEIP2981ERC721.address,
             ONE_DAY,
             TENTH_ETH,
-            await curator.getAddress(),
+            await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
             ethers.constants.AddressZero
           );
 
-        await reserveAuction.connect(curator).setAuctionApproval(0, true);
         await reserveAuction
           .connect(bidderA)
           .createBid(0, ONE_ETH, { value: ONE_ETH });
@@ -571,7 +568,7 @@ describe('ReserveAuctionV1 integration', () => {
         const afterBalance = await fundsRecipient.getBalance();
 
         // 50% creator fee -> 2ETH * 50% = 1 ETH
-        // 20% curator fee -> 1 ETH * 80% = 0.8 ETH
+        // 20% host fee -> 1 ETH * 80% = 0.8 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(8))),
           10
@@ -591,7 +588,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('WETH auction with no curator', () => {
+    describe('WETH auction with no host', () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth
@@ -675,7 +672,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('WETH auction with curator', async () => {
+    describe('WETH auction with host', async () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth
@@ -695,12 +692,11 @@ describe('ReserveAuctionV1 integration', () => {
             testEIP2981ERC721.address,
             ONE_DAY,
             TENTH_ETH,
-            await curator.getAddress(),
+            await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
             weth.address
           );
-        await reserveAuction.connect(curator).setAuctionApproval(0, true);
 
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
@@ -743,7 +739,7 @@ describe('ReserveAuctionV1 integration', () => {
         );
 
         // 50% creator fee -> 2ETH * 50% = 1 WETH
-        // 20% curator fee -> 1 ETH * 80% = 0.8 ETH
+        // 20% host fee -> 1 ETH * 80% = 0.8 ETH
         expect(toRoundedNumber(afterBalance)).to.eq(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(8)))
         );
@@ -773,7 +769,7 @@ describe('ReserveAuctionV1 integration', () => {
       );
     });
 
-    describe('ETH auction with no curator', async () => {
+    describe('ETH auction with no host', async () => {
       async function run() {
         await reserveAuction
           .connect(deployer)
@@ -836,7 +832,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('ETH auction with curator', () => {
+    describe('ETH auction with host', () => {
       async function run() {
         await reserveAuction
           .connect(deployer)
@@ -845,13 +841,12 @@ describe('ReserveAuctionV1 integration', () => {
             testERC721.address,
             ONE_DAY,
             TENTH_ETH,
-            await curator.getAddress(),
+            await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
             ethers.constants.AddressZero
           );
 
-        await reserveAuction.connect(curator).setAuctionApproval(0, true);
         await reserveAuction
           .connect(bidderA)
           .createBid(0, ONE_ETH, { value: ONE_ETH });
@@ -892,7 +887,7 @@ describe('ReserveAuctionV1 integration', () => {
         await run();
         const afterBalance = await fundsRecipient.getBalance();
 
-        // 20% curator fee -> 2 ETH * 80% = 1.6 ETH
+        // 20% host fee -> 2 ETH * 80% = 1.6 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(16))),
           10
@@ -900,7 +895,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('WETH auction with no curator', () => {
+    describe('WETH auction with no host', () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth
@@ -970,7 +965,7 @@ describe('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('WETH auction with curator', async () => {
+    describe('WETH auction with host', async () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth
@@ -990,12 +985,11 @@ describe('ReserveAuctionV1 integration', () => {
             testERC721.address,
             ONE_DAY,
             TENTH_ETH,
-            await curator.getAddress(),
+            await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
             weth.address
           );
-        await reserveAuction.connect(curator).setAuctionApproval(0, true);
 
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
@@ -1035,7 +1029,7 @@ describe('ReserveAuctionV1 integration', () => {
           await fundsRecipient.getAddress()
         );
 
-        // 20% curator fee -> 2 ETH * 80% = 1.6 ETH
+        // 20% host fee -> 2 ETH * 80% = 1.6 ETH
         expect(toRoundedNumber(afterBalance)).to.eq(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(16)))
         );

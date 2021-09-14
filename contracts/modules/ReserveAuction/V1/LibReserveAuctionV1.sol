@@ -45,8 +45,6 @@ library LibReserveAuctionV1 {
         uint256 tokenId;
         // Address for the ERC721 contract
         address tokenContract;
-        // Whether or not the auction curator has approved the auction to start
-        bool approved;
         // The current highest bid amount
         uint256 amount;
         // The length of time to run the auction for, after the first bid was made
@@ -55,15 +53,14 @@ library LibReserveAuctionV1 {
         uint256 firstBidTime;
         // The minimum price of the first bid
         uint256 reservePrice;
-        // The sale percentage to send to the curator
-        uint8 curatorFeePercentage;
+        // The sale percentage to send to the host
+        uint8 listingFeePercentage;
         // The address that should receive the funds once the NFT is sold.
         address tokenOwner;
         // The address of the current highest bid
         address payable bidder;
-        // The address of the auction's curator.
-        // The curator can reject or approve an auction
-        address payable curator;
+        // The address of the auction's host.
+        address payable host;
         // The address of the recipient of the auction's highest bid
         address payable fundsRecipient;
         // The address of the ERC-20 currency to run the auction with.
@@ -78,13 +75,11 @@ library LibReserveAuctionV1 {
         uint256 duration,
         uint256 reservePrice,
         address tokenOwner,
-        address curator,
+        address host,
         address fundsRecipient,
-        uint8 curatorFeePercentage,
+        uint8 listingFeePercentage,
         address auctionCurrency
     );
-
-    event AuctionApprovalUpdated(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, bool approved);
 
     event AuctionReservePriceUpdated(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, uint256 reservePrice);
 
@@ -104,7 +99,7 @@ library LibReserveAuctionV1 {
         uint256 indexed auctionId,
         uint256 indexed tokenId,
         address indexed tokenContract,
-        address curator,
+        address host,
         address winner,
         address fundsRecipient,
         uint256 amount,
@@ -141,7 +136,6 @@ library LibReserveAuctionV1 {
     /**
      * @notice Create an auction.
      * @dev Store the auction details in the auctions mapping and emit an AuctionCreated event.
-     * If there is no curator, or if the curator is the auction creator, automatically approve the auction.
      */
     function createAuction(
         ReserveAuctionStorage storage _self,
@@ -149,14 +143,14 @@ library LibReserveAuctionV1 {
         address _tokenContract,
         uint256 _duration,
         uint256 _reservePrice,
-        address payable _curator,
+        address payable _host,
         address payable _fundsRecipient,
-        uint8 _curatorFeePercentage,
+        uint8 _listingFeePercentage,
         address _auctionCurrency
     ) internal returns (uint256) {
         require(IERC165(_tokenContract).supportsInterface(ERC721_INTERFACE_ID), "createAuction tokenContract does not support ERC721 interface");
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(_curatorFeePercentage < 100, "createAuction curatorFeePercentage must be less than 100");
+        require(_listingFeePercentage < 100, "createAuction listingFeePercentage must be less than 100");
         require(_fundsRecipient != address(0), "createAuction fundsRecipient cannot be 0 address");
         require(
             IERC721(_tokenContract).getApproved(_tokenId) == msg.sender || tokenOwner == msg.sender,
@@ -167,15 +161,14 @@ library LibReserveAuctionV1 {
         _self.auctions[auctionId] = Auction({
             tokenId: _tokenId,
             tokenContract: _tokenContract,
-            approved: false,
             amount: 0,
             duration: _duration,
             firstBidTime: 0,
             reservePrice: _reservePrice,
-            curatorFeePercentage: _curatorFeePercentage,
+            listingFeePercentage: _listingFeePercentage,
             tokenOwner: tokenOwner,
             bidder: payable(address(0)),
-            curator: _curator,
+            host: _host,
             fundsRecipient: _fundsRecipient,
             auctionCurrency: _auctionCurrency
         });
@@ -189,32 +182,13 @@ library LibReserveAuctionV1 {
             _duration,
             _reservePrice,
             tokenOwner,
-            _curator,
+            _host,
             _fundsRecipient,
-            _curatorFeePercentage,
+            _listingFeePercentage,
             _auctionCurrency
         );
 
-        if (_self.auctions[auctionId].curator == address(0) || _curator == tokenOwner) {
-            _approveAuction(_self, auctionId, true);
-        }
-
         return auctionId;
-    }
-
-    /**
-     * @notice Approve an auction, opening up the auction for bids.
-     * @dev Only callable by the curator. Cannot be called if the auction has already started.
-     */
-    function setAuctionApproval(
-        ReserveAuctionStorage storage _self,
-        uint256 _auctionId,
-        bool _approved
-    ) internal auctionExists(_self, _auctionId) {
-        Auction storage auction = _self.auctions[_auctionId];
-        require(msg.sender == auction.curator, "setAuctionApproval must be auction curator");
-        require(auction.firstBidTime == 0, "setAuctionApproval auction has already started");
-        _approveAuction(_self, _auctionId, _approved);
     }
 
     /**
@@ -229,7 +203,7 @@ library LibReserveAuctionV1 {
         uint256 _reservePrice
     ) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
-        require(msg.sender == auction.curator || msg.sender == auction.tokenOwner, "setAuctionReservePrice must be auction curator or token owner");
+        require(msg.sender == auction.tokenOwner, "setAuctionReservePrice must be token owner");
         require(auction.firstBidTime == 0, "setAuctionReservePrice auction has already started");
 
         auction.reservePrice = _reservePrice;
@@ -248,7 +222,6 @@ library LibReserveAuctionV1 {
     ) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
         address payable lastBidder = auction.bidder;
-        require(auction.approved, "createBid auction must be approved by curator");
         require(auction.firstBidTime == 0 || block.timestamp < auction.firstBidTime.add(auction.duration), "createBid auction expired");
         require(_amount >= auction.reservePrice, "createBid must send at least reservePrice");
         require(
@@ -329,7 +302,7 @@ library LibReserveAuctionV1 {
             _auctionId,
             auction.tokenId,
             auction.tokenContract,
-            auction.curator,
+            auction.host,
             auction.bidder,
             auction.fundsRecipient,
             fundsRecipientProfit,
@@ -349,25 +322,13 @@ library LibReserveAuctionV1 {
 
         require(auction.firstBidTime == 0, "cancelAuction auction already started");
         // If the auction creator has already transferred the token elsewhere, let anyone cancel the auction, since it is no longer valid.
-        // Otherwise, only allow the curator or token owner to cancel the auction
+        // Otherwise, only allow the token owner to cancel the auction
         address currOwner = IERC721(auction.tokenContract).ownerOf(auction.tokenId);
-        require(
-            currOwner != auction.tokenOwner || auction.tokenOwner == msg.sender || auction.curator == msg.sender,
-            "cancelAuction only callable by curator or auction creator"
-        );
+        require(currOwner != auction.tokenOwner || auction.tokenOwner == msg.sender, "cancelAuction only callable by auction creator");
 
         emit AuctionCanceled(_auctionId, auction.tokenId, auction.tokenContract, auction.tokenOwner);
 
         delete _self.auctions[_auctionId];
-    }
-
-    function _approveAuction(
-        ReserveAuctionStorage storage _self,
-        uint256 _auctionId,
-        bool _approved
-    ) private {
-        _self.auctions[_auctionId].approved = _approved;
-        emit AuctionApprovalUpdated(_auctionId, _self.auctions[_auctionId].tokenId, _self.auctions[_auctionId].tokenContract, _approved);
     }
 
     function _exists(ReserveAuctionStorage storage _self, uint256 _auctionId) private view returns (bool) {
@@ -458,20 +419,20 @@ library LibReserveAuctionV1 {
             );
         }
 
-        // Pay out curator and funds recipient
-        uint256 curatorProfit;
+        // Pay out host and funds recipient
+        uint256 hostProfit;
         uint256 remainingProfit = auction.amount.sub(creatorProfit).sub(prevOwnerProfit);
-        if (auction.curator != address(0)) {
-            curatorProfit = remainingProfit.mul(auction.curatorFeePercentage).div(100);
-            remainingProfit = remainingProfit.sub(curatorProfit);
-            _handleOutgoingTransfer(_self, auction.curator, curatorProfit, auction.auctionCurrency);
+        if (auction.host != address(0)) {
+            hostProfit = remainingProfit.mul(auction.listingFeePercentage).div(100);
+            remainingProfit = remainingProfit.sub(hostProfit);
+            _handleOutgoingTransfer(_self, auction.host, hostProfit, auction.auctionCurrency);
         }
         _handleOutgoingTransfer(_self, auction.fundsRecipient, remainingProfit, auction.auctionCurrency);
 
         // Transfer NFT to winner
         IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
 
-        return (remainingProfit, curatorProfit);
+        return (remainingProfit, hostProfit);
     }
 
     function _handleEIP2981AuctionPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256, uint256) {
@@ -486,12 +447,12 @@ library LibReserveAuctionV1 {
             _handleOutgoingTransfer(_self, royaltyReceiver, royaltyAmount, auction.auctionCurrency);
         }
 
-        // Pay out curator and funds recipient
-        uint256 curatorProfit;
-        if (auction.curator != address(0)) {
-            curatorProfit = profit.mul(auction.curatorFeePercentage).div(100);
-            profit = profit.sub(curatorProfit);
-            _handleOutgoingTransfer(_self, auction.curator, curatorProfit, auction.auctionCurrency);
+        // Pay out host and funds recipient
+        uint256 hostProfit;
+        if (auction.host != address(0)) {
+            hostProfit = profit.mul(auction.listingFeePercentage).div(100);
+            profit = profit.sub(hostProfit);
+            _handleOutgoingTransfer(_self, auction.host, hostProfit, auction.auctionCurrency);
         }
 
         // Pay out the funds recipient
@@ -500,19 +461,19 @@ library LibReserveAuctionV1 {
         // Transfer NFT to winner
         IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
 
-        return (profit, curatorProfit);
+        return (profit, hostProfit);
     }
 
     function _handleVanillaAuctionPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256, uint256) {
         Auction memory auction = _self.auctions[_auctionId];
         uint256 profit = auction.amount;
 
-        // Pay out curator and funds recipient
-        uint256 curatorProfit;
-        if (auction.curator != address(0)) {
-            curatorProfit = profit.mul(auction.curatorFeePercentage).div(100);
-            profit = profit.sub(curatorProfit);
-            _handleOutgoingTransfer(_self, auction.curator, curatorProfit, auction.auctionCurrency);
+        // Pay out host and funds recipient
+        uint256 hostProfit;
+        if (auction.host != address(0)) {
+            hostProfit = profit.mul(auction.listingFeePercentage).div(100);
+            profit = profit.sub(hostProfit);
+            _handleOutgoingTransfer(_self, auction.host, hostProfit, auction.auctionCurrency);
         }
 
         // Pay out the funds recipient
@@ -521,6 +482,6 @@ library LibReserveAuctionV1 {
         // Transfer NFT to winner
         IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
 
-        return (profit, curatorProfit);
+        return (profit, hostProfit);
     }
 }
