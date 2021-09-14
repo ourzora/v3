@@ -125,7 +125,7 @@ describe('ReserveAuctionV1 integration', () => {
           .connect(bidderB)
           .createBid(0, TWO_ETH, { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -202,7 +202,7 @@ describe('ReserveAuctionV1 integration', () => {
           .connect(bidderB)
           .createBid(0, TWO_ETH, { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -285,7 +285,7 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -368,7 +368,7 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -456,7 +456,7 @@ describe('ReserveAuctionV1 integration', () => {
           .connect(bidderB)
           .createBid(0, TWO_ETH, { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -535,7 +535,7 @@ describe('ReserveAuctionV1 integration', () => {
           .connect(bidderB)
           .createBid(0, TWO_ETH, { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -620,7 +620,7 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -705,7 +705,7 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -795,7 +795,7 @@ describe('ReserveAuctionV1 integration', () => {
           .connect(bidderB)
           .createBid(0, TWO_ETH, { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -859,7 +859,7 @@ describe('ReserveAuctionV1 integration', () => {
           .connect(bidderB)
           .createBid(0, TWO_ETH, { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -929,7 +929,7 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -1000,7 +1000,7 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
         await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
-        await reserveAuction.connect(otherUser).endAuction(0);
+        await reserveAuction.connect(otherUser).settleAuction(0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {

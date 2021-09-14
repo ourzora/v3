@@ -310,10 +310,10 @@ library LibReserveAuctionV1 {
      * @dev If for some reason the auction cannot be finalized (invalid token recipient, for example),
      * The auction is reset and the NFT is transferred back to the auction creator.
      */
-    function endAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
+    function settleAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
-        require(auction.firstBidTime != 0, "endAuction auction hasn't begun");
-        require(block.timestamp >= auction.firstBidTime.add(auction.duration), "endAuction auction hasn't completed");
+        require(auction.firstBidTime != 0, "settleAuction auction hasn't begun");
+        require(block.timestamp >= auction.firstBidTime.add(auction.duration), "settleAuction auction hasn't completed");
 
         uint256 fundsRecipientProfit;
         uint256 curatorFee;

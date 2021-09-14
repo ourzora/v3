@@ -58,8 +58,8 @@ contract ReserveAuctionV1 is ReentrancyGuard {
         reserveAuctionStorage.createBid(_auctionId, _amount);
     }
 
-    function endAuction(uint256 _auctionId) external nonReentrant {
-        reserveAuctionStorage.endAuction(_auctionId);
+    function settleAuction(uint256 _auctionId) external nonReentrant {
+        reserveAuctionStorage.settleAuction(_auctionId);
     }
 
     function cancelAuction(uint256 _auctionId) external nonReentrant {

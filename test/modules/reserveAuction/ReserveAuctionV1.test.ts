@@ -26,7 +26,7 @@ import {
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
   deployZoraProtocol,
-  endAuction,
+  settleAuction,
   mintERC2981Token,
   mintERC721Token,
   mintZoraNFT,
@@ -617,7 +617,7 @@ describe('ReserveAuctionV1', () => {
     xit('should emit an AuctionDurationExtended event', async () => {});
   });
 
-  describe('#endAuction', async () => {
+  describe('#settleAuction', async () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
@@ -633,7 +633,7 @@ describe('ReserveAuctionV1', () => {
     });
 
     it('should revert if the auction does not exist', async () => {
-      await expect(reserveAuction.endAuction(1111)).eventually.rejectedWith(
+      await expect(reserveAuction.settleAuction(1111)).eventually.rejectedWith(
         revert`auctionExists auction doesn't exist`
       );
     });
@@ -649,8 +649,8 @@ describe('ReserveAuctionV1', () => {
         undefined,
         1
       );
-      await expect(reserveAuction.endAuction(1)).eventually.rejectedWith(
-        revert`endAuction auction hasn't begun`
+      await expect(reserveAuction.settleAuction(1)).eventually.rejectedWith(
+        revert`settleAuction auction hasn't begun`
       );
     });
 
@@ -667,8 +667,8 @@ describe('ReserveAuctionV1', () => {
       );
       await bid(reserveAuction.connect(bidderA), 1, ONE_ETH);
 
-      await expect(reserveAuction.endAuction(1)).eventually.rejectedWith(
-        revert`endAuction auction hasn't completed`
+      await expect(reserveAuction.settleAuction(1)).eventually.rejectedWith(
+        revert`settleAuction auction hasn't completed`
       );
     });
 
@@ -679,7 +679,7 @@ describe('ReserveAuctionV1', () => {
       const beforeCuratorBalance = await curator.getBalance();
       const beforeCreatorBalance = await deployer.getBalance();
 
-      await endAuction(reserveAuction, 0);
+      await settleAuction(reserveAuction, 0);
 
       const afterFundsRecipientBalance = await fundsRecipient.getBalance();
       const afterCuratorBalance = await curator.getBalance();
@@ -722,7 +722,7 @@ describe('ReserveAuctionV1', () => {
       const beforeFundsRecipientBalance = await fundsRecipient.getBalance();
       const beforeCreatorBalance = await deployer.getBalance();
       const beforeCuratorBalance = await curator.getBalance();
-      await endAuction(reserveAuction, 1);
+      await settleAuction(reserveAuction, 1);
       const afterFundsRecipientBalance = await fundsRecipient.getBalance();
       const afterCreatorBalance = await deployer.getBalance();
       const afterCuratorBalance = await curator.getBalance();
@@ -761,7 +761,7 @@ describe('ReserveAuctionV1', () => {
       const beforeCreatorBalance = await ethers.provider.getBalance(
         await deployer.getAddress()
       );
-      await endAuction(reserveAuction, 1);
+      await settleAuction(reserveAuction, 1);
 
       const fundsRecipientBalance = (
         await ethers.provider.getBalance(await fundsRecipient.getAddress())

@@ -258,11 +258,11 @@ export async function timeTravelToEndOfAuction(
   await timeTravel(target.toNumber());
 }
 
-export async function endAuction(
+export async function settleAuction(
   reserveAuction: ReserveAuctionV1,
   auctionId: number
 ) {
-  await reserveAuction.endAuction(auctionId);
+  await reserveAuction.settleAuction(auctionId);
 }
 
 export async function mintERC2981Token(eip2981: TestEip2981Erc721, to: string) {
