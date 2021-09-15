@@ -46,6 +46,7 @@ describe('ListingsV1 integration', () => {
   let deployer: Signer;
   let buyerA: Signer;
   let fundsRecipient: Signer;
+  let host: Signer;
   let otherUser: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
@@ -55,7 +56,8 @@ describe('ListingsV1 integration', () => {
     deployer = signers[0];
     buyerA = signers[1];
     fundsRecipient = signers[2];
-    otherUser = signers[3];
+    host = signers[3];
+    otherUser = signers[4];
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
     testERC721 = await deployTestERC271();
@@ -100,7 +102,9 @@ describe('ListingsV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await fundsRecipient.getAddress()
+          await fundsRecipient.getAddress(),
+          await host.getAddress(),
+          10
         );
 
         await listings.connect(buyerA).fillListing(1, { value: ONE_ETH });
@@ -127,9 +131,21 @@ describe('ListingsV1 integration', () => {
         await run();
         const afterBalance = await fundsRecipient.getBalance();
 
-        // 15% creator fee -> 1ETH * 85% = 0.85 ETH
+        // 15% creator fee + 10% listing fee -> 1ETH * 75% = 0.75 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(850))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765))),
+          10
+        );
+      });
+
+      it('should pay the host', async () => {
+        const beforeBalance = await host.getBalance();
+        await run();
+        const afterBalance = await host.getBalance();
+
+        // 15% creator fee -> 0.85 ETH * 10% listing fee -> 0.085 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
           10
         );
       });
@@ -161,7 +177,9 @@ describe('ListingsV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await fundsRecipient.getAddress()
+          await fundsRecipient.getAddress(),
+          await host.getAddress(),
+          10
         );
 
         await listings.connect(buyerA).fillListing(1);
@@ -191,9 +209,21 @@ describe('ListingsV1 integration', () => {
           await fundsRecipient.getAddress()
         );
 
-        // 15% creator fee -> 1 WETH * 15% = .85WETH
+        // 15% creator fee + 10% host fee -> 1 WETH * 15% * 10%  = .765WETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(850)))
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765)))
+        );
+      });
+
+      it('should pay the host', async () => {
+        const beforeBalance = await weth.balanceOf(await host.getAddress());
+        await run();
+        const afterBalance = await weth.balanceOf(await host.getAddress());
+
+        // 15% creator fee -> 0.85 ETH * 10% listing fee -> 0.085 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
+          10
         );
       });
 
@@ -228,7 +258,9 @@ describe('ListingsV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await fundsRecipient.getAddress()
+          await fundsRecipient.getAddress(),
+          await host.getAddress(),
+          10
         );
 
         await listings.connect(buyerA).fillListing(1, { value: ONE_ETH });
@@ -257,9 +289,21 @@ describe('ListingsV1 integration', () => {
         await run();
         const afterBalance = await fundsRecipient.getBalance();
 
-        // 50% creator fee -> 1ETH * 50% = 0.5 ETH
+        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 10% listing fee -> .45 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(5))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
+          10
+        );
+      });
+
+      it('should pay the host', async () => {
+        const beforeBalance = await host.getBalance();
+        await run();
+        const afterBalance = await host.getBalance();
+
+        // 50% creator fee -> 0.5 ETH * 10% listing fee -> 0.05 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
           10
         );
       });
@@ -291,7 +335,9 @@ describe('ListingsV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await fundsRecipient.getAddress()
+          await fundsRecipient.getAddress(),
+          await host.getAddress(),
+          10
         );
 
         await listings.connect(buyerA).fillListing(1);
@@ -323,9 +369,22 @@ describe('ListingsV1 integration', () => {
           await fundsRecipient.getAddress()
         );
 
-        // 50% creator fee -> 1 WETH * 50% = .5WETH
-        expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(5)))
+        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 10% listing fee -> .45 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
+          10
+        );
+      });
+
+      it('should pay the host', async () => {
+        const beforeBalance = await weth.balanceOf(await host.getAddress());
+        await run();
+        const afterBalance = await weth.balanceOf(await host.getAddress());
+
+        // 50% creator fee -> 0.5 ETH * 10% listing fee -> 0.05 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
+          10
         );
       });
 
@@ -360,7 +419,9 @@ describe('ListingsV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await fundsRecipient.getAddress()
+          await fundsRecipient.getAddress(),
+          await host.getAddress(),
+          10
         );
 
         await listings.connect(buyerA).fillListing(1, { value: ONE_ETH });
@@ -387,8 +448,21 @@ describe('ListingsV1 integration', () => {
         await run();
         const afterBalance = await fundsRecipient.getBalance();
 
+        // 10% listing fee -> 0.9 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9))),
+          10
+        );
+      });
+
+      it('should pay the host', async () => {
+        const beforeBalance = await host.getBalance();
+        await run();
+        const afterBalance = await host.getBalance();
+
+        // 10% listing fee -> 0.9 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(TENTH_ETH)),
           10
         );
       });
@@ -408,7 +482,9 @@ describe('ListingsV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await fundsRecipient.getAddress()
+          await fundsRecipient.getAddress(),
+          await host.getAddress(),
+          10
         );
 
         await listings.connect(buyerA).fillListing(1);
@@ -439,8 +515,22 @@ describe('ListingsV1 integration', () => {
           await fundsRecipient.getAddress()
         );
 
-        expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(ONE_ETH))
+        // 10% listing fee -> 0.9 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9))),
+          10
+        );
+      });
+
+      it('should pay the host', async () => {
+        const beforeBalance = await weth.balanceOf(await host.getAddress());
+        await run();
+        const afterBalance = await weth.balanceOf(await host.getAddress());
+
+        // 10% listing fee -> 0.9 ETH
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(TENTH_ETH)),
+          10
         );
       });
     });

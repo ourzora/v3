@@ -48,8 +48,10 @@ contract ListingsV1 is ReentrancyGuard {
         address seller;
         address fundsRecipient;
         address listingCurrency;
+        address host;
         uint256 tokenId;
         uint256 listingPrice;
+        uint8 listingFeePercentage;
         ListingStatus status;
     }
 
@@ -77,9 +79,12 @@ contract ListingsV1 is ReentrancyGuard {
         uint256 _tokenId,
         uint256 _listingPrice,
         address _listingCurrency,
-        address _fundsRecipient
+        address _fundsRecipient,
+        address _host,
+        uint8 _listingFeePercentage
     ) external nonReentrant returns (uint256) {
         require(_fundsRecipient != address(0), "createListing must specify fundsRecipient");
+        require(_listingFeePercentage <= 100, "createListing listing fee percentage must be less than 100");
 
         // Create a listing
         listingCounter.increment();
@@ -89,8 +94,10 @@ contract ListingsV1 is ReentrancyGuard {
             seller: msg.sender,
             fundsRecipient: _fundsRecipient,
             listingCurrency: _listingCurrency,
+            host: _host,
             tokenId: _tokenId,
             listingPrice: _listingPrice,
+            listingFeePercentage: _listingFeePercentage,
             status: ListingStatus.Active
         });
 
@@ -133,7 +140,13 @@ contract ListingsV1 is ReentrancyGuard {
         } else if (IERC165(listing.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
             _handleEIP2981Payout(listing);
         } else {
-            _handleOutgoingTransfer(listing.fundsRecipient, listing.listingPrice, listing.listingCurrency);
+            uint256 hostProfit = listing.listingPrice.mul(listing.listingFeePercentage).div(100);
+
+            if (hostProfit != 0 && listing.host != address(0)) {
+                _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
+            }
+
+            _handleOutgoingTransfer(listing.fundsRecipient, listing.listingPrice.sub(hostProfit), listing.listingCurrency);
         }
 
         // Transfer NFT to auction winner
@@ -150,6 +163,8 @@ contract ListingsV1 is ReentrancyGuard {
         uint256 creatorProfit = zoraV1Market.splitShare(bidShares.creator, listing.listingPrice);
         uint256 prevOwnerProfit = zoraV1Market.splitShare(bidShares.prevOwner, listing.listingPrice);
         uint256 remainingProfit = listing.listingPrice.sub(creatorProfit).sub(prevOwnerProfit);
+        uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
+        remainingProfit = remainingProfit.sub(hostProfit);
 
         // Pay out creator
         if (creatorProfit != 0) {
@@ -159,6 +174,12 @@ contract ListingsV1 is ReentrancyGuard {
         if (prevOwnerProfit != 0) {
             _handleOutgoingTransfer(zoraV1Media.previousTokenOwner(listing.tokenId), prevOwnerProfit, listing.listingCurrency);
         }
+
+        // Pay out host
+        if (hostProfit != 0 && listing.host != address(0)) {
+            _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
+        }
+
         // Pay out funds recipient
         if (remainingProfit != 0) {
             _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit, listing.listingCurrency);
@@ -169,6 +190,8 @@ contract ListingsV1 is ReentrancyGuard {
         (address royaltyReceiver, uint256 royaltyAmount) = IERC2981(listing.tokenContract).royaltyInfo(listing.tokenId, listing.listingPrice);
 
         uint256 remainingProfit = listing.listingPrice.sub(royaltyAmount);
+        uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
+        remainingProfit = remainingProfit.sub(hostProfit);
 
         if (royaltyAmount != 0 && royaltyReceiver != address(0)) {
             _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, listing.listingCurrency);
@@ -176,6 +199,10 @@ contract ListingsV1 is ReentrancyGuard {
 
         if (remainingProfit != 0) {
             _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit, listing.listingCurrency);
+        }
+
+        if (hostProfit != 0 && listing.host != address(0)) {
+            _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
         }
     }
 

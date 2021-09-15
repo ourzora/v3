@@ -43,6 +43,7 @@ describe('ListingsV1', () => {
   let deployer: Signer;
   let buyerA: Signer;
   let fundsRecipient: Signer;
+  let host: Signer;
   let otherUser: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
@@ -52,7 +53,8 @@ describe('ListingsV1', () => {
     deployer = signers[0];
     buyerA = signers[1];
     fundsRecipient = signers[2];
-    otherUser = signers[3];
+    host = signers[3];
+    otherUser = signers[4];
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
     testERC721 = await deployTestERC271();
@@ -94,7 +96,9 @@ describe('ListingsV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress()
+        await fundsRecipient.getAddress(),
+        await host.getAddress(),
+        10
       );
 
       const listing = await listings.listings(1);
@@ -124,7 +128,9 @@ describe('ListingsV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress()
+        await fundsRecipient.getAddress(),
+        await host.getAddress(),
+        10
       );
 
       const events = await listings.queryFilter(
@@ -148,9 +154,27 @@ describe('ListingsV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          ethers.constants.AddressZero
+          ethers.constants.AddressZero,
+          await host.getAddress(),
+          10
         )
       ).eventually.rejectedWith('createListing must specify fundsRecipient');
+    });
+
+    it('should revert if the lising fee percentage is greater than 100', async () => {
+      await expect(
+        listings.createListing(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          await fundsRecipient.getAddress(),
+          await host.getAddress(),
+          101
+        )
+      ).eventually.rejectedWith(
+        'createListing listing fee percentage must be less than 100'
+      );
     });
   });
 
@@ -161,7 +185,9 @@ describe('ListingsV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress()
+        await fundsRecipient.getAddress(),
+        await host.getAddress(),
+        10
       );
     });
 
@@ -225,7 +251,9 @@ describe('ListingsV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress()
+        await fundsRecipient.getAddress(),
+        await host.getAddress(),
+        10
       );
     });
 
@@ -233,10 +261,12 @@ describe('ListingsV1', () => {
       const buyerBeforeBalance = await buyerA.getBalance();
       const minterBeforeBalance = await deployer.getBalance();
       const fundsRecipientBeforeBalance = await fundsRecipient.getBalance();
+      const hostBeforeBalance = await host.getBalance();
       await listings.connect(buyerA).fillListing(1, { value: ONE_ETH });
       const buyerAfterBalance = await buyerA.getBalance();
       const minterAfterBalance = await deployer.getBalance();
       const fundsRecipientAfterBalance = await fundsRecipient.getBalance();
+      const hostAfterBalance = await host.getBalance();
 
       const listing = await listings.listings(1);
 
@@ -250,10 +280,14 @@ describe('ListingsV1', () => {
       expect(toRoundedNumber(minterAfterBalance)).to.eq(
         toRoundedNumber(minterBeforeBalance.add(THOUSANDTH_ETH.mul(150)))
       );
-      // 15% creator fee + 1 ETH bid -> .85 ETH profit
+      // 15% creator fee + 1 ETH bid * 10% listing fee -> .085 ETH profit
+      expect(toRoundedNumber(hostAfterBalance)).to.eq(
+        toRoundedNumber(hostBeforeBalance.add(THOUSANDTH_ETH.mul(85)))
+      );
+      // listing fee - creator fee -> .765 ETH profit
       expect(toRoundedNumber(fundsRecipientAfterBalance)).to.eq(
         toRoundedNumber(
-          fundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(850))
+          fundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(765))
         )
       );
 
