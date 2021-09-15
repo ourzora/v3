@@ -44,6 +44,7 @@ describe('ListingsV1', () => {
   let buyerA: Signer;
   let fundsRecipient: Signer;
   let host: Signer;
+  let finder: Signer;
   let otherUser: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
@@ -55,6 +56,7 @@ describe('ListingsV1', () => {
     fundsRecipient = signers[2];
     host = signers[3];
     otherUser = signers[4];
+    finder = signers[5];
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
     testERC721 = await deployTestERC271();
@@ -98,6 +100,7 @@ describe('ListingsV1', () => {
         ethers.constants.AddressZero,
         await fundsRecipient.getAddress(),
         await host.getAddress(),
+        10,
         10
       );
 
@@ -130,6 +133,7 @@ describe('ListingsV1', () => {
         ethers.constants.AddressZero,
         await fundsRecipient.getAddress(),
         await host.getAddress(),
+        10,
         10
       );
 
@@ -156,6 +160,7 @@ describe('ListingsV1', () => {
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
           await host.getAddress(),
+          10,
           10
         )
       ).eventually.rejectedWith('createListing must specify fundsRecipient');
@@ -170,10 +175,11 @@ describe('ListingsV1', () => {
           ethers.constants.AddressZero,
           await fundsRecipient.getAddress(),
           await host.getAddress(),
-          101
+          101,
+          10
         )
       ).eventually.rejectedWith(
-        'createListing listing fee percentage must be less than 100'
+        'createListing listing fee and finders fee percentage must be less than 100'
       );
     });
   });
@@ -187,6 +193,7 @@ describe('ListingsV1', () => {
         ethers.constants.AddressZero,
         await fundsRecipient.getAddress(),
         await host.getAddress(),
+        10,
         10
       );
     });
@@ -236,7 +243,9 @@ describe('ListingsV1', () => {
     });
 
     it('should revert if the listing has been filled already', async () => {
-      await listings.connect(buyerA).fillListing(1, { value: ONE_ETH });
+      await listings
+        .connect(buyerA)
+        .fillListing(1, await finder.getAddress(), { value: ONE_ETH });
 
       await expect(listings.cancelListing(1)).rejectedWith(
         revert`cancelListing must be active listing`
@@ -253,6 +262,7 @@ describe('ListingsV1', () => {
         ethers.constants.AddressZero,
         await fundsRecipient.getAddress(),
         await host.getAddress(),
+        10,
         10
       );
     });
@@ -262,11 +272,15 @@ describe('ListingsV1', () => {
       const minterBeforeBalance = await deployer.getBalance();
       const fundsRecipientBeforeBalance = await fundsRecipient.getBalance();
       const hostBeforeBalance = await host.getBalance();
-      await listings.connect(buyerA).fillListing(1, { value: ONE_ETH });
+      const finderBeforeBalance = await finder.getBalance();
+      await listings
+        .connect(buyerA)
+        .fillListing(1, await finder.getAddress(), { value: ONE_ETH });
       const buyerAfterBalance = await buyerA.getBalance();
       const minterAfterBalance = await deployer.getBalance();
       const fundsRecipientAfterBalance = await fundsRecipient.getBalance();
       const hostAfterBalance = await host.getBalance();
+      const finderAfterBalance = await finder.getBalance();
 
       const listing = await listings.listings(1);
 
@@ -284,10 +298,16 @@ describe('ListingsV1', () => {
       expect(toRoundedNumber(hostAfterBalance)).to.eq(
         toRoundedNumber(hostBeforeBalance.add(THOUSANDTH_ETH.mul(85)))
       );
-      // listing fee - creator fee -> .765 ETH profit
+
+      // 15% creator fee + 1 ETH bid * 10% finder fee -> .085 ETH profit
+      expect(toRoundedNumber(finderAfterBalance)).to.eq(
+        toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(85)))
+      );
+
+      // listing fee - creator fee - finder fee -> .68 ETH profit
       expect(toRoundedNumber(fundsRecipientAfterBalance)).to.eq(
         toRoundedNumber(
-          fundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(765))
+          fundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(680))
         )
       );
 

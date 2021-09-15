@@ -16,6 +16,7 @@ import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 contract ListingsV1 is ReentrancyGuard {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
+    using SafeMath for uint8;
     using SafeERC20 for IERC20;
 
     bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
@@ -52,6 +53,7 @@ contract ListingsV1 is ReentrancyGuard {
         uint256 tokenId;
         uint256 listingPrice;
         uint8 listingFeePercentage;
+        uint8 findersFeePercentage;
         ListingStatus status;
     }
 
@@ -81,10 +83,11 @@ contract ListingsV1 is ReentrancyGuard {
         address _listingCurrency,
         address _fundsRecipient,
         address _host,
-        uint8 _listingFeePercentage
+        uint8 _listingFeePercentage,
+        uint8 _findersFeePercentage
     ) external nonReentrant returns (uint256) {
         require(_fundsRecipient != address(0), "createListing must specify fundsRecipient");
-        require(_listingFeePercentage <= 100, "createListing listing fee percentage must be less than 100");
+        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createListing listing fee and finders fee percentage must be less than 100");
 
         // Create a listing
         listingCounter.increment();
@@ -98,6 +101,7 @@ contract ListingsV1 is ReentrancyGuard {
             tokenId: _tokenId,
             listingPrice: _listingPrice,
             listingFeePercentage: _listingFeePercentage,
+            findersFeePercentage: _findersFeePercentage,
             status: ListingStatus.Active
         });
 
@@ -125,29 +129,35 @@ contract ListingsV1 is ReentrancyGuard {
         emit ListingCanceled(_listingId, listing);
     }
 
-    function fillListing(uint256 _listingId) external payable nonReentrant {
+    function fillListing(uint256 _listingId, address _finder) external payable nonReentrant {
         Listing storage listing = listings[_listingId];
 
         require(listing.seller != address(0), "fillListing listing does not exist");
+        require(_finder != address(0), "fillListing _finder must not be 0 address");
         require(listing.status == ListingStatus.Active, "fillListing must be active listing");
 
         // Ensure payment is valid and take custody of payment
         _handleIncomingTransfer(listing.listingPrice, listing.listingCurrency);
 
         // Payout respective parties, ensuring royalties are honored
+        uint256 remainingProfit = listing.listingPrice;
         if (listing.tokenContract == address(zoraV1Media)) {
-            _handleZoraPayout(listing);
+            remainingProfit = _handleZoraPayout(listing);
         } else if (IERC165(listing.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
-            _handleEIP2981Payout(listing);
-        } else {
-            uint256 hostProfit = listing.listingPrice.mul(listing.listingFeePercentage).div(100);
-
-            if (hostProfit != 0 && listing.host != address(0)) {
-                _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
-            }
-
-            _handleOutgoingTransfer(listing.fundsRecipient, listing.listingPrice.sub(hostProfit), listing.listingCurrency);
+            remainingProfit = _handleEIP2981Payout(listing);
         }
+
+        uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
+        uint256 finderFee = remainingProfit.mul(listing.findersFeePercentage).div(100);
+
+        if (hostProfit != 0 && listing.host != address(0)) {
+            _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
+        }
+        if (finderFee != 0) {
+            _handleOutgoingTransfer(_finder, finderFee, listing.listingCurrency);
+        }
+
+        _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit.sub(hostProfit).sub(finderFee), listing.listingCurrency);
 
         // Transfer NFT to auction winner
         erc721TransferHelper.transferFrom(listing.tokenContract, listing.seller, msg.sender, listing.tokenId);
@@ -157,14 +167,12 @@ contract ListingsV1 is ReentrancyGuard {
         emit ListingFilled(_listingId, msg.sender, listing);
     }
 
-    function _handleZoraPayout(Listing memory listing) private {
+    function _handleZoraPayout(Listing memory listing) private returns (uint256) {
         IZoraV1Market.BidShares memory bidShares = zoraV1Market.bidSharesForToken(listing.tokenId);
 
         uint256 creatorProfit = zoraV1Market.splitShare(bidShares.creator, listing.listingPrice);
         uint256 prevOwnerProfit = zoraV1Market.splitShare(bidShares.prevOwner, listing.listingPrice);
         uint256 remainingProfit = listing.listingPrice.sub(creatorProfit).sub(prevOwnerProfit);
-        uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
-        remainingProfit = remainingProfit.sub(hostProfit);
 
         // Pay out creator
         if (creatorProfit != 0) {
@@ -175,35 +183,19 @@ contract ListingsV1 is ReentrancyGuard {
             _handleOutgoingTransfer(zoraV1Media.previousTokenOwner(listing.tokenId), prevOwnerProfit, listing.listingCurrency);
         }
 
-        // Pay out host
-        if (hostProfit != 0 && listing.host != address(0)) {
-            _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
-        }
-
-        // Pay out funds recipient
-        if (remainingProfit != 0) {
-            _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit, listing.listingCurrency);
-        }
+        return remainingProfit;
     }
 
-    function _handleEIP2981Payout(Listing memory listing) private {
+    function _handleEIP2981Payout(Listing memory listing) private returns (uint256) {
         (address royaltyReceiver, uint256 royaltyAmount) = IERC2981(listing.tokenContract).royaltyInfo(listing.tokenId, listing.listingPrice);
 
         uint256 remainingProfit = listing.listingPrice.sub(royaltyAmount);
-        uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
-        remainingProfit = remainingProfit.sub(hostProfit);
 
         if (royaltyAmount != 0 && royaltyReceiver != address(0)) {
             _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, listing.listingCurrency);
         }
 
-        if (remainingProfit != 0) {
-            _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit, listing.listingCurrency);
-        }
-
-        if (hostProfit != 0 && listing.host != address(0)) {
-            _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
-        }
+        return remainingProfit;
     }
 
     function _handleIncomingTransfer(uint256 _amount, address _currency) private {
