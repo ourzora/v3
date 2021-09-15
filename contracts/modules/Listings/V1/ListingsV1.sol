@@ -81,9 +81,6 @@ contract ListingsV1 is ReentrancyGuard {
     ) external nonReentrant returns (uint256) {
         require(_fundsRecipient != address(0), "createListing must specify fundsRecipient");
 
-        // Take the NFT into escrow
-        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, address(this), _tokenId);
-
         // Create a listing
         listingCounter.increment();
         uint256 listingId = listingCounter.current();
@@ -109,11 +106,11 @@ contract ListingsV1 is ReentrancyGuard {
     function cancelListing(uint256 _listingId) external {
         Listing storage listing = listings[_listingId];
 
-        require(listing.seller == msg.sender, "cancelListing must be seller");
+        require(
+            listing.seller == msg.sender || IERC721(listing.tokenContract).ownerOf(listing.tokenId) != listing.seller,
+            "cancelListing must be seller or invalid listing"
+        );
         require(listing.status == ListingStatus.Active, "cancelListing must be active listing");
-
-        // Return NFT to seller
-        IERC721(listing.tokenContract).transferFrom(address(this), listing.seller, listing.tokenId);
 
         // Set listing status to cancelled
         listing.status = ListingStatus.Canceled;
@@ -140,7 +137,7 @@ contract ListingsV1 is ReentrancyGuard {
         }
 
         // Transfer NFT to auction winner
-        IERC721(listing.tokenContract).safeTransferFrom(address(this), msg.sender, listing.tokenId);
+        erc721TransferHelper.transferFrom(listing.tokenContract, listing.seller, msg.sender, listing.tokenId);
 
         listing.status = ListingStatus.Filled;
 

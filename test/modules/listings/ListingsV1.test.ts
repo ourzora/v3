@@ -193,7 +193,20 @@ describe('ListingsV1', () => {
     it('should revert when the seller is not msg.sender', async () => {
       await expect(
         listings.connect(otherUser).cancelListing(1)
-      ).eventually.rejectedWith(revert`cancelListing must be seller`);
+      ).eventually.rejectedWith(
+        revert`cancelListing must be seller or invalid listing`
+      );
+    });
+
+    it('should cancel a listing if the listing is no longer valid', async () => {
+      await zoraV1.transferFrom(
+        await deployer.getAddress(),
+        await buyerA.getAddress(),
+        0
+      );
+      await listings.connect(otherUser).cancelListing(1);
+      const listing = await listings.listings(1);
+      expect(listing.status).to.eq(1);
     });
 
     it('should revert if the listing has been filled already', async () => {
