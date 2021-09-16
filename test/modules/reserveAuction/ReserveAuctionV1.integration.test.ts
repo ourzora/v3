@@ -94,12 +94,22 @@ describe.only('ReserveAuctionV1 integration', () => {
     await proposeModule(proposalManager, reserveAuction.address);
     await registerModule(proposalManager, reserveAuction.address);
 
-    await approvalManager.setApprovalForAllModules(true);
-    await approvalManager.connect(bidderA).setApprovalForAllModules(true);
-    await approvalManager.connect(bidderB).setApprovalForAllModules(true);
+    await approvalManager.setApprovalForModule(reserveAuction.address, true);
+    await approvalManager
+      .connect(deployer)
+      .setApprovalForModule(reserveAuction.address, true);
+    await approvalManager
+      .connect(bidderA)
+      .setApprovalForModule(reserveAuction.address, true);
+    await approvalManager
+      .connect(bidderB)
+      .setApprovalForModule(reserveAuction.address, true);
+    await approvalManager
+      .connect(otherUser)
+      .setApprovalForModule(reserveAuction.address, true);
   });
 
-  describe('Zora V1 NFT', () => {
+  describe.only('Zora V1 NFT', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
@@ -259,7 +269,7 @@ describe.only('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe('WETH auction with no host', () => {
+    describe.only('WETH auction with no host', () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth

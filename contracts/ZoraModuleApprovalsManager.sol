@@ -8,9 +8,6 @@ contract ZoraModuleApprovalsManager {
     // The address of the proposal manager, manages allowed modules
     ZoraProposalManager public proposalManager;
 
-    // Map of users who approve all modules in the zora registry
-    mapping(address => bool) public approvedForAll;
-
     // Map of specific approvals for modules and users in the zora registry
     // user address => module address => approved
     mapping(address => mapping(address => bool)) public userApprovals;
@@ -24,13 +21,7 @@ contract ZoraModuleApprovalsManager {
     }
 
     function isModuleApproved(address _module, address _user) external view returns (bool) {
-        return approvedForAll[_user] || userApprovals[_user][_module];
-    }
-
-    function setApprovalForAllModules(bool _approved) public {
-        approvedForAll[msg.sender] = _approved;
-
-        emit AllModulesApprovalSet(msg.sender, _approved);
+        return userApprovals[_user][_module];
     }
 
     function setApprovalForModule(address _moduleAddress, bool _approved) public {

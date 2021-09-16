@@ -69,20 +69,6 @@ describe('ERC20TransferHelper', () => {
     await registerModule(proposalManager.connect(registrar), module.address);
   });
 
-  it('should allow transfers when the user has approved all modules', async () => {
-    await approvalsManager.connect(otherUser).setApprovalForAllModules(true);
-
-    await module.depositERC20(
-      weth.address,
-      await otherUser.getAddress(),
-      ONE_ETH
-    );
-
-    expect((await weth.balanceOf(module.address)).toString()).to.eq(
-      ONE_ETH.toString()
-    );
-  });
-
   it('should allow transfers when the user has approved the module', async () => {
     await approvalsManager
       .connect(otherUser)

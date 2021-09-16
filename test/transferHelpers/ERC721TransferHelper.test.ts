@@ -71,14 +71,6 @@ describe('ERC20TransferHelper', () => {
     await registerModule(proposalManager.connect(registrar), module.address);
   });
 
-  it('should allow transfers when the user has approved all modules', async () => {
-    await approvalsManager.connect(otherUser).setApprovalForAllModules(true);
-
-    await module.depositERC721(nft.address, await otherUser.getAddress(), 1);
-
-    expect(await nft.ownerOf(1)).to.eq(module.address);
-  });
-
   it('should allow transfers when the user has approved the module', async () => {
     await approvalsManager
       .connect(otherUser)

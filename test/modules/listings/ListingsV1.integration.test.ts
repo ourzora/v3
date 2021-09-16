@@ -87,8 +87,10 @@ describe('ListingsV1 integration', () => {
     await proposeModule(proposalManager, listings.address);
     await registerModule(proposalManager, listings.address);
 
-    await approvalManager.setApprovalForAllModules(true);
-    await approvalManager.connect(buyerA).setApprovalForAllModules(true);
+    await approvalManager.setApprovalForModule(listings.address, true);
+    await approvalManager
+      .connect(buyerA)
+      .setApprovalForModule(listings.address, true);
   });
 
   describe('Zora V1 NFT', () => {

@@ -84,8 +84,10 @@ describe('ListingsV1', () => {
     await proposeModule(proposalManager, listings.address);
     await registerModule(proposalManager, listings.address);
 
-    await approvalManager.setApprovalForAllModules(true);
-    await approvalManager.connect(buyerA).setApprovalForAllModules(true);
+    await approvalManager.setApprovalForModule(listings.address, true);
+    await approvalManager
+      .connect(buyerA)
+      .setApprovalForModule(listings.address, true);
 
     await mintZoraNFT(zoraV1);
     await approveNFTTransfer(zoraV1, erc721TransferHelper.address);

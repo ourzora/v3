@@ -100,9 +100,13 @@ describe('ReserveAuctionV1', () => {
     await proposeModule(proposalManager, reserveAuction.address);
     await registerModule(proposalManager, reserveAuction.address);
 
-    await approvalManager.setApprovalForAllModules(true);
-    await approvalManager.connect(bidderA).setApprovalForAllModules(true);
-    await approvalManager.connect(bidderB).setApprovalForAllModules(true);
+    await approvalManager.setApprovalForModule(reserveAuction.address, true);
+    await approvalManager
+      .connect(bidderA)
+      .setApprovalForModule(reserveAuction.address, true);
+    await approvalManager
+      .connect(bidderB)
+      .setApprovalForModule(reserveAuction.address, true);
   });
 
   describe('#createAuction', () => {

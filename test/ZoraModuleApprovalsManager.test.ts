@@ -44,29 +44,6 @@ describe('ZoraModuleApprovalsManager', () => {
     await registerModule(proposalManager.connect(registrar), module.address);
   });
 
-  describe('#setApprovalForAllModules', async () => {
-    it("should set a user's approval for all modules", async () => {
-      await manager.connect(otherUser).setApprovalForAllModules(true);
-
-      expect(await manager.approvedForAll(await otherUser.getAddress())).to.eq(
-        true
-      );
-    });
-
-    it('should emit an AllModulesApprovalSet event', async () => {
-      await manager.connect(otherUser).setApprovalForAllModules(true);
-
-      const events = await manager.queryFilter(
-        manager.filters.AllModulesApprovalSet(null, null)
-      );
-      expect(events.length).to.eq(1);
-      const logDescription = manager.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('AllModulesApprovalSet');
-      expect(logDescription.args.user).to.eq(await otherUser.getAddress());
-      expect(logDescription.args.approved).to.eq(true);
-    });
-  });
-
   describe('#setApprovalForModule', async () => {
     it('should set approval for a module', async () => {
       await manager
