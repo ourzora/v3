@@ -213,7 +213,8 @@ export async function createReserveAuction(
   tokenContract: Contract,
   reserveAuction: ReserveAuctionV1,
   fundsRecipient: string,
-  curator: string,
+  host: string,
+  findersFeePercentage: number,
   currency = ethers.constants.AddressZero,
   tokenId = 0
 ) {
@@ -225,9 +226,10 @@ export async function createReserveAuction(
     tokenContract.address,
     duration,
     reservePrice,
-    curator,
+    host,
     fundsRecipient,
     5,
+    findersFeePercentage,
     currency
   );
 }
@@ -236,9 +238,10 @@ export async function bid(
   reserveAuction: ReserveAuctionV1,
   auctionId: number,
   amount: BigNumberish,
+  finder: string,
   currency = ethers.constants.AddressZero
 ) {
-  await reserveAuction.createBid(auctionId, amount, {
+  await reserveAuction.createBid(auctionId, amount, finder, {
     value: currency === ethers.constants.AddressZero ? amount : 0,
   });
 }

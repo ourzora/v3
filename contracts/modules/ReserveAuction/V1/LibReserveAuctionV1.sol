@@ -17,6 +17,7 @@ import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.
 library LibReserveAuctionV1 {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
+    using SafeMath for uint8;
     using SafeERC20 for IERC20;
 
     struct ReserveAuctionStorage {
@@ -55,6 +56,8 @@ library LibReserveAuctionV1 {
         uint256 reservePrice;
         // The sale percentage to send to the host
         uint8 listingFeePercentage;
+        // The sale percentage to send to the winning bid finder
+        uint8 findersFeePercentage;
         // The address that should receive the funds once the NFT is sold.
         address tokenOwner;
         // The address of the current highest bid
@@ -63,6 +66,8 @@ library LibReserveAuctionV1 {
         address payable host;
         // The address of the recipient of the auction's highest bid
         address payable fundsRecipient;
+        // The address of the current bid's finder
+        address payable finder;
         // The address of the ERC-20 currency to run the auction with.
         // If set to 0x0, the auction will be run in ETH
         address auctionCurrency;
@@ -88,6 +93,7 @@ library LibReserveAuctionV1 {
         uint256 indexed tokenId,
         address indexed tokenContract,
         address sender,
+        address finder,
         uint256 value,
         bool firstBid,
         bool extended
@@ -103,7 +109,8 @@ library LibReserveAuctionV1 {
         address winner,
         address fundsRecipient,
         uint256 amount,
-        uint256 curatorFee,
+        uint256 finderFee,
+        uint256 listingFee,
         address auctionCurrency
     );
 
@@ -146,11 +153,12 @@ library LibReserveAuctionV1 {
         address payable _host,
         address payable _fundsRecipient,
         uint8 _listingFeePercentage,
+        uint8 _findersFeePercentage,
         address _auctionCurrency
     ) internal returns (uint256) {
         require(IERC165(_tokenContract).supportsInterface(ERC721_INTERFACE_ID), "createAuction tokenContract does not support ERC721 interface");
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(_listingFeePercentage < 100, "createAuction listingFeePercentage must be less than 100");
+        require(_listingFeePercentage.add(_findersFeePercentage) < 100, "createAuction listingFeePercentage plus findersFeePercentage must be less than 100");
         require(_fundsRecipient != address(0), "createAuction fundsRecipient cannot be 0 address");
         require(
             IERC721(_tokenContract).getApproved(_tokenId) == msg.sender || tokenOwner == msg.sender,
@@ -166,10 +174,12 @@ library LibReserveAuctionV1 {
             firstBidTime: 0,
             reservePrice: _reservePrice,
             listingFeePercentage: _listingFeePercentage,
+            findersFeePercentage: _findersFeePercentage,
             tokenOwner: tokenOwner,
             bidder: payable(address(0)),
             host: _host,
             fundsRecipient: _fundsRecipient,
+            finder: payable(address(0)),
             auctionCurrency: _auctionCurrency
         });
 
@@ -218,7 +228,8 @@ library LibReserveAuctionV1 {
     function createBid(
         ReserveAuctionStorage storage _self,
         uint256 _auctionId,
-        uint256 _amount
+        uint256 _amount,
+        address _finder
     ) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
         address payable lastBidder = auction.bidder;
@@ -228,6 +239,7 @@ library LibReserveAuctionV1 {
             _amount >= auction.amount.add(auction.amount.mul(minBidIncrementPercentage).div(100)),
             "createBid must send more than the last bid by minBidIncrementPercentage amount"
         );
+        require(_finder != address(0), "createBid _finder must not be 0 address");
 
         // For Zora V1 Protocol, ensure that the bid is valid for the current bidShare configuration
         if (auction.tokenContract == _self.zoraV1ProtocolMedia) {
@@ -247,6 +259,7 @@ library LibReserveAuctionV1 {
 
         auction.amount = _amount;
         auction.bidder = payable(msg.sender);
+        auction.finder = payable(_finder);
 
         bool extended = false;
         // at this point we know that the timestamp is less than start + duration (since the auction would be over, otherwise)
@@ -268,6 +281,7 @@ library LibReserveAuctionV1 {
             auction.tokenId,
             auction.tokenContract,
             msg.sender,
+            _finder,
             _amount,
             lastBidder == address(0), // firstBid boolean
             extended
@@ -288,15 +302,26 @@ library LibReserveAuctionV1 {
         require(auction.firstBidTime != 0, "settleAuction auction hasn't begun");
         require(block.timestamp >= auction.firstBidTime.add(auction.duration), "settleAuction auction hasn't completed");
 
-        uint256 fundsRecipientProfit;
-        uint256 curatorFee;
+        uint256 remainingProfit = auction.amount;
         if (auction.tokenContract == _self.zoraV1ProtocolMedia) {
-            (fundsRecipientProfit, curatorFee) = _handleZoraAuctionPayout(_self, _auctionId);
+            remainingProfit = _handleZoraAuctionPayout(_self, _auctionId);
         } else if (IERC165(auction.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
-            (fundsRecipientProfit, curatorFee) = _handleEIP2981AuctionPayout(_self, _auctionId);
-        } else {
-            (fundsRecipientProfit, curatorFee) = _handleVanillaAuctionPayout(_self, _auctionId);
+            remainingProfit = _handleEIP2981AuctionPayout(_self, _auctionId);
         }
+
+        uint256 hostProfit;
+        uint256 finderProfit = remainingProfit.mul(auction.findersFeePercentage).div(100);
+        if (auction.host != address(0)) {
+            hostProfit = remainingProfit.mul(auction.listingFeePercentage).div(100);
+            _handleOutgoingTransfer(_self, auction.host, hostProfit, auction.auctionCurrency);
+        }
+        remainingProfit = remainingProfit.sub(hostProfit).sub(finderProfit);
+
+        _handleOutgoingTransfer(_self, auction.finder, finderProfit, auction.auctionCurrency);
+        _handleOutgoingTransfer(_self, auction.fundsRecipient, remainingProfit, auction.auctionCurrency);
+
+        // Transfer NFT to winner
+        IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
 
         emit AuctionEnded(
             _auctionId,
@@ -305,8 +330,9 @@ library LibReserveAuctionV1 {
             auction.host,
             auction.bidder,
             auction.fundsRecipient,
-            fundsRecipientProfit,
-            curatorFee,
+            remainingProfit,
+            hostProfit,
+            finderProfit,
             auction.auctionCurrency
         );
 
@@ -341,6 +367,9 @@ library LibReserveAuctionV1 {
         uint256 _amount,
         address _currency
     ) private {
+        if (_amount == 0 || _dest == address(0)) {
+            return;
+        }
         if (_currency == address(0)) {
             _handleOutgoingETHTransfer(_self, _dest, _amount);
         } else {
@@ -396,7 +425,7 @@ library LibReserveAuctionV1 {
         }
     }
 
-    function _handleZoraAuctionPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256, uint256) {
+    function _handleZoraAuctionPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256) {
         IZoraV1Market.BidShares memory bidShares = IZoraV1Market(_self.zoraV1ProtocolMarket).bidSharesForToken(_self.auctions[_auctionId].tokenId);
 
         Auction memory auction = _self.auctions[_auctionId];
@@ -419,69 +448,17 @@ library LibReserveAuctionV1 {
             );
         }
 
-        // Pay out host and funds recipient
-        uint256 hostProfit;
-        uint256 remainingProfit = auction.amount.sub(creatorProfit).sub(prevOwnerProfit);
-        if (auction.host != address(0)) {
-            hostProfit = remainingProfit.mul(auction.listingFeePercentage).div(100);
-            remainingProfit = remainingProfit.sub(hostProfit);
-            _handleOutgoingTransfer(_self, auction.host, hostProfit, auction.auctionCurrency);
-        }
-        _handleOutgoingTransfer(_self, auction.fundsRecipient, remainingProfit, auction.auctionCurrency);
-
-        // Transfer NFT to winner
-        IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
-
-        return (remainingProfit, hostProfit);
+        return auction.amount.sub(creatorProfit).sub(prevOwnerProfit);
     }
 
-    function _handleEIP2981AuctionPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256, uint256) {
+    function _handleEIP2981AuctionPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256) {
         Auction memory auction = _self.auctions[_auctionId];
 
         (address royaltyReceiver, uint256 royaltyAmount) = IERC2981(auction.tokenContract).royaltyInfo(auction.tokenId, auction.amount);
 
-        uint256 profit = auction.amount;
         // Pay out royalty receiver
-        if (royaltyAmount != 0 && royaltyReceiver != address(0)) {
-            profit = profit.sub(royaltyAmount);
-            _handleOutgoingTransfer(_self, royaltyReceiver, royaltyAmount, auction.auctionCurrency);
-        }
+        _handleOutgoingTransfer(_self, royaltyReceiver, royaltyAmount, auction.auctionCurrency);
 
-        // Pay out host and funds recipient
-        uint256 hostProfit;
-        if (auction.host != address(0)) {
-            hostProfit = profit.mul(auction.listingFeePercentage).div(100);
-            profit = profit.sub(hostProfit);
-            _handleOutgoingTransfer(_self, auction.host, hostProfit, auction.auctionCurrency);
-        }
-
-        // Pay out the funds recipient
-        _handleOutgoingTransfer(_self, auction.fundsRecipient, profit, auction.auctionCurrency);
-
-        // Transfer NFT to winner
-        IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
-
-        return (profit, hostProfit);
-    }
-
-    function _handleVanillaAuctionPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256, uint256) {
-        Auction memory auction = _self.auctions[_auctionId];
-        uint256 profit = auction.amount;
-
-        // Pay out host and funds recipient
-        uint256 hostProfit;
-        if (auction.host != address(0)) {
-            hostProfit = profit.mul(auction.listingFeePercentage).div(100);
-            profit = profit.sub(hostProfit);
-            _handleOutgoingTransfer(_self, auction.host, hostProfit, auction.auctionCurrency);
-        }
-
-        // Pay out the funds recipient
-        _handleOutgoingTransfer(_self, auction.fundsRecipient, profit, auction.auctionCurrency);
-
-        // Transfer NFT to winner
-        IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
-
-        return (profit, hostProfit);
+        return auction.amount.sub(royaltyAmount);
     }
 }

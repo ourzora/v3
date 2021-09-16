@@ -40,7 +40,7 @@ import {
 
 chai.use(asPromised);
 
-describe('ReserveAuctionV1 integration', () => {
+describe.only('ReserveAuctionV1 integration', () => {
   let reserveAuction: ReserveAuctionV1;
   let zoraV1: Media;
   let badERC721: BadErc721;
@@ -53,6 +53,7 @@ describe('ReserveAuctionV1 integration', () => {
   let bidderB: Signer;
   let fundsRecipient: Signer;
   let otherUser: Signer;
+  let finder: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
 
@@ -65,6 +66,7 @@ describe('ReserveAuctionV1 integration', () => {
     bidderB = signers[3];
     fundsRecipient = signers[4];
     otherUser = signers[5];
+    finder = signers[5];
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
     badERC721 = await deployBadERC721();
@@ -115,15 +117,16 @@ describe('ReserveAuctionV1 integration', () => {
             ethers.constants.AddressZero,
             await fundsRecipient.getAddress(),
             0,
+            10,
             ethers.constants.AddressZero
           );
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(0, ONE_ETH, { value: ONE_ETH });
+          .createBid(0, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
         await reserveAuction
           .connect(bidderB)
-          .createBid(0, TWO_ETH, { value: TWO_ETH });
+          .createBid(0, TWO_ETH, await finder.getAddress(), { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -161,7 +164,7 @@ describe('ReserveAuctionV1 integration', () => {
 
         // 15% creator fee -> 2ETH * 85% = 1.7 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(17))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1530))),
           10
         );
       });
@@ -191,15 +194,16 @@ describe('ReserveAuctionV1 integration', () => {
             await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
+            10,
             ethers.constants.AddressZero
           );
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(0, ONE_ETH, { value: ONE_ETH });
+          .createBid(0, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
         await reserveAuction
           .connect(bidderB)
-          .createBid(0, TWO_ETH, { value: TWO_ETH });
+          .createBid(0, TWO_ETH, await finder.getAddress(), { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -237,7 +241,7 @@ describe('ReserveAuctionV1 integration', () => {
         // 15% creator fee -> 2ETH * 85% = 1.7 ETH
         // 20% host fee -> 1.7 ETH * 80% = 1.36 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1360))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1190))),
           10
         );
       });
@@ -278,11 +282,16 @@ describe('ReserveAuctionV1 integration', () => {
             ethers.constants.AddressZero,
             await fundsRecipient.getAddress(),
             0,
+            10,
             weth.address
           );
 
-        await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
-        await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
+        await reserveAuction
+          .connect(bidderA)
+          .createBid(0, ONE_ETH, await finder.getAddress());
+        await reserveAuction
+          .connect(bidderB)
+          .createBid(0, TWO_ETH, await finder.getAddress());
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -321,7 +330,7 @@ describe('ReserveAuctionV1 integration', () => {
 
         // 15% creator fee -> 2ETH * 85% = 1.7 WETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(17)))
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1530)))
         );
       });
 
@@ -360,11 +369,16 @@ describe('ReserveAuctionV1 integration', () => {
             await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
+            10,
             weth.address
           );
 
-        await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
-        await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
+        await reserveAuction
+          .connect(bidderA)
+          .createBid(0, ONE_ETH, await finder.getAddress());
+        await reserveAuction
+          .connect(bidderB)
+          .createBid(0, TWO_ETH, await finder.getAddress());
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -404,7 +418,7 @@ describe('ReserveAuctionV1 integration', () => {
         // 15% creator fee -> 2ETH * 85% = 1.7 WETH
         // 20% host fee -> 1.7 ETH * 80% = 1.36 ETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1360)))
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(1190)))
         );
       });
 
@@ -444,15 +458,16 @@ describe('ReserveAuctionV1 integration', () => {
             ethers.constants.AddressZero,
             await fundsRecipient.getAddress(),
             0,
+            10,
             ethers.constants.AddressZero
           );
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(0, ONE_ETH, { value: ONE_ETH });
+          .createBid(0, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
         await reserveAuction
           .connect(bidderB)
-          .createBid(0, TWO_ETH, { value: TWO_ETH });
+          .createBid(0, TWO_ETH, await finder.getAddress(), { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -492,7 +507,7 @@ describe('ReserveAuctionV1 integration', () => {
 
         // 50% creator fee -> 2ETH * 50% = 1 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9))),
           10
         );
       });
@@ -522,15 +537,16 @@ describe('ReserveAuctionV1 integration', () => {
             await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
+            10,
             ethers.constants.AddressZero
           );
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(0, ONE_ETH, { value: ONE_ETH });
+          .createBid(0, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
         await reserveAuction
           .connect(bidderB)
-          .createBid(0, TWO_ETH, { value: TWO_ETH });
+          .createBid(0, TWO_ETH, await finder.getAddress(), { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -570,7 +586,7 @@ describe('ReserveAuctionV1 integration', () => {
         // 50% creator fee -> 2ETH * 50% = 1 ETH
         // 20% host fee -> 1 ETH * 80% = 0.8 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(8))),
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(7))),
           10
         );
       });
@@ -611,11 +627,16 @@ describe('ReserveAuctionV1 integration', () => {
             ethers.constants.AddressZero,
             await fundsRecipient.getAddress(),
             0,
+            10,
             weth.address
           );
 
-        await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
-        await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
+        await reserveAuction
+          .connect(bidderA)
+          .createBid(0, ONE_ETH, await finder.getAddress());
+        await reserveAuction
+          .connect(bidderB)
+          .createBid(0, TWO_ETH, await finder.getAddress());
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -656,7 +677,7 @@ describe('ReserveAuctionV1 integration', () => {
 
         // 50% creator fee -> 2ETH * 50% = 1 WETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(ONE_ETH))
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9)))
         );
       });
 
@@ -695,11 +716,16 @@ describe('ReserveAuctionV1 integration', () => {
             await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
+            10,
             weth.address
           );
 
-        await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
-        await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
+        await reserveAuction
+          .connect(bidderA)
+          .createBid(0, ONE_ETH, await finder.getAddress());
+        await reserveAuction
+          .connect(bidderB)
+          .createBid(0, TWO_ETH, await finder.getAddress());
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -741,7 +767,7 @@ describe('ReserveAuctionV1 integration', () => {
         // 50% creator fee -> 2ETH * 50% = 1 WETH
         // 20% host fee -> 1 ETH * 80% = 0.8 ETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(8)))
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(7)))
         );
       });
 
@@ -781,15 +807,16 @@ describe('ReserveAuctionV1 integration', () => {
             ethers.constants.AddressZero,
             await fundsRecipient.getAddress(),
             0,
+            10,
             ethers.constants.AddressZero
           );
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(0, ONE_ETH, { value: ONE_ETH });
+          .createBid(0, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
         await reserveAuction
           .connect(bidderB)
-          .createBid(0, TWO_ETH, { value: TWO_ETH });
+          .createBid(0, TWO_ETH, await finder.getAddress(), { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -826,7 +853,7 @@ describe('ReserveAuctionV1 integration', () => {
         const afterBalance = await fundsRecipient.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TWO_ETH)),
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(18))),
           10
         );
       });
@@ -844,15 +871,16 @@ describe('ReserveAuctionV1 integration', () => {
             await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
+            10,
             ethers.constants.AddressZero
           );
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(0, ONE_ETH, { value: ONE_ETH });
+          .createBid(0, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
         await reserveAuction
           .connect(bidderB)
-          .createBid(0, TWO_ETH, { value: TWO_ETH });
+          .createBid(0, TWO_ETH, await finder.getAddress(), { value: TWO_ETH });
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -889,7 +917,7 @@ describe('ReserveAuctionV1 integration', () => {
 
         // 20% host fee -> 2 ETH * 80% = 1.6 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(16))),
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(14))),
           10
         );
       });
@@ -918,11 +946,16 @@ describe('ReserveAuctionV1 integration', () => {
             ethers.constants.AddressZero,
             await fundsRecipient.getAddress(),
             0,
+            10,
             weth.address
           );
 
-        await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
-        await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
+        await reserveAuction
+          .connect(bidderA)
+          .createBid(0, ONE_ETH, await finder.getAddress());
+        await reserveAuction
+          .connect(bidderB)
+          .createBid(0, TWO_ETH, await finder.getAddress());
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -960,7 +993,7 @@ describe('ReserveAuctionV1 integration', () => {
         );
 
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(TWO_ETH))
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(18)))
         );
       });
     });
@@ -988,11 +1021,16 @@ describe('ReserveAuctionV1 integration', () => {
             await host.getAddress(),
             await fundsRecipient.getAddress(),
             20,
+            10,
             weth.address
           );
 
-        await reserveAuction.connect(bidderA).createBid(0, ONE_ETH);
-        await reserveAuction.connect(bidderB).createBid(0, TWO_ETH);
+        await reserveAuction
+          .connect(bidderA)
+          .createBid(0, ONE_ETH, await finder.getAddress());
+        await reserveAuction
+          .connect(bidderB)
+          .createBid(0, TWO_ETH, await finder.getAddress());
         await timeTravelToEndOfAuction(reserveAuction, 0, true);
         await reserveAuction.connect(otherUser).settleAuction(0);
       }
@@ -1031,7 +1069,7 @@ describe('ReserveAuctionV1 integration', () => {
 
         // 20% host fee -> 2 ETH * 80% = 1.6 ETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(16)))
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(14)))
         );
       });
     });

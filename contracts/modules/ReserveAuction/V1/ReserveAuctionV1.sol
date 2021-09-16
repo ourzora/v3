@@ -28,9 +28,10 @@ contract ReserveAuctionV1 is ReentrancyGuard {
         address _tokenContract,
         uint256 _duration,
         uint256 _reservePrice,
-        address payable _curator,
+        address payable _host,
         address payable _fundsRecipient,
-        uint8 _curatorFeePercentage,
+        uint8 _listingFeePercentage,
+        uint8 _findersFeePercentage,
         address _auctionCurrency
     ) public nonReentrant returns (uint256) {
         return
@@ -39,9 +40,10 @@ contract ReserveAuctionV1 is ReentrancyGuard {
                 _tokenContract,
                 _duration,
                 _reservePrice,
-                _curator,
+                _host,
                 _fundsRecipient,
-                _curatorFeePercentage,
+                _listingFeePercentage,
+                _findersFeePercentage,
                 _auctionCurrency
             );
     }
@@ -50,8 +52,12 @@ contract ReserveAuctionV1 is ReentrancyGuard {
         reserveAuctionStorage.setAuctionReservePrice(_auctionId, _reservePrice);
     }
 
-    function createBid(uint256 _auctionId, uint256 _amount) external payable nonReentrant {
-        reserveAuctionStorage.createBid(_auctionId, _amount);
+    function createBid(
+        uint256 _auctionId,
+        uint256 _amount,
+        address _finder
+    ) external payable nonReentrant {
+        reserveAuctionStorage.createBid(_auctionId, _amount, _finder);
     }
 
     function settleAuction(uint256 _auctionId) external nonReentrant {
