@@ -21,7 +21,7 @@ contract ZoraModuleApprovalsManager {
     }
 
     function isModuleApproved(address _module, address _user) external view returns (bool) {
-        return userApprovals[_user][_module];
+        return userApprovals[_module][_user];
     }
 
     function setApprovalForModule(address _moduleAddress, bool _approved) public {
