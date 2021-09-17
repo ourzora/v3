@@ -33,6 +33,7 @@
     "*.sol": "solhint"
   },
   "scripts": {
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "test": "hardhat test"
   }
 }
