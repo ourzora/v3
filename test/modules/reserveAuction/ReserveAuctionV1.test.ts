@@ -38,6 +38,7 @@ import {
   toRoundedNumber,
   TWO_ETH,
   TENTH_ETH,
+  THOUSANDTH_ETH,
 } from '../../utils';
 
 import { BigNumber, Signer } from 'ethers';
@@ -677,7 +678,7 @@ describe('ReserveAuctionV1', () => {
 
       expect(
         afterFundsRecipientBalance.sub(beforeFundsRecipientBalance).toString()
-      ).to.eq('807500000000000000');
+      ).to.eq('722500000000000000');
       expect(afterhostBalance.sub(beforehostBalance).toString()).to.eq(
         '42500000000000000'
       );
@@ -686,7 +687,7 @@ describe('ReserveAuctionV1', () => {
         500
       );
       expect(afterFinderBalance.toString()).to.eq(
-        beforeFinderBalance.add(TENTH_ETH).toString()
+        beforeFinderBalance.add(THOUSANDTH_ETH.mul(85)).toString()
       );
       expect(tokenOwner).to.eq(await bidderA.getAddress());
     });
@@ -730,7 +731,7 @@ describe('ReserveAuctionV1', () => {
 
       expect(
         afterFundsRecipientBalance.sub(beforeFundsRecipientBalance).toString()
-      ).to.eq('475000000000000000');
+      ).to.eq('425000000000000000');
       expect(afterhostBalance.sub(beforehostBalance).toString()).to.eq(
         '25000000000000000'
       );
@@ -739,7 +740,7 @@ describe('ReserveAuctionV1', () => {
         500
       );
       expect(afterFinderBalance.toString()).to.eq(
-        afterFinderBalance.add(TENTH_ETH).toString()
+        beforeFinderBalance.add(TENTH_ETH.div(2)).toString()
       );
       expect(tokenOwner).to.eq(await bidderA.getAddress());
     });
@@ -778,7 +779,7 @@ describe('ReserveAuctionV1', () => {
       );
       const tokenOwner = await testERC721.ownerOf(0);
 
-      expect(fundsRecipientBalance).to.eq('10000950000000000000000');
+      expect(fundsRecipientBalance).to.eq('10000850000000000000000');
       expect(toRoundedNumber(hostBalance)).to.approximately(
         toRoundedNumber(BigNumber.from('10000050000000000000000')),
         2

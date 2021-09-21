@@ -40,7 +40,7 @@ import {
 
 chai.use(asPromised);
 
-describe.only('ReserveAuctionV1 integration', () => {
+describe('ReserveAuctionV1 integration', () => {
   let reserveAuction: ReserveAuctionV1;
   let zoraV1: Media;
   let badERC721: BadErc721;
@@ -109,7 +109,7 @@ describe.only('ReserveAuctionV1 integration', () => {
       .setApprovalForModule(reserveAuction.address, true);
   });
 
-  describe.only('Zora V1 NFT', () => {
+  describe('Zora V1 NFT', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
@@ -269,7 +269,7 @@ describe.only('ReserveAuctionV1 integration', () => {
       });
     });
 
-    describe.only('WETH auction with no host', () => {
+    describe('WETH auction with no host', () => {
       beforeEach(async () => {
         await weth.connect(bidderA).deposit({ value: ONE_ETH });
         await weth
