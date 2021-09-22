@@ -2,6 +2,10 @@ import { HardhatUserConfig } from 'hardhat/config';
 import '@nomiclabs/hardhat-ethers';
 import 'hardhat-typechain';
 import 'tsconfig-paths/register';
+import 'hardhat-gas-reporter';
+import dotenv from 'dotenv';
+
+const env = dotenv.config().parsed;
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -12,6 +16,10 @@ const config: HardhatUserConfig = {
         runs: 200,
       },
     },
+  },
+  gasReporter: {
+    currency: 'USD',
+    coinmarketcap: env.CMC_API_KEY as string,
   },
 };
 
