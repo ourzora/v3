@@ -59,6 +59,8 @@ contract ListingsV1 is ReentrancyGuard {
 
     event ListingCreated(uint256 indexed id, Listing listing);
 
+    event ListingPriceUpdated(uint256 indexed id, Listing listing);
+
     event ListingCanceled(uint256 indexed id, Listing listing);
 
     event ListingFilled(uint256 indexed id, address buyer, Listing listing);
@@ -112,6 +114,22 @@ contract ListingsV1 is ReentrancyGuard {
         emit ListingCreated(listingId, listings[listingId]);
 
         return listingId;
+    }
+
+    function setListingPrice(
+        uint256 _listingId,
+        uint256 _listingPrice,
+        address _listingCurrency
+    ) external {
+        Listing storage listing = listings[_listingId];
+
+        require(listing.seller == msg.sender, "setListingPrice must be seller");
+        require(listing.status == ListingStatus.Active, "setListingPrice must be active listing");
+
+        listing.listingPrice = _listingPrice;
+        listing.listingCurrency = _listingCurrency;
+
+        emit ListingPriceUpdated(_listingId, listing);
     }
 
     function cancelListing(uint256 _listingId) external {

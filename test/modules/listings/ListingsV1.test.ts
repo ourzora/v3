@@ -186,6 +186,69 @@ describe('ListingsV1', () => {
     });
   });
 
+  describe('#setListingPrice', () => {
+    beforeEach(async () => {
+      await listings.createListing(
+        zoraV1.address,
+        0,
+        ONE_ETH,
+        ethers.constants.AddressZero,
+        await fundsRecipient.getAddress(),
+        await host.getAddress(),
+        10,
+        10
+      );
+    });
+
+    it('should update the listing price', async () => {
+      await listings.setListingPrice(1, TWO_ETH, weth.address);
+
+      const listing = await listings.listings(1);
+
+      expect(listing.listingPrice.toString()).to.eq(TWO_ETH.toString());
+      expect(listing.listingCurrency).to.eq(weth.address);
+    });
+
+    it('should emit a ListingPriceUpdated event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+
+      await listings.setListingPrice(1, TWO_ETH, weth.address);
+
+      const events = await listings.queryFilter(
+        listings.filters.ListingPriceUpdated(null, null),
+        block
+      );
+
+      expect(events.length).to.eq(1);
+
+      const logDescription = listings.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ListingPriceUpdated');
+      expect(logDescription.args.listing.listingCurrency).to.eq(weth.address);
+    });
+
+    it('should revert when the msg.sender is not the seller', async () => {
+      await expect(
+        listings.connect(host).setListingPrice(1, TWO_ETH, weth.address)
+      ).eventually.rejectedWith(revert`setListingPrice must be seller`);
+    });
+    it('should revert if the listing has been sold', async () => {
+      await listings
+        .connect(buyerA)
+        .fillListing(1, await finder.getAddress(), { value: ONE_ETH });
+
+      await expect(
+        listings.setListingPrice(1, TWO_ETH, weth.address)
+      ).eventually.rejectedWith(revert`setListingPrice must be active listing`);
+    });
+    it('should revert if the listing has been canceled', async () => {
+      await listings.cancelListing(1);
+
+      await expect(
+        listings.setListingPrice(1, TWO_ETH, weth.address)
+      ).eventually.rejectedWith(revert`setListingPrice must be active listing`);
+    });
+  });
+
   describe('#cancelListing', () => {
     beforeEach(async () => {
       await listings.createListing(
