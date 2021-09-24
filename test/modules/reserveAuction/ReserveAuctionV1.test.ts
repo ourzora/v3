@@ -262,7 +262,10 @@ describe('ReserveAuctionV1', () => {
         auctionCurrency
       );
 
-      const createdAuction = await reserveAuction.auctions(0);
+      const createdAuction = await reserveAuction.auctions(1);
+      const auctionId = (
+        await reserveAuction.nftToAuctionId(zoraV1.address, 0)
+      ).toNumber();
       expect(createdAuction.duration.toNumber()).to.eq(duration);
       expect(createdAuction.reservePrice.toString()).to.eq(
         reservePrice.toString()
@@ -272,6 +275,58 @@ describe('ReserveAuctionV1', () => {
       expect(createdAuction.fundsRecipient).to.eq(fundsRecipientAddress);
       expect(createdAuction.tokenOwner).to.eq(await deployer.getAddress());
       expect(createdAuction.findersFeePercentage).to.eq(findersFeePercentage);
+      expect(auctionId).to.eq(1);
+    });
+
+    it.only('should cancel an old auction if one currently exists for it', async () => {
+      const duration = 60 * 60 * 24;
+      const reservePrice = BigNumber.from(10).pow(18).div(2);
+      const listingFeePercentage = 10;
+      const findersFeePercentage = 10;
+      const hostAddress = await host.getAddress();
+      const fundsRecipientAddress = await fundsRecipient.getAddress();
+      const auctionCurrency = ethers.constants.AddressZero;
+      await reserveAuction.createAuction(
+        0,
+        zoraV1.address,
+        duration,
+        reservePrice,
+        hostAddress,
+        fundsRecipientAddress,
+        listingFeePercentage,
+        findersFeePercentage,
+        auctionCurrency
+      );
+
+      await zoraV1.transferFrom(
+        await deployer.getAddress(),
+        await otherUser.getAddress(),
+        0
+      );
+
+      await reserveAuction
+        .connect(otherUser)
+        .createAuction(
+          0,
+          zoraV1.address,
+          duration,
+          reservePrice,
+          hostAddress,
+          fundsRecipientAddress,
+          listingFeePercentage,
+          findersFeePercentage,
+          auctionCurrency
+        );
+
+      const oldAuction = await reserveAuction.auctions(1);
+      const newAuction = await reserveAuction.auctions(2);
+      const auctionId = (
+        await reserveAuction.nftToAuctionId(zoraV1.address, 0)
+      ).toNumber();
+      expect(auctionId).to.eq(2);
+      expect(oldAuction.tokenContract).to.eq(ethers.constants.AddressZero);
+      expect(newAuction.tokenContract).to.eq(zoraV1.address);
+      expect(newAuction.tokenOwner).to.eq(await otherUser.getAddress());
     });
 
     xit('should emit an AuctionCreated event', async () => {
@@ -296,7 +351,7 @@ describe('ReserveAuctionV1', () => {
         auctionCurrency
       );
 
-      const createdAuction = await reserveAuction.auctions(0);
+      const createdAuction = await reserveAuction.auctions(1);
       const events = await reserveAuction.queryFilter(
         new LibReserveAuctionV1Factory()
           .attach(reserveAuction.address)
@@ -318,7 +373,7 @@ describe('ReserveAuctionV1', () => {
       expect(events.length).to.eq(1);
       const logDescription = reserveAuction.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('AuctionCreated');
-      expect(logDescription.args.auctionId.toNumber()).to.eq(0);
+      expect(logDescription.args.auctionId.toNumber()).to.eq(1);
       expect(logDescription.args.tokenId.toNumber()).to.eq(
         createdAuction.tokenId.toNumber()
       );
@@ -366,24 +421,24 @@ describe('ReserveAuctionV1', () => {
 
     it('should revert if the caller is not the owner or host', async () => {
       await expect(
-        reserveAuction.connect(otherUser).setAuctionReservePrice(0, 1)
+        reserveAuction.connect(otherUser).setAuctionReservePrice(1, 1)
       ).eventually.rejectedWith(
         revert`setAuctionReservePrice must be token owner`
       );
     });
 
     it('should revert if the auction has already started', async () => {
-      await bid(reserveAuction, 0, ONE_ETH, await finder.getAddress());
+      await bid(reserveAuction, 1, ONE_ETH, await finder.getAddress());
       await expect(
-        reserveAuction.setAuctionReservePrice(0, 1)
+        reserveAuction.setAuctionReservePrice(1, 1)
       ).eventually.rejectedWith(
         revert`setAuctionReservePrice auction has already started`
       );
     });
 
     it('should set the reserve price for the auction', async () => {
-      await reserveAuction.setAuctionReservePrice(0, ONE_ETH.mul(2));
-      const auction = await reserveAuction.auctions(0);
+      await reserveAuction.setAuctionReservePrice(1, ONE_ETH.mul(2));
+      const auction = await reserveAuction.auctions(1);
 
       expect(auction.reservePrice.toString()).to.eq(ONE_ETH.mul(2).toString());
     });
@@ -408,16 +463,16 @@ describe('ReserveAuctionV1', () => {
     it('should revert if the auction expired', async () => {
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
-      await timeTravelToEndOfAuction(reserveAuction, 0, true);
+      await timeTravelToEndOfAuction(reserveAuction, 1, true);
 
       await expect(
         reserveAuction
           .connect(bidderB)
-          .createBid(0, ONE_ETH.mul(2), await finder.getAddress())
+          .createBid(1, ONE_ETH.mul(2), await finder.getAddress())
       ).eventually.rejectedWith(revert`createBid auction expired`);
     });
 
@@ -425,7 +480,7 @@ describe('ReserveAuctionV1', () => {
       await expect(
         reserveAuction
           .connect(bidderA)
-          .createBid(0, 1, await finder.getAddress())
+          .createBid(1, 1, await finder.getAddress())
       ).eventually.rejectedWith(
         revert`createBid must send at least reservePrice`
       );
@@ -434,14 +489,14 @@ describe('ReserveAuctionV1', () => {
     it('should revert if the bid is not greater than 10% more of the previous bid', async () => {
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
       await expect(
         reserveAuction
           .connect(bidderB)
-          .createBid(0, ONE_ETH.add(1), await finder.getAddress())
+          .createBid(1, ONE_ETH.add(1), await finder.getAddress())
       ).eventually.rejectedWith(
         revert`createBid must send more than the last bid by minBidIncrementPercentage amount`
       );
@@ -451,7 +506,7 @@ describe('ReserveAuctionV1', () => {
       await expect(
         reserveAuction
           .connect(bidderB)
-          .createBid(0, ONE_ETH, ethers.constants.AddressZero)
+          .createBid(1, ONE_ETH, ethers.constants.AddressZero)
       ).eventually.rejectedWith(
         revert`createBid _finder must not be 0 address`
       );
@@ -461,7 +516,7 @@ describe('ReserveAuctionV1', () => {
       await expect(
         reserveAuction
           .connect(bidderA)
-          .createBid(0, ONE_ETH.add(1), await finder.getAddress())
+          .createBid(1, ONE_ETH.add(1), await finder.getAddress())
       ).eventually.rejectedWith(
         revert`createBid bid invalid for share splitting`
       );
@@ -470,11 +525,11 @@ describe('ReserveAuctionV1', () => {
     it('should set the starting time on the first bid', async () => {
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
-      const auction = await reserveAuction.auctions(0);
+      const auction = await reserveAuction.auctions(1);
 
       expect(auction.firstBidTime.toNumber()).to.not.eq(0);
     });
@@ -485,13 +540,13 @@ describe('ReserveAuctionV1', () => {
       );
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
       await bid(
         reserveAuction.connect(bidderB),
-        0,
+        1,
         ONE_ETH.mul(2),
         await finder.getAddress()
       );
@@ -509,12 +564,12 @@ describe('ReserveAuctionV1', () => {
     it('should accept the transfer and set the bid details on the auction', async () => {
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
 
-      const auction = await reserveAuction.auctions(0);
+      const auction = await reserveAuction.auctions(1);
 
       expect(auction.firstBidTime.toNumber()).to.not.eq(0);
       expect(auction.amount.toString()).to.eq(ONE_ETH.toString());
@@ -525,21 +580,21 @@ describe('ReserveAuctionV1', () => {
     });
 
     it('should extend the auction if it is in its final moments', async () => {
-      const oldDuration = (await reserveAuction.auctions(0)).duration;
+      const oldDuration = (await reserveAuction.auctions(1)).duration;
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
-      await timeTravelToEndOfAuction(reserveAuction, 0);
+      await timeTravelToEndOfAuction(reserveAuction, 1);
       await bid(
         reserveAuction.connect(bidderB),
-        0,
+        1,
         TWO_ETH,
         await finder.getAddress()
       );
-      const newDuration = (await reserveAuction.auctions(0)).duration;
+      const newDuration = (await reserveAuction.auctions(1)).duration;
 
       expect(newDuration.toNumber()).to.eq(
         oldDuration.toNumber() - 1 + 15 * 60
@@ -549,7 +604,7 @@ describe('ReserveAuctionV1', () => {
     it('should take the NFT into escrow after the first bid', async () => {
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
@@ -560,12 +615,12 @@ describe('ReserveAuctionV1', () => {
     it('should set the current finder on the auction', async () => {
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
 
-      const currFinder = (await reserveAuction.auctions(0)).finder;
+      const currFinder = (await reserveAuction.auctions(1)).finder;
 
       expect(currFinder).to.eq(await finder.getAddress());
     });
@@ -579,7 +634,7 @@ describe('ReserveAuctionV1', () => {
       await expect(
         bid(
           reserveAuction.connect(bidderA),
-          0,
+          1,
           ONE_ETH,
           await finder.getAddress()
         )
@@ -607,7 +662,7 @@ describe('ReserveAuctionV1', () => {
       );
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
@@ -631,7 +686,7 @@ describe('ReserveAuctionV1', () => {
         undefined,
         1
       );
-      await expect(reserveAuction.settleAuction(1)).eventually.rejectedWith(
+      await expect(reserveAuction.settleAuction(2)).eventually.rejectedWith(
         revert`settleAuction auction hasn't begun`
       );
     });
@@ -650,7 +705,7 @@ describe('ReserveAuctionV1', () => {
       );
       await bid(
         reserveAuction.connect(bidderA),
-        1,
+        2,
         ONE_ETH,
         await finder.getAddress()
       );
@@ -661,14 +716,14 @@ describe('ReserveAuctionV1', () => {
     });
 
     it('should handle a zora auction payout', async () => {
-      await timeTravelToEndOfAuction(reserveAuction, 0, true);
+      await timeTravelToEndOfAuction(reserveAuction, 1, true);
 
       const beforeFundsRecipientBalance = await fundsRecipient.getBalance();
       const beforehostBalance = await host.getBalance();
       const beforeCreatorBalance = await deployer.getBalance();
       const beforeFinderBalance = await finder.getBalance();
 
-      await settleAuction(reserveAuction, 0);
+      await settleAuction(reserveAuction, 1);
 
       const afterFundsRecipientBalance = await fundsRecipient.getBalance();
       const afterhostBalance = await host.getBalance();
@@ -711,17 +766,17 @@ describe('ReserveAuctionV1', () => {
       );
       await bid(
         reserveAuction.connect(bidderA),
-        1,
+        2,
         ONE_ETH,
         await finder.getAddress()
       );
-      await timeTravelToEndOfAuction(reserveAuction, 1, true);
+      await timeTravelToEndOfAuction(reserveAuction, 2, true);
 
       const beforeFundsRecipientBalance = await fundsRecipient.getBalance();
       const beforeCreatorBalance = await deployer.getBalance();
       const beforehostBalance = await host.getBalance();
       const beforeFinderBalance = await finder.getBalance();
-      await settleAuction(reserveAuction, 1);
+      await settleAuction(reserveAuction, 2);
       const afterFundsRecipientBalance = await fundsRecipient.getBalance();
       const afterCreatorBalance = await deployer.getBalance();
       const afterhostBalance = await host.getBalance();
@@ -760,13 +815,13 @@ describe('ReserveAuctionV1', () => {
       );
       await bid(
         reserveAuction.connect(bidderA),
-        1,
+        2,
         ONE_ETH,
         await finder.getAddress()
       );
-      await timeTravelToEndOfAuction(reserveAuction, 1, true);
+      await timeTravelToEndOfAuction(reserveAuction, 2, true);
 
-      await settleAuction(reserveAuction, 1);
+      await settleAuction(reserveAuction, 2);
 
       const fundsRecipientBalance = (
         await ethers.provider.getBalance(await fundsRecipient.getAddress())
@@ -812,7 +867,7 @@ describe('ReserveAuctionV1', () => {
 
     it('should revert if not called by the host or creator before the first bid', async () => {
       await expect(
-        reserveAuction.connect(otherUser).cancelAuction(0)
+        reserveAuction.connect(otherUser).cancelAuction(1)
       ).eventually.rejectedWith(
         revert`cancelAuction only callable by auction creator`
       );
@@ -821,20 +876,20 @@ describe('ReserveAuctionV1', () => {
     it('should revert if the auction has started', async () => {
       await bid(
         reserveAuction.connect(bidderA),
-        0,
+        1,
         ONE_ETH,
         await finder.getAddress()
       );
 
-      await expect(reserveAuction.cancelAuction(0)).eventually.rejectedWith(
+      await expect(reserveAuction.cancelAuction(1)).eventually.rejectedWith(
         revert`cancelAuction auction already started`
       );
     });
 
     it('should cancel an auction and return the token to the creator', async () => {
-      await reserveAuction.cancelAuction(0);
+      await reserveAuction.cancelAuction(1);
 
-      const deletedAuction = await reserveAuction.auctions(0);
+      const deletedAuction = await reserveAuction.auctions(1);
 
       expect(await zoraV1.ownerOf(0)).to.eq(await deployer.getAddress());
       expect(deletedAuction.tokenContract).to.eq(ethers.constants.AddressZero);
@@ -847,9 +902,9 @@ describe('ReserveAuctionV1', () => {
         await bidderA.getAddress(),
         0
       );
-      await reserveAuction.connect(otherUser).cancelAuction(0);
+      await reserveAuction.connect(otherUser).cancelAuction(1);
 
-      const deletedAuction = await reserveAuction.auctions(0);
+      const deletedAuction = await reserveAuction.auctions(1);
       expect(deletedAuction.tokenContract).to.eq(ethers.constants.AddressZero);
       expect(deletedAuction.tokenOwner).to.eq(ethers.constants.AddressZero);
     });

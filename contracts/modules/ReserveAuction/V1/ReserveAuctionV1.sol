@@ -23,6 +23,10 @@ contract ReserveAuctionV1 is ReentrancyGuard {
         return reserveAuctionStorage.auctions[_auctionId];
     }
 
+    function nftToAuctionId(address _tokenAddress, uint256 _tokenId) external view returns (uint256) {
+        return reserveAuctionStorage.nftToAuctionId[_tokenAddress][_tokenId];
+    }
+
     function createAuction(
         uint256 _tokenId,
         address _tokenContract,

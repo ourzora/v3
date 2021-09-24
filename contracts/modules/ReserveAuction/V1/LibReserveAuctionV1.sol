@@ -30,6 +30,7 @@ library LibReserveAuctionV1 {
         Counters.Counter auctionIdTracker;
         uint256 version;
         mapping(uint256 => Auction) auctions;
+        mapping(address => mapping(uint256 => uint256)) nftToAuctionId;
     }
 
     bytes4 constant ERC721_INTERFACE_ID = 0x80ac58cd;
@@ -138,6 +139,8 @@ library LibReserveAuctionV1 {
         _self.erc20TransferHelper = _erc20TransferHelper;
         _self.erc721TransferHelper = _erc721TransferHelper;
         _self.initialized = true;
+        // Ensure auction IDs start at 1 so we can reserve 0 for "nonexistant"
+        _self.auctionIdTracker.increment();
     }
 
     /**
@@ -166,6 +169,11 @@ library LibReserveAuctionV1 {
         );
         uint256 auctionId = _self.auctionIdTracker.current();
 
+        // If another auction already exists for this nft, cancel it
+        if (_self.nftToAuctionId[_tokenContract][_tokenId] != 0) {
+            cancelAuction(_self, _self.nftToAuctionId[_tokenContract][_tokenId]);
+        }
+
         _self.auctions[auctionId] = Auction({
             tokenId: _tokenId,
             tokenContract: _tokenContract,
@@ -182,6 +190,7 @@ library LibReserveAuctionV1 {
             finder: payable(address(0)),
             auctionCurrency: _auctionCurrency
         });
+        _self.nftToAuctionId[_tokenContract][_tokenId] = auctionId;
 
         _self.auctionIdTracker.increment();
 
