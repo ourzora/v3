@@ -62,3 +62,7 @@ The other side of issue **1.1**
 ### 3.x Consistency: Revert reason format unconsistent with general format
 
 **Resultion proposal**: Consider prefixing revert reasons with `BTH::`
+
+## 4. Transfer Helpers
+
+No comments
