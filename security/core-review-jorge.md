@@ -13,7 +13,7 @@
 
 ### 1.1 High severity: Incorrect mapping access in `isModuleApproved`
 
-`userApprovals` mapping was accessed incorrectly with arguments reversed. The reason this wasn't caught was due to the only consumer of this function (`BaseTransferHelper.onlyApprovedModule` modifier) passed the arguments reversed.
+The `userApprovals` mapping is being accessed incorrectly with its arguments reversed. The reason this wasn't caught was due to the only consumer of this function (`BaseTransferHelper.onlyApprovedModule` modifier) passed the arguments reversed.
 
 **Recommendation**: instead of just testing that the `userApprovals` module has the correct value, also test `isModuleApproved` since that it should be the function to check module approval
 
@@ -21,11 +21,13 @@
 
 ### 1.2 Missing functionality: freezing a proposal has no effect on user approvals
 
-Even though frozen state was introduced, there's currently no effect in user approvals
+Even though a `Frozen` state was introduced, there's currently no effect in user approvals
 
 **Resultion proposal**: [PR#12](https://github.com/ourzora/v3/pull/12)
 
 ### 1.3 Missing functionality: unused event `AllModulesApprovalSet`
+
+Missing a function to allow a user to approve all modules with passed proposals
 
 **Resultion proposal**: [PR#12](https://github.com/ourzora/v3/pull/12)
 
@@ -37,7 +39,7 @@ Currently neither `ModuleApprovalSet` or `AllModulesApprovalSet` use indexed arg
 
 ## 2. `ZoraProposalManager`
 
-### 2.1 Optimization: check proposal existance using `ProposalStatus`
+### 2.1 Optimization: implicitly check proposal existence using `ProposalStatus`
 
 Currently, all functions check whether a proposal exists by checking whether the proposer address is not the zero address (which it can never be after `proposeModule` since it gets set to `msg.sender`)
 
@@ -45,7 +47,7 @@ However, if all proposals that have been created have a non-zero value in their 
 
 **Resultion proposal**: add a `Unexistent` proposal status as the first status option
 
-### 2.x Performance: address arguments in events are not indexed
+### 2.2 Performance: address arguments in events are not indexed
 
 Similar rational to **1.4**
 
@@ -59,7 +61,7 @@ The other side of issue **1.1**
 
 **Resultion proposal**: [PR#12](https://github.com/ourzora/v3/pull/12)
 
-### 3.x Consistency: Revert reason format unconsistent with general format
+### 3.2 Consistency: Revert reason format unconsistent with general format
 
 **Resultion proposal**: Consider prefixing revert reasons with `BTH::`
 
