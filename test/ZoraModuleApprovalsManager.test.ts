@@ -56,6 +56,13 @@ describe('ZoraModuleApprovalsManager', () => {
           module.address
         )
       ).to.eq(true);
+
+      await expect(
+        await manager.isModuleApproved(
+          module.address,
+          await otherUser.getAddress()
+        )
+      ).to.eq(true);
     });
 
     it('should emit a ModuleApprovalSet event', async () => {
@@ -72,6 +79,26 @@ describe('ZoraModuleApprovalsManager', () => {
       expect(logDescription.args.user).to.eq(await otherUser.getAddress());
       expect(logDescription.args.module).to.eq(module.address);
       expect(logDescription.args.approved).to.eq(true);
+    });
+
+    it('should consider not registered module as approved by default', async () => {
+      await expect(
+        await manager.isModuleApproved(
+          module.address,
+          await otherUser.getAddress()
+        )
+      ).to.eq(false);
+    });
+
+    it('should not consider frozen module as approved', async () => {
+      await freezeModule(proposalManager.connect(registrar), module.address);
+
+      await expect(
+        await manager.isModuleApproved(
+          module.address,
+          await otherUser.getAddress()
+        )
+      ).to.eq(false);
     });
 
     it('should not allow a user to approve a module that has not been proposed', async () => {
@@ -138,6 +165,58 @@ describe('ZoraModuleApprovalsManager', () => {
             ).to.eq(true))();
         })
       );
+    });
+  });
+
+  describe('#setApprovalForAll', async () => {
+    let ALL_MODULES_FLAG;
+
+    before(async () => {
+      ALL_MODULES_FLAG = await manager.ALL_MODULES_FLAG();
+    });
+
+    beforeEach(async () => {
+      await manager.connect(otherUser).setApprovalForAll(true);
+    });
+
+    it('should set approval for all', async () => {
+      expect(
+        await manager.userApprovals(
+          await otherUser.getAddress(),
+          ALL_MODULES_FLAG
+        )
+      ).to.eq(true);
+    });
+
+    it('should emit a ModuleApprovalSet event', async () => {
+      const events = await manager.queryFilter(
+        manager.filters.AllModulesApprovalSet(null, null)
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = manager.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('AllModulesApprovalSet');
+      expect(logDescription.args.user).to.eq(await otherUser.getAddress());
+      expect(logDescription.args.approved).to.eq(true);
+    });
+
+    it('should consider registered module as approved by default', async () => {
+      await expect(
+        await manager.isModuleApproved(
+          module.address,
+          await otherUser.getAddress()
+        )
+      ).to.eq(true);
+    });
+
+    it('should not consider module as approved after freeze', async () => {
+      await freezeModule(proposalManager.connect(registrar), module.address);
+
+      await expect(
+        await manager.isModuleApproved(
+          module.address,
+          await otherUser.getAddress()
+        )
+      ).to.eq(false);
     });
   });
 });
