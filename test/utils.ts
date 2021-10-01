@@ -12,6 +12,7 @@ import {
   Erc721TransferHelper,
   SimpleModule,
   ListingsV1,
+  OffersV1,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -27,6 +28,8 @@ export const revert = (messages: TemplateStringsArray, ...rest) =>
 export const ONE_DAY = 24 * 60 * 60;
 export const ONE_ETH = ethers.utils.parseEther('1');
 export const TWO_ETH = ethers.utils.parseEther('2');
+export const THREE_ETH = ethers.utils.parseEther('3');
+export const TEN_ETH = ethers.utils.parseEther('10');
 export const TENTH_ETH = ethers.utils.parseEther('0.1');
 export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 
@@ -291,4 +294,21 @@ export async function deployListingsV1(
   );
   await listings.deployed();
   return listings as ListingsV1;
+}
+
+export async function deployOffersV1(
+  erc20Helper: string,
+  erc721Helper: string,
+  zoraV1Media: string,
+  weth: string
+) {
+  const OffersV1Factory = await ethers.getContractFactory('OffersV1');
+  const offers = await OffersV1Factory.deploy(
+    erc20Helper,
+    erc721Helper,
+    zoraV1Media,
+    weth
+  );
+  await offers.deployed();
+  return offers as OffersV1;
 }
