@@ -1,4 +1,5 @@
 import { ethers } from 'hardhat';
+import { Signer } from 'ethers';
 import {
   BadErc721,
   ReserveAuctionV1,
@@ -26,6 +27,7 @@ export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
 
 export const ONE_DAY = 24 * 60 * 60;
+export const ONE_HALF_ETH = ethers.utils.parseEther('0.5');
 export const ONE_ETH = ethers.utils.parseEther('1');
 export const TWO_ETH = ethers.utils.parseEther('2');
 export const THREE_ETH = ethers.utils.parseEther('3');

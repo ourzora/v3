@@ -22,7 +22,9 @@ import {
   deployZoraProposalManager,
   deployZoraProtocol,
   mintZoraNFT,
+  mintERC721Token,
   ONE_ETH,
+  ONE_HALF_ETH,
   proposeModule,
   registerModule,
   revert,
@@ -112,7 +114,7 @@ describe('OffersV1', () => {
       ).to.eq(1);
 
       expect(
-        await offers.userToActiveOffer(
+        await offers.userHasActiveOffer(
           await buyerA.getAddress(),
           zoraV1.address,
           0
@@ -124,7 +126,7 @@ describe('OffersV1', () => {
       );
     });
 
-    it('should revert if buyer attempts to create a second offer on the same NFT while the first is still active', async () => {
+    it('should revert on attempt to create second offer while first is active', async () => {
       await offers
         .connect(buyerA)
         .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
@@ -142,45 +144,78 @@ describe('OffersV1', () => {
             { value: TWO_ETH }
           )
       ).eventually.rejectedWith(
-        revert`createOffer cannot make another offer for this NFT ... update or cancel the existing active offer!`
+        revert`createOffer must update or cancel existing offer`
+      );
+    });
+
+    it('should revert on attempt to create offer without attaching correct amt funds', async () => {
+      await expect(
+        offers
+          .connect(buyerA)
+          .createOffer(
+            zoraV1.address,
+            0,
+            ONE_ETH,
+            ethers.constants.AddressZero,
+            {
+              value: ONE_HALF_ETH,
+            }
+          )
+      ).eventually.rejectedWith(
+        revert`_handleIncomingTransfer msg value less than expected amount`
       );
     });
   });
 
-  describe('#increaseOffer', () => {
-    it('should update the offer price', async () => {
+  describe('#updateOffer', () => {
+    it('should increase the offer price', async () => {
       await offers
         .connect(buyerA)
         .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
           value: ONE_ETH,
         });
-      await offers
-        .connect(buyerA)
-        .increaseOffer(1, TWO_ETH, { value: TWO_ETH });
+      await offers.connect(buyerA).updatePrice(1, TWO_ETH, { value: ONE_ETH });
       expect((await (await offers.offers(1)).offerPrice).toString()).to.eq(
-        THREE_ETH.toString()
+        TWO_ETH.toString()
       );
     });
-    it('should revert if user attempts to increase offer they did not originally make', async () => {
+
+    it('should decrease the offer price', async () => {
       await offers
         .connect(buyerA)
         .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
           value: ONE_ETH,
         });
-      await expect(
-        offers.connect(otherUser).increaseOffer(1, TWO_ETH, { value: TWO_ETH })
-      ).eventually.rejectedWith(revert`increaseOffer must be buyer`);
+
+      await offers.connect(buyerA).updatePrice(1, ONE_HALF_ETH);
+      expect((await (await offers.offers(1)).offerPrice).toString()).to.eq(
+        ONE_HALF_ETH.toString()
+      );
     });
-    it('should revert if user attempts to increase offer without sending funds', async () => {
+
+    it('should revert on attempt to increase offer not originally created', async () => {
       await offers
         .connect(buyerA)
         .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
           value: ONE_ETH,
         });
       await expect(
-        offers.connect(buyerA).increaseOffer(1, TWO_ETH)
+        offers.connect(otherUser).updatePrice(1, TWO_ETH, { value: TWO_ETH })
       ).eventually.rejectedWith(
-        revert`increaseOffer must transfer equal amount of funds specified`
+        revert`updatePrice must be buyer from original offer`
+      );
+    });
+
+    it('should revert on attempt to increase offer without attaching funds', async () => {
+      await offers
+        .connect(buyerA)
+        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
+          value: ONE_ETH,
+        });
+      await expect(
+        offers.connect(buyerA).updatePrice(1, TWO_ETH)
+      ).eventually.rejectedWith(
+        revert`_handleIncomingTransfer msg value less than expected amount`
       );
     });
   });
@@ -223,5 +258,33 @@ describe('OffersV1', () => {
         TENTH_ETH.toString()
       );
     });
+  });
+
+  describe('#acceptOffer', () => {
+    it('should allow a token owner to accept an offer', async () => {
+      await offers
+        .connect(buyerA)
+        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
+          value: ONE_ETH,
+        });
+
+      await offers.acceptOffer(1);
+
+      expect(await zoraV1.ownerOf(0)).to.eq(await buyerA.getAddress());
+    });
+  });
+
+  it('should revert a user from accepting an offer on behalf of a token holder', async () => {
+    await offers
+      .connect(buyerA)
+      .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
+        value: ONE_ETH,
+      });
+
+    await expect(
+      offers.connect(otherUser).acceptOffer(1)
+    ).eventually.rejectedWith(
+      revert`acceptOffer must own token associated with offer`
+    );
   });
 });
