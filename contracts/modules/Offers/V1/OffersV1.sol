@@ -26,8 +26,6 @@ contract OffersV1 is ReentrancyGuard {
     IZoraV1Market zoraV1Market;
     IWETH weth;
 
-    Counters.Counter offerCounter;
-
     // ============ Mutable Storage ============
 
     // User to offer IDs
@@ -38,6 +36,8 @@ contract OffersV1 is ReentrancyGuard {
     mapping(address => mapping(address => mapping(uint256 => bool))) public userHasActiveOffer;
     // Offer ID to offer
     mapping(uint256 => Offer) public offers;
+
+    Counters.Counter offerCounter;
 
     enum OfferStatus {
         Active,
@@ -54,12 +54,12 @@ contract OffersV1 is ReentrancyGuard {
         OfferStatus status;
     }
 
-    // ============ Events ============
+    // ============ Events =============
 
-    event OfferCreated(uint256 indexed offerId, Offer offer);
-    event OfferCanceled(uint256 indexed offerId, Offer offer);
-    event OfferUpdated(uint256 indexed offerId, uint256 indexed newOffer, Offer offer);
-    event OfferAccepted(uint256 indexed offerId, address indexed buyer, Offer offer);
+    event OfferCreated(uint256 indexed id, Offer offer);
+    event OfferCanceled(uint256 indexed id, Offer offer);
+    event OfferUpdated(uint256 indexed id, Offer offer);
+    event OfferAccepted(uint256 indexed id, Offer offer);
 
     // ============ Constructor ============
 
@@ -111,7 +111,7 @@ contract OffersV1 is ReentrancyGuard {
         return offerId;
     }
 
-    function updatePrice(uint256 _offerId, uint256 _newOffer) external payable {
+    function updatePrice(uint256 _offerId, uint256 _newOffer) external payable nonReentrant {
         Offer storage offer = offers[_offerId];
 
         require(offer.buyer == msg.sender, "updatePrice must be buyer from original offer");
@@ -124,21 +124,21 @@ contract OffersV1 is ReentrancyGuard {
 
             offer.offerPrice += increaseAmount;
 
-            emit OfferUpdated(_offerId, offer.offerPrice, offer);
+            emit OfferUpdated(_offerId, offer);
         } else if (_newOffer < offer.offerPrice) {
             uint256 decreaseAmount = offer.offerPrice - _newOffer;
 
             _handleOutgoingTransfer(offer.buyer, decreaseAmount, offer.offerCurrency);
             offer.offerPrice -= decreaseAmount;
 
-            emit OfferUpdated(_offerId, offer.offerPrice, offer);
+            emit OfferUpdated(_offerId, offer);
         }
     }
 
-    function cancelOffer(uint256 _offerId) external {
+    function cancelOffer(uint256 _offerId) external nonReentrant {
         Offer storage offer = offers[_offerId];
 
-        require(offer.buyer == msg.sender || IERC721(offer.tokenContract).ownerOf(offer.tokenId) != offer.buyer, "cancelOffer must be buyer or invalid offer");
+        require(offer.buyer == msg.sender, "cancelOffer must be buyer from original offer");
         require(offer.status == OfferStatus.Active, "cancelOffer must be active offer");
 
         _handleOutgoingTransfer(offer.buyer, offer.offerPrice, offer.offerCurrency);
@@ -152,8 +152,8 @@ contract OffersV1 is ReentrancyGuard {
     function acceptOffer(uint256 _offerId) external nonReentrant {
         Offer storage offer = offers[_offerId];
 
-        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenId), "acceptOffer must own token associated with offer");
         require(offer.status == OfferStatus.Active, "acceptOffer must be active offer");
+        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenId), "acceptOffer must own token associated with offer");
 
         // Payout respective parties, ensuring royalties are honored
         uint256 remainingProfit = offer.offerPrice;
@@ -173,7 +173,7 @@ contract OffersV1 is ReentrancyGuard {
         offer.status = OfferStatus.Accepted;
         userHasActiveOffer[offer.buyer][offer.tokenContract][offer.tokenId] = false;
 
-        emit OfferAccepted(_offerId, offer.buyer, offer);
+        emit OfferAccepted(_offerId, offer);
     }
 
     // ============ Private Functions ============

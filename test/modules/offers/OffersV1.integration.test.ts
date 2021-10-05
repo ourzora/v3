@@ -112,7 +112,7 @@ describe('OffersV1 integration', () => {
           );
       }
 
-      it('should withdraw the offer price from the buyer', async () => {
+      it('should withdraw offer from buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
         const afterBalance = await buyerA.getBalance();
@@ -122,7 +122,7 @@ describe('OffersV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should withdraw the updated offer price from the buyer', async () => {
+      it('should withdraw offer increase from buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
 
@@ -138,7 +138,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund the updated offer price to the buyer', async () => {
+      it('should refund offer decrease to buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
 
@@ -152,7 +152,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund a canceled offer', async () => {
+      it('should refund canceled offer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
         const middleBalance = await buyerA.getBalance();
@@ -169,7 +169,19 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should transfer NFT ownership to buyer', async () => {
+      it('should transfer funds from accepted offer to seller', async () => {
+        const beforeBalance = await offers.signer.getBalance();
+        await run();
+        await offers.acceptOffer(1);
+        const afterBalance = await offers.signer.getBalance();
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          10
+        );
+      });
+
+      it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
         await offers.acceptOffer(1);
 
@@ -193,7 +205,7 @@ describe('OffersV1 integration', () => {
           });
       }
 
-      it('should withdraw the offer price from the buyer', async () => {
+      it('should withdraw offer from buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         const afterBalance = await weth.balanceOf(await buyerA.getAddress());
@@ -203,7 +215,7 @@ describe('OffersV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should withdraw the updated offer price from the buyer', async () => {
+      it('should withdraw offer increase from buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         await offers
@@ -217,7 +229,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund the updated offer price to the buyer', async () => {
+      it('should refund offer decrease to buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
 
@@ -231,7 +243,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund a canceled offer', async () => {
+      it('should refund canceled offer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         const middleBalance = await weth.balanceOf(await buyerA.getAddress());
@@ -248,7 +260,23 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should transfer NFT ownership to buyer', async () => {
+      it('should transfer funds from accepted offer to seller', async () => {
+        const beforeBalance = await weth.balanceOf(
+          await offers.signer.getAddress()
+        );
+        await run();
+        await offers.acceptOffer(1);
+        const afterBalance = await weth.balanceOf(
+          await offers.signer.getAddress()
+        );
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          10
+        );
+      });
+
+      it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
         await offers.acceptOffer(1);
 
@@ -281,7 +309,7 @@ describe('OffersV1 integration', () => {
           );
       }
 
-      it('should withdraw the offer price from the buyer', async () => {
+      it('should withdraw offer from buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
         const afterBalance = await buyerA.getBalance();
@@ -291,7 +319,7 @@ describe('OffersV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should withdraw the updated offer price from the buyer', async () => {
+      it('should withdraw offer increase from buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
 
@@ -307,7 +335,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund the updated offer price to the buyer', async () => {
+      it('should refund offer decrease to buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
 
@@ -321,7 +349,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund a canceled offer', async () => {
+      it('should refund canceled offer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
         const middleBalance = await buyerA.getBalance();
@@ -338,7 +366,19 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should transfer NFT ownership to buyer', async () => {
+      it('should transfer funds from accepted offer to seller', async () => {
+        const beforeBalance = await offers.signer.getBalance();
+        await run();
+        await offers.acceptOffer(1);
+        const afterBalance = await offers.signer.getBalance();
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          10
+        );
+      });
+
+      it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
         await offers.acceptOffer(1);
 
@@ -364,7 +404,7 @@ describe('OffersV1 integration', () => {
           });
       }
 
-      it('should withdraw the offer price from the buyer', async () => {
+      it('should withdraw offer from buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         const afterBalance = await weth.balanceOf(await buyerA.getAddress());
@@ -374,7 +414,7 @@ describe('OffersV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should withdraw the updated offer price from the buyer', async () => {
+      it('should withdraw offer increase from buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         await offers
@@ -388,7 +428,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund the updated offer price to the buyer', async () => {
+      it('should refund offer decrease to buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
 
@@ -402,7 +442,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund a canceled offer', async () => {
+      it('should refund canceled offer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         const middleBalance = await weth.balanceOf(await buyerA.getAddress());
@@ -419,7 +459,23 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should transfer NFT ownership to buyer', async () => {
+      it('should transfer funds from accepted offer to seller', async () => {
+        const beforeBalance = await weth.balanceOf(
+          await offers.signer.getAddress()
+        );
+        await run();
+        await offers.acceptOffer(1);
+        const afterBalance = await weth.balanceOf(
+          await offers.signer.getAddress()
+        );
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          10
+        );
+      });
+
+      it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
         await offers.acceptOffer(1);
 
@@ -454,7 +510,7 @@ describe('OffersV1 integration', () => {
           );
       }
 
-      it('should withdraw the offer price from the buyer', async () => {
+      it('should withdraw offer from buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
         const afterBalance = await buyerA.getBalance();
@@ -464,7 +520,7 @@ describe('OffersV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should withdraw the updated offer price from the buyer', async () => {
+      it('should withdraw offer increase from buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
 
@@ -480,7 +536,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund the updated offer price to the buyer', async () => {
+      it('should refund offer decrease to buyer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
 
@@ -494,7 +550,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund a canceled offer', async () => {
+      it('should refund canceled offer', async () => {
         const beforeBalance = await buyerA.getBalance();
         await run();
         const middleBalance = await buyerA.getBalance();
@@ -511,7 +567,19 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should transfer NFT ownership to buyer', async () => {
+      it('should transfer funds from accepted offer to seller', async () => {
+        const beforeBalance = await offers.signer.getBalance();
+        await run();
+        await offers.acceptOffer(1);
+        const afterBalance = await offers.signer.getBalance();
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          10
+        );
+      });
+
+      it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
         await offers.acceptOffer(1);
 
@@ -535,7 +603,7 @@ describe('OffersV1 integration', () => {
           });
       }
 
-      it('should withdraw the offer price from the buyer', async () => {
+      it('should withdraw offer from buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         const afterBalance = await weth.balanceOf(await buyerA.getAddress());
@@ -545,7 +613,7 @@ describe('OffersV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should withdraw the updated offer price from the buyer', async () => {
+      it('should withdraw offer increase from buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         await offers
@@ -559,7 +627,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund the updated offer price to the buyer', async () => {
+      it('should refund offer decrease to buyer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
 
@@ -573,7 +641,7 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should refund a canceled offer', async () => {
+      it('should refund canceled offer', async () => {
         const beforeBalance = await weth.balanceOf(await buyerA.getAddress());
         await run();
         const middleBalance = await weth.balanceOf(await buyerA.getAddress());
@@ -590,7 +658,23 @@ describe('OffersV1 integration', () => {
         );
       });
 
-      it('should transfer NFT ownership to buyer', async () => {
+      it('should transfer funds from accepted offer to seller', async () => {
+        const beforeBalance = await weth.balanceOf(
+          await offers.signer.getAddress()
+        );
+        await run();
+        await offers.acceptOffer(1);
+        const afterBalance = await weth.balanceOf(
+          await offers.signer.getAddress()
+        );
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(ONE_ETH)),
+          10
+        );
+      });
+
+      it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
         await offers.acceptOffer(1);
 
