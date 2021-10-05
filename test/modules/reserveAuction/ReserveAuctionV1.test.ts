@@ -278,7 +278,7 @@ describe('ReserveAuctionV1', () => {
       expect(auctionId).to.eq(1);
     });
 
-    it.only('should cancel an old auction if one currently exists for it', async () => {
+    it('should cancel an old auction if one currently exists for it', async () => {
       const duration = 60 * 60 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
       const listingFeePercentage = 10;

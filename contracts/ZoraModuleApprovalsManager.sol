@@ -5,6 +5,8 @@ pragma solidity 0.8.5;
 import {ZoraProposalManager} from "./ZoraProposalManager.sol";
 
 contract ZoraModuleApprovalsManager {
+    address public constant ALL_MODULES_FLAG = 0xFFfFfFffFFfffFFfFFfFFFFFffFFFffffFfFFFfF;
+
     // The address of the proposal manager, manages allowed modules
     ZoraProposalManager public proposalManager;
 
@@ -21,7 +23,12 @@ contract ZoraModuleApprovalsManager {
     }
 
     function isModuleApproved(address _module, address _user) external view returns (bool) {
-        return userApprovals[_module][_user];
+        if (!proposalManager.isPassedProposal(_module)) {
+            return false; // returns 'false' after proposal is frozen
+        }
+
+        // either has approved all or this specific module
+        return userApprovals[_user][ALL_MODULES_FLAG] || userApprovals[_user][_module];
     }
 
     function setApprovalForModule(address _moduleAddress, bool _approved) public {
@@ -32,7 +39,13 @@ contract ZoraModuleApprovalsManager {
         emit ModuleApprovalSet(msg.sender, _moduleAddress, _approved);
     }
 
-    function setBatchApprovalForModules(address[] memory _moduleAddresses, bool _approved) public {
+    function setApprovalForAll(bool _approved) external {
+        userApprovals[msg.sender][ALL_MODULES_FLAG] = _approved;
+
+        emit AllModulesApprovalSet(msg.sender, _approved);
+    }
+
+    function setBatchApprovalForModules(address[] memory _moduleAddresses, bool _approved) external {
         for (uint256 i = 0; i < _moduleAddresses.length; i++) {
             setApprovalForModule(_moduleAddresses[i], _approved);
         }
