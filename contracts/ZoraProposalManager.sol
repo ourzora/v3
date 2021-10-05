@@ -18,15 +18,15 @@ contract ZoraProposalManager {
     address public registrar;
     mapping(address => Proposal) public proposedModuleToProposal;
 
-    event ModuleProposed(address contractAddress, address proposer);
+    event ModuleProposed(address indexed contractAddress, address indexed proposer);
 
-    event ModuleRegistered(address contractAddress);
+    event ModuleRegistered(address indexed contractAddress);
 
-    event ModuleCanceled(address contractAddress);
+    event ModuleCanceled(address indexed contractAddress);
 
-    event ModuleFrozen(address contractAddress);
+    event ModuleFrozen(address indexed contractAddress);
 
-    event RegistrarChanged(address newRegistrar);
+    event RegistrarChanged(address indexed newRegistrar);
 
     modifier onlyRegistrar() {
         require(msg.sender == registrar, "ZPM::onlyRegistrar must be registrar");
