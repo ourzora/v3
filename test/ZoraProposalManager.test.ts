@@ -79,7 +79,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      expect(proposal.status).to.eq(0);
+      expect(proposal.status).to.eq(1);
       expect(proposal.proposer).to.eq(await deployer.getAddress());
     });
 
@@ -125,7 +125,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      expect(proposal.status).to.eq(1);
+      expect(proposal.status).to.eq(2);
     });
 
     it('should emit a ModuleRegistered event', async () => {
@@ -185,7 +185,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      await expect(proposal.status).to.eq(2);
+      await expect(proposal.status).to.eq(3);
     });
 
     it('should emit a ModuleCanceled event', async () => {
@@ -245,7 +245,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      await expect(proposal.status).to.eq(3);
+      await expect(proposal.status).to.eq(4);
     });
 
     it('should emit a ModuleFrozen event', async () => {

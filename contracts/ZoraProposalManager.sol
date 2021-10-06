@@ -4,6 +4,7 @@ pragma solidity 0.8.5;
 
 contract ZoraProposalManager {
     enum ProposalStatus {
+        Nonexistent,
         Pending,
         Passed,
         Failed,
@@ -17,15 +18,15 @@ contract ZoraProposalManager {
     address public registrar;
     mapping(address => Proposal) public proposedModuleToProposal;
 
-    event ModuleProposed(address contractAddress, address proposer);
+    event ModuleProposed(address indexed contractAddress, address indexed proposer);
 
-    event ModuleRegistered(address contractAddress);
+    event ModuleRegistered(address indexed contractAddress);
 
-    event ModuleCanceled(address contractAddress);
+    event ModuleCanceled(address indexed contractAddress);
 
-    event ModuleFrozen(address contractAddress);
+    event ModuleFrozen(address indexed contractAddress);
 
-    event RegistrarChanged(address newRegistrar);
+    event RegistrarChanged(address indexed newRegistrar);
 
     modifier onlyRegistrar() {
         require(msg.sender == registrar, "ZPM::onlyRegistrar must be registrar");
@@ -55,7 +56,7 @@ contract ZoraProposalManager {
     function registerModule(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
-        require(proposal.proposer != address(0), "ZPM::registerModule proposal does not exist");
+        require(proposal.status != ProposalStatus.Nonexistent, "ZPM::registerModule proposal does not exist");
         require(proposal.status == ProposalStatus.Pending, "ZPM::registerModule can only register pending proposals");
 
         proposal.status = ProposalStatus.Passed;
@@ -66,7 +67,7 @@ contract ZoraProposalManager {
     function cancelProposal(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
-        require(proposal.proposer != address(0), "ZPM::cancelProposal proposal does not exist");
+        require(proposal.status != ProposalStatus.Nonexistent, "ZPM::cancelProposal proposal does not exist");
         require(proposal.status == ProposalStatus.Pending, "ZPM::cancelProposal can only cancel pending proposals");
 
         proposal.status = ProposalStatus.Failed;
@@ -77,7 +78,7 @@ contract ZoraProposalManager {
     function freezeProposal(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
-        require(proposal.proposer != address(0), "ZPM::freezeProposal proposal does not exist");
+        require(proposal.status != ProposalStatus.Nonexistent, "ZPM::freezeProposal proposal does not exist");
         require(proposal.status == ProposalStatus.Passed, "ZPM::freezeProposal can only freeze passed proposals");
 
         proposal.status = ProposalStatus.Frozen;

@@ -14,9 +14,9 @@ contract ZoraModuleApprovalsManager {
     // user address => module address => approved
     mapping(address => mapping(address => bool)) public userApprovals;
 
-    event ModuleApprovalSet(address user, address module, bool approved);
+    event ModuleApprovalSet(address indexed user, address indexed module, bool approved);
 
-    event AllModulesApprovalSet(address user, bool approved);
+    event AllModulesApprovalSet(address indexed user, bool approved);
 
     constructor(address _proposalManager) {
         proposalManager = ZoraProposalManager(_proposalManager);
