@@ -10,7 +10,7 @@ import {
   TestEip2981Erc721,
   TestErc721,
   Weth,
-} from '../../../typechain';
+} from '../../../../typechain';
 import {
   approveNFTTransfer,
   deployERC20TransferHelper,
@@ -31,7 +31,7 @@ import {
   THOUSANDTH_ETH,
   toRoundedNumber,
   TWO_ETH,
-} from '../../utils';
+} from '../../../utils';
 chai.use(asPromised);
 
 describe('ListingsV1', () => {
@@ -151,6 +151,23 @@ describe('ListingsV1', () => {
       expect(logDescription.args.listing.seller).to.eq(
         await deployer.getAddress()
       );
+    });
+
+    it('should revert if seller is not token owner', async () => {
+      await expect(
+        listings
+          .connect(otherUser)
+          .createListing(
+            zoraV1.address,
+            0,
+            ONE_ETH,
+            ethers.constants.AddressZero,
+            ethers.constants.AddressZero,
+            await host.getAddress(),
+            10,
+            10
+          )
+      ).eventually.rejectedWith('createListing must be token owner');
     });
 
     it('should revert if the funds recipient is the zero address', async () => {
