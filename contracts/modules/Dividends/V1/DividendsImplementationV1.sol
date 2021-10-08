@@ -13,7 +13,7 @@ contract DividendsImplementationV1 is Initializable {
     // The next withdrawal base for each token ID
     mapping(uint256 => uint256) public nextWithdrawalBase;
 
-    event DividendsClaimed(address indexed recipient, uint256 indexed tokenId, uint256 amount);
+    event DividendsClaimed(address indexed recipient, uint256 indexed tokenID, uint256 amount);
     event FundsReceived(uint256 amount);
 
     function initialize(address _nftAddress) public initializer {
@@ -23,7 +23,7 @@ contract DividendsImplementationV1 is Initializable {
     }
 
     // The amount of funds available to be claimed for the token
-    function claimableDividendsForToken(uint256 _tokenID) public returns (uint256) {
+    function claimableDividendsForToken(uint256 _tokenID) public view returns (uint256) {
         return (totalIncome - nextWithdrawalBase[_tokenID]) / nft.totalSupply();
     }
 
