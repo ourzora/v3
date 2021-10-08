@@ -1,4 +1,4 @@
-name: CI
+name: Run Tests
 on: [push]
 jobs:
   build:
@@ -6,9 +6,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: borales/actions-yarn@v1.22.5
+      - uses: actions/setup-node@v2
         with:
-          cmd: install # will run `yarn install` command
-      - uses: borales/actions-yarn@v1.22.5
-        with:
-          cmd: test # will run `yarn test` command
+          node-version: '14'
+      - run: npm install
+      - run: npm test
