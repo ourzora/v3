@@ -34,6 +34,7 @@
   },
   "scripts": {
     "prepare": "husky install",
+    "build": "hardhat compile",
     "test": "hardhat test"
   }
 }
