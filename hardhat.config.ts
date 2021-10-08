@@ -19,7 +19,7 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     currency: 'USD',
-    coinmarketcap: env.CMC_API_KEY as string,
+    coinmarketcap: env ? (env.CMC_API_KEY as string) : '',
   },
 };
 
