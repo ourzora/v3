@@ -5,7 +5,6 @@ import { Signer } from 'ethers';
 import {
   Erc20TransferHelper,
   Erc1155TransferHelper,
-  ListingsV2,
   TestErc1155,
   Weth,
   OffersV2,
