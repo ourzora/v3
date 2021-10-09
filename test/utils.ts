@@ -14,9 +14,11 @@ import {
   SimpleModule,
   ListingsV1,
   OffersV1,
+  OffersV2,
   Erc1155TransferHelper,
   TestErc1155,
   TestModuleV2,
+  Erc1155,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -242,6 +244,13 @@ export const approveNFTTransfer = async (
   await token.approve(spender, tokenId);
 };
 
+export const approveERC1155Transfer = async (
+  token: Erc1155,
+  spender: string
+) => {
+  await token.setApprovalForAll(spender, true);
+};
+
 export async function createReserveAuction(
   tokenContract: Contract,
   reserveAuction: ReserveAuctionV1,
@@ -309,6 +318,14 @@ export async function mintERC721Token(erc721: TestErc721, to: string) {
   await erc721.mint(to, 0);
 }
 
+export async function mintERC1155Token(
+  erc1155: TestErc1155,
+  to: string,
+  amount: BigNumber
+) {
+  await erc1155.mint(to, 0, amount);
+}
+
 export async function deployListingsV1(
   erc20Helper: string,
   erc721Helper: string,
@@ -341,4 +358,15 @@ export async function deployOffersV1(
   );
   await offers.deployed();
   return offers as OffersV1;
+}
+
+export async function deployOffersV2(
+  erc20Helper: string,
+  erc1155Helper: string,
+  weth: string
+) {
+  const OffersV2Factory = await ethers.getContractFactory('OffersV2');
+  const offers = await OffersV2Factory.deploy(erc20Helper, erc1155Helper, weth);
+  await offers.deployed();
+  return offers as OffersV2;
 }
