@@ -150,7 +150,7 @@ describe('ZoraProposalManager', () => {
       await expect(
         registerModule(manager.connect(registrar), ethers.constants.AddressZero)
       ).eventually.rejectedWith(
-        revert`ZPM::registerModule proposal does not exist`
+        revert`ZPM::registerModule can only register pending proposals`
       );
     });
 
@@ -210,7 +210,7 @@ describe('ZoraProposalManager', () => {
       await expect(
         cancelModule(manager.connect(registrar), ethers.constants.AddressZero)
       ).eventually.rejectedWith(
-        revert`ZPM::cancelProposal proposal does not exist`
+        revert`ZPM::cancelProposal can only cancel pending proposals`
       );
     });
     it('should revert if the proposal has already been approved', async () => {
@@ -271,7 +271,7 @@ describe('ZoraProposalManager', () => {
       await expect(
         freezeModule(manager.connect(registrar), ethers.constants.AddressZero)
       ).eventually.rejectedWith(
-        revert`ZPM::freezeProposal proposal does not exist`
+        revert`ZPM::freezeProposal can only freeze passed proposals`
       );
     });
 
