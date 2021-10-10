@@ -10,6 +10,49 @@ contract ReserveAuctionV1 is ReentrancyGuard {
 
     LibReserveAuctionV1.ReserveAuctionStorage reserveAuctionStorage;
 
+    event AuctionCreated(
+        uint256 indexed auctionId,
+        uint256 indexed tokenId,
+        address indexed tokenContract,
+        uint256 duration,
+        uint256 reservePrice,
+        address tokenOwner,
+        address host,
+        address fundsRecipient,
+        uint8 listingFeePercentage,
+        address auctionCurrency
+    );
+
+    event AuctionReservePriceUpdated(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, uint256 reservePrice);
+
+    event AuctionBid(
+        uint256 indexed auctionId,
+        uint256 indexed tokenId,
+        address indexed tokenContract,
+        address sender,
+        address finder,
+        uint256 value,
+        bool firstBid,
+        bool extended
+    );
+
+    event AuctionDurationExtended(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, uint256 duration);
+
+    event AuctionEnded(
+        uint256 indexed auctionId,
+        uint256 indexed tokenId,
+        address indexed tokenContract,
+        address host,
+        address winner,
+        address fundsRecipient,
+        uint256 amount,
+        uint256 finderFee,
+        uint256 listingFee,
+        address auctionCurrency
+    );
+
+    event AuctionCanceled(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, address tokenOwner);
+
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,

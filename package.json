@@ -17,7 +17,7 @@
     "husky": "^7.0.0",
     "lint-staged": "^11.0.0",
     "prettier": "^2.3.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.13",
+    "prettier-plugin-solidity": "^1.0.0-beta.18",
     "solhint": "^3.3.6",
     "solhint-plugin-prettier": "^0.0.5",
     "ts-node": "^10.0.0",
@@ -25,7 +25,7 @@
     "typescript": "^4.3.4"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.2.0",
+    "@openzeppelin/contracts": "^4.3.2",
     "@zoralabs/core": "^1.0.5"
   },
   "lint-staged": {
@@ -34,6 +34,7 @@
   },
   "scripts": {
     "prepare": "husky install",
+    "build": "hardhat compile",
     "test": "hardhat test"
   }
 }

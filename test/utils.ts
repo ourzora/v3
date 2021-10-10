@@ -1,4 +1,5 @@
 import { ethers } from 'hardhat';
+import { Signer } from 'ethers';
 import {
   BadErc721,
   ReserveAuctionV1,
@@ -12,6 +13,10 @@ import {
   Erc721TransferHelper,
   SimpleModule,
   ListingsV1,
+  OffersV1,
+  Erc1155TransferHelper,
+  TestErc1155,
+  TestModuleV2,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -25,8 +30,11 @@ export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
 
 export const ONE_DAY = 24 * 60 * 60;
+export const ONE_HALF_ETH = ethers.utils.parseEther('0.5');
 export const ONE_ETH = ethers.utils.parseEther('1');
 export const TWO_ETH = ethers.utils.parseEther('2');
+export const THREE_ETH = ethers.utils.parseEther('3');
+export const TEN_ETH = ethers.utils.parseEther('10');
 export const TENTH_ETH = ethers.utils.parseEther('0.1');
 export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 
@@ -109,6 +117,18 @@ export const deployERC721TransferHelper = async (approvalsManager: string) => {
   return transferHelper as Erc721TransferHelper;
 };
 
+export const deployERC1155TransferHelper = async (approvalsManager: string) => {
+  const ERC1155TransferHelperFactory = await ethers.getContractFactory(
+    'ERC1155TransferHelper'
+  );
+  const transferHelper = await ERC1155TransferHelperFactory.deploy(
+    approvalsManager
+  );
+  await transferHelper.deployed();
+
+  return transferHelper as Erc1155TransferHelper;
+};
+
 export const deployTestModule = async (
   erc20Helper: string,
   erc721Helper: string
@@ -117,6 +137,13 @@ export const deployTestModule = async (
   const testModule = await TestModuleFactory.deploy(erc20Helper, erc721Helper);
   await testModule.deployed();
   return testModule as TestModuleV1;
+};
+
+export const deployTestModuleV2 = async (erc1155Helper: string) => {
+  const TestModuleV2Factory = await ethers.getContractFactory('TestModuleV2');
+  const testModuleV2 = await TestModuleV2Factory.deploy(erc1155Helper);
+  await testModuleV2.deployed();
+  return testModuleV2 as TestModuleV2;
 };
 
 export const deploySimpleModule = async () => {
@@ -147,6 +174,12 @@ export const deployTestERC271 = async () => {
   const TestERC721Factory = await ethers.getContractFactory('TestERC721');
   const testERC721 = await TestERC721Factory.deploy();
   return testERC721 as TestErc721;
+};
+
+export const deployTestERC1155 = async () => {
+  const TestERC1155Factory = await ethers.getContractFactory('TestERC1155');
+  const testERC1155 = await TestERC1155Factory.deploy();
+  return testERC1155 as TestErc1155;
 };
 
 export const deployTestEIP2981ERC721 = async () => {
@@ -291,4 +324,21 @@ export async function deployListingsV1(
   );
   await listings.deployed();
   return listings as ListingsV1;
+}
+
+export async function deployOffersV1(
+  erc20Helper: string,
+  erc721Helper: string,
+  zoraV1Media: string,
+  weth: string
+) {
+  const OffersV1Factory = await ethers.getContractFactory('OffersV1');
+  const offers = await OffersV1Factory.deploy(
+    erc20Helper,
+    erc721Helper,
+    zoraV1Media,
+    weth
+  );
+  await offers.deployed();
+  return offers as OffersV1;
 }

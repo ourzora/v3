@@ -281,7 +281,7 @@ describe('ListingsV1 integration', () => {
         // @ts-ignore
         testEIP2981ERC721,
         erc721TransferHelper.address,
-        0
+        '0'
       );
     });
 
@@ -472,7 +472,7 @@ describe('ListingsV1 integration', () => {
         // @ts-ignore
         testERC721,
         erc721TransferHelper.address,
-        0
+        '0'
       );
     });
 

@@ -79,7 +79,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      expect(proposal.status).to.eq(0);
+      expect(proposal.status).to.eq(1);
       expect(proposal.proposer).to.eq(await deployer.getAddress());
     });
 
@@ -125,7 +125,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      expect(proposal.status).to.eq(1);
+      expect(proposal.status).to.eq(2);
     });
 
     it('should emit a ModuleRegistered event', async () => {
@@ -150,7 +150,7 @@ describe('ZoraProposalManager', () => {
       await expect(
         registerModule(manager.connect(registrar), ethers.constants.AddressZero)
       ).eventually.rejectedWith(
-        revert`ZPM::registerModule proposal does not exist`
+        revert`ZPM::registerModule can only register pending proposals`
       );
     });
 
@@ -185,7 +185,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      await expect(proposal.status).to.eq(2);
+      await expect(proposal.status).to.eq(3);
     });
 
     it('should emit a ModuleCanceled event', async () => {
@@ -210,7 +210,7 @@ describe('ZoraProposalManager', () => {
       await expect(
         cancelModule(manager.connect(registrar), ethers.constants.AddressZero)
       ).eventually.rejectedWith(
-        revert`ZPM::cancelProposal proposal does not exist`
+        revert`ZPM::cancelProposal can only cancel pending proposals`
       );
     });
     it('should revert if the proposal has already been approved', async () => {
@@ -245,7 +245,7 @@ describe('ZoraProposalManager', () => {
 
       const proposal = await manager.proposedModuleToProposal(module.address);
 
-      await expect(proposal.status).to.eq(3);
+      await expect(proposal.status).to.eq(4);
     });
 
     it('should emit a ModuleFrozen event', async () => {
@@ -271,7 +271,7 @@ describe('ZoraProposalManager', () => {
       await expect(
         freezeModule(manager.connect(registrar), ethers.constants.AddressZero)
       ).eventually.rejectedWith(
-        revert`ZPM::freezeProposal proposal does not exist`
+        revert`ZPM::freezeProposal can only freeze passed proposals`
       );
     });
 
