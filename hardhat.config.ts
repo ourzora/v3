@@ -3,6 +3,7 @@ import '@nomiclabs/hardhat-ethers';
 import 'hardhat-typechain';
 import 'tsconfig-paths/register';
 import 'hardhat-gas-reporter';
+import '@nomiclabs/hardhat-etherscan';
 import dotenv from 'dotenv';
 import { deployZPM } from './scripts/deployZPM';
 import { deployZMAM } from './scripts/deployZMAM';
@@ -66,6 +67,9 @@ const config: HardhatUserConfig = {
   gasReporter: {
     currency: 'USD',
     coinmarketcap: env ? (env.CMC_API_KEY as string) : '',
+  },
+  etherscan: {
+    apiKey: env ? (env.ETHERSCAN_API_KEY as string) : '',
   },
   networks: {
     rinkeby: {
