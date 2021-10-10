@@ -197,8 +197,8 @@ export const deployWETH = async () => {
 };
 
 export const deployReserveAuctionV1 = async (
-  proposalManager: string,
-  approvalsManager: string,
+  erc20TransferHelper: string,
+  erc721TransferHelper: string,
   zoraV1Media: string,
   weth: string
 ) => {
@@ -206,8 +206,8 @@ export const deployReserveAuctionV1 = async (
     'ReserveAuctionV1'
   );
   const reserveAuction = await ReserveAuctionV1Factory.deploy(
-    proposalManager,
-    approvalsManager,
+    erc20TransferHelper,
+    erc721TransferHelper,
     zoraV1Media,
     weth
   );
