@@ -15,7 +15,7 @@ contract BaseTransferHelper {
 
     // Only allows the method to continue if the caller is an approved zora module
     modifier onlyApprovedModule(address _from) {
-        require(approvalsManager.isModuleApproved(msg.sender, _from), "module has not been approved by user");
+        require(approvalsManager.isModuleApproved(_from, msg.sender), "module has not been approved by user");
 
         _;
     }
