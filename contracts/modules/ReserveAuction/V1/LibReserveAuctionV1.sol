@@ -164,7 +164,9 @@ library LibReserveAuctionV1 {
         require(_listingFeePercentage.add(_findersFeePercentage) < 100, "createAuction listingFeePercentage plus findersFeePercentage must be less than 100");
         require(_fundsRecipient != address(0), "createAuction fundsRecipient cannot be 0 address");
         require(
-            IERC721(_tokenContract).getApproved(_tokenId) == msg.sender || tokenOwner == msg.sender,
+            tokenOwner == msg.sender ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
+                IERC721(_tokenContract).getApproved(_tokenId) == msg.sender,
             "createAuction caller must be approved or owner for token id"
         );
         uint256 auctionId = _self.auctionIdTracker.current();
