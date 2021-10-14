@@ -305,7 +305,7 @@ library LibReserveAuctionV1 {
     /**
      * @notice End an auction, finalizing the bid on Zora if applicable and paying out the respective parties.
      * @dev If for some reason the auction cannot be finalized (invalid token recipient, for example),
-     * The auction is reset and the NFT is transferred back to the auction creator.
+     * The auction is settled and the NFT is transferred to the auction winner.
      */
     function settleAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
