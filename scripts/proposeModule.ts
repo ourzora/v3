@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as fs from 'fs-extra';
 import assert from 'assert';
+// @ts-ignore
 import { ZoraProposalManager } from '../typechain';
 
 interface Args {
