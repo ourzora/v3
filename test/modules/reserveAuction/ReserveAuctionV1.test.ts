@@ -7,6 +7,7 @@ import {
   Erc721TransferHelper,
   LibReserveAuctionV1Factory,
   ReserveAuctionV1,
+  ReserveAuctionV1Factory,
   TestEip2981Erc721,
   TestErc721,
   Weth,
@@ -329,7 +330,7 @@ describe('ReserveAuctionV1', () => {
       expect(newAuction.tokenOwner).to.eq(await otherUser.getAddress());
     });
 
-    xit('should emit an AuctionCreated event', async () => {
+    it('should emit an AuctionCreated event', async () => {
       const duration = 60 * 60 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
       const listingFeePercentage = 10;
@@ -353,7 +354,7 @@ describe('ReserveAuctionV1', () => {
 
       const createdAuction = await reserveAuction.auctions(1);
       const events = await reserveAuction.queryFilter(
-        new LibReserveAuctionV1Factory()
+        new ReserveAuctionV1Factory()
           .attach(reserveAuction.address)
           .filters.AuctionCreated(
             null,

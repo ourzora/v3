@@ -10,7 +10,7 @@ import {
   TestEip2981Erc721,
   TestErc721,
   Weth,
-} from '../../../../typechain';
+} from '../../../typechain';
 import {
   approveNFTTransfer,
   deployERC20TransferHelper,
@@ -27,11 +27,10 @@ import {
   proposeModule,
   registerModule,
   revert,
-  TENTH_ETH,
   THOUSANDTH_ETH,
   toRoundedNumber,
   TWO_ETH,
-} from '../../../utils';
+} from '../../utils';
 chai.use(asPromised);
 
 describe('ListingsV1', () => {

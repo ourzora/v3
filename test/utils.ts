@@ -14,6 +14,9 @@ import {
   SimpleModule,
   ListingsV1,
   OffersV1,
+  Erc1155TransferHelper,
+  TestErc1155,
+  TestModuleV2,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -114,6 +117,18 @@ export const deployERC721TransferHelper = async (approvalsManager: string) => {
   return transferHelper as Erc721TransferHelper;
 };
 
+export const deployERC1155TransferHelper = async (approvalsManager: string) => {
+  const ERC1155TransferHelperFactory = await ethers.getContractFactory(
+    'ERC1155TransferHelper'
+  );
+  const transferHelper = await ERC1155TransferHelperFactory.deploy(
+    approvalsManager
+  );
+  await transferHelper.deployed();
+
+  return transferHelper as Erc1155TransferHelper;
+};
+
 export const deployTestModule = async (
   erc20Helper: string,
   erc721Helper: string
@@ -122,6 +137,13 @@ export const deployTestModule = async (
   const testModule = await TestModuleFactory.deploy(erc20Helper, erc721Helper);
   await testModule.deployed();
   return testModule as TestModuleV1;
+};
+
+export const deployTestModuleV2 = async (erc1155Helper: string) => {
+  const TestModuleV2Factory = await ethers.getContractFactory('TestModuleV2');
+  const testModuleV2 = await TestModuleV2Factory.deploy(erc1155Helper);
+  await testModuleV2.deployed();
+  return testModuleV2 as TestModuleV2;
 };
 
 export const deploySimpleModule = async () => {
@@ -154,6 +176,12 @@ export const deployTestERC271 = async () => {
   return testERC721 as TestErc721;
 };
 
+export const deployTestERC1155 = async () => {
+  const TestERC1155Factory = await ethers.getContractFactory('TestERC1155');
+  const testERC1155 = await TestERC1155Factory.deploy();
+  return testERC1155 as TestErc1155;
+};
+
 export const deployTestEIP2981ERC721 = async () => {
   const TestEIP2981ERC721Factory = await ethers.getContractFactory(
     'TestEIP2981ERC721'
@@ -169,8 +197,8 @@ export const deployWETH = async () => {
 };
 
 export const deployReserveAuctionV1 = async (
-  proposalManager: string,
-  approvalsManager: string,
+  erc20TransferHelper: string,
+  erc721TransferHelper: string,
   zoraV1Media: string,
   weth: string
 ) => {
@@ -178,8 +206,8 @@ export const deployReserveAuctionV1 = async (
     'ReserveAuctionV1'
   );
   const reserveAuction = await ReserveAuctionV1Factory.deploy(
-    proposalManager,
-    approvalsManager,
+    erc20TransferHelper,
+    erc721TransferHelper,
     zoraV1Media,
     weth
   );
