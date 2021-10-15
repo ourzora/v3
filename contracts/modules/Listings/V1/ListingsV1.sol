@@ -92,7 +92,13 @@ contract ListingsV1 is ReentrancyGuard {
         uint8 _listingFeePercentage,
         uint8 _findersFeePercentage
     ) external nonReentrant returns (uint256) {
-        require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "createListing must be token owner");
+        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
+        require(
+            tokenOwner == msg.sender ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) == true ||
+                IERC721(_tokenContract).getApproved(_tokenId) == msg.sender,
+            "createListing must be token owner or approved operator"
+        );
         require(_fundsRecipient != address(0), "createListing must specify fundsRecipient");
         require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createListing listing fee and finders fee percentage must be less than 100");
 
