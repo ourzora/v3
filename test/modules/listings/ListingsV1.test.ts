@@ -7,6 +7,7 @@ import {
   Erc20TransferHelper,
   Erc721TransferHelper,
   ListingsV1,
+  RoyaltyRegistryV1,
   TestEip2981Erc721,
   TestErc721,
   Weth,
@@ -16,6 +17,7 @@ import {
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployListingsV1,
+  deployRoyaltyRegistry,
   deployTestEIP2981ERC721,
   deployTestERC271,
   deployWETH,
@@ -47,6 +49,7 @@ describe('ListingsV1', () => {
   let otherUser: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
+  let royaltyRegistry: RoyaltyRegistryV1;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -73,10 +76,12 @@ describe('ListingsV1', () => {
     erc721TransferHelper = await deployERC721TransferHelper(
       approvalManager.address
     );
+    royaltyRegistry = await deployRoyaltyRegistry();
     listings = await deployListingsV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       zoraV1.address,
+      royaltyRegistry.address,
       weth.address
     );
 

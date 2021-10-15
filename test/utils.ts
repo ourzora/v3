@@ -17,6 +17,7 @@ import {
   Erc1155TransferHelper,
   TestErc1155,
   TestModuleV2,
+  RoyaltyRegistryV1,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -127,6 +128,16 @@ export const deployERC1155TransferHelper = async (approvalsManager: string) => {
   await transferHelper.deployed();
 
   return transferHelper as Erc1155TransferHelper;
+};
+
+export const deployRoyaltyRegistry = async () => {
+  const RoyaltyRegistryFactory = await ethers.getContractFactory(
+    'RoyaltyRegistryV1'
+  );
+  const royaltyRegistry = await RoyaltyRegistryFactory.deploy();
+  await royaltyRegistry.deployed();
+
+  return royaltyRegistry as RoyaltyRegistryV1;
 };
 
 export const deployTestModule = async (
@@ -313,6 +324,7 @@ export async function deployListingsV1(
   erc20Helper: string,
   erc721Helper: string,
   zoraV1Media: string,
+  royaltyRegistry: string,
   weth: string
 ) {
   const ListingsV1Factory = await ethers.getContractFactory('ListingsV1');
@@ -320,6 +332,7 @@ export async function deployListingsV1(
     erc20Helper,
     erc721Helper,
     zoraV1Media,
+    royaltyRegistry,
     weth
   );
   await listings.deployed();
