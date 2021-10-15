@@ -117,27 +117,6 @@ describe('ReserveAuctionV1', () => {
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
     });
 
-    it('should revert if the 721 token does not support the ERC721 interface', async () => {
-      const duration = 60 * 68 * 24;
-      const reservePrice = BigNumber.from(10).pow(18).div(2);
-
-      await expect(
-        reserveAuction.createAuction(
-          0,
-          badERC721.address,
-          duration,
-          reservePrice,
-          await host.getAddress(),
-          await fundsRecipient.getAddress(),
-          5,
-          10,
-          ethers.constants.AddressZero
-        )
-      ).eventually.rejectedWith(
-        revert`createAuction tokenContract does not support ERC721 interface`
-      );
-    });
-
     it('should revert if the token owner has not approved an auction', async () => {
       const duration = 60 * 68 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);

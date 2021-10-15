@@ -159,12 +159,13 @@ library LibReserveAuctionV1 {
         uint8 _findersFeePercentage,
         address _auctionCurrency
     ) internal returns (uint256) {
-        require(IERC165(_tokenContract).supportsInterface(ERC721_INTERFACE_ID), "createAuction tokenContract does not support ERC721 interface");
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(_listingFeePercentage.add(_findersFeePercentage) < 100, "createAuction listingFeePercentage plus findersFeePercentage must be less than 100");
         require(_fundsRecipient != address(0), "createAuction fundsRecipient cannot be 0 address");
         require(
-            IERC721(_tokenContract).getApproved(_tokenId) == msg.sender || tokenOwner == msg.sender,
+            tokenOwner == msg.sender ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
+                IERC721(_tokenContract).getApproved(_tokenId) == msg.sender,
             "createAuction caller must be approved or owner for token id"
         );
         uint256 auctionId = _self.auctionIdTracker.current();
@@ -304,7 +305,7 @@ library LibReserveAuctionV1 {
     /**
      * @notice End an auction, finalizing the bid on Zora if applicable and paying out the respective parties.
      * @dev If for some reason the auction cannot be finalized (invalid token recipient, for example),
-     * The auction is reset and the NFT is transferred back to the auction creator.
+     * The auction is settled and the NFT is transferred to the auction winner.
      */
     function settleAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
