@@ -171,7 +171,9 @@ describe('ListingsV1', () => {
             10,
             10
           )
-      ).eventually.rejectedWith('createListing must be token owner');
+      ).eventually.rejectedWith(
+        'createListing must be token owner or approved operator'
+      );
     });
 
     it('should revert if the funds recipient is the zero address', async () => {
