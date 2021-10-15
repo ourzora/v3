@@ -12,6 +12,7 @@ import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.
 import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
+import {RoyaltyRegistryV1} from "../../RoyaltyRegistry/V1/RoyaltyRegistryV1.sol";
 
 contract ListingsV1 is ReentrancyGuard {
     using Counters for Counters.Counter;
@@ -25,6 +26,7 @@ contract ListingsV1 is ReentrancyGuard {
     IZoraV1Media zoraV1Media;
     IZoraV1Market zoraV1Market;
     IWETH weth;
+    RoyaltyRegistryV1 royaltyRegistry;
 
     Counters.Counter listingCounter;
 
@@ -69,6 +71,7 @@ contract ListingsV1 is ReentrancyGuard {
         address _erc20TransferHelper,
         address _erc721TransferHelper,
         address _zoraV1ProtocolMedia,
+        address _royaltyRegistry,
         address _wethAddress
     ) {
         erc20TransferHelper = ERC20TransferHelper(_erc20TransferHelper);
@@ -76,6 +79,7 @@ contract ListingsV1 is ReentrancyGuard {
         zoraV1Media = IZoraV1Media(_zoraV1ProtocolMedia);
         zoraV1Market = IZoraV1Market(zoraV1Media.marketContract());
         weth = IWETH(_wethAddress);
+        royaltyRegistry = RoyaltyRegistryV1(_royaltyRegistry);
     }
 
     function createListing(
@@ -164,6 +168,8 @@ contract ListingsV1 is ReentrancyGuard {
             remainingProfit = _handleZoraPayout(listing);
         } else if (IERC165(listing.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
             remainingProfit = _handleEIP2981Payout(listing);
+        } else {
+            remainingProfit = _handleRoyaltyRegistryPayout(listing);
         }
 
         uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
@@ -212,6 +218,21 @@ contract ListingsV1 is ReentrancyGuard {
 
         if (royaltyAmount != 0 && royaltyReceiver != address(0)) {
             _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, listing.listingCurrency);
+        }
+
+        return remainingProfit;
+    }
+
+    function _handleRoyaltyRegistryPayout(Listing memory listing) private returns (uint256) {
+        (address royaltyReceiver, uint8 royaltyPercentage) = royaltyRegistry.collectionRoyalty(listing.tokenContract);
+
+        uint256 remainingProfit = listing.listingPrice;
+
+        if (royaltyReceiver != address(0) && royaltyPercentage != 0) {
+            uint256 royaltyAmount = remainingProfit.mul(100).div(royaltyPercentage);
+            _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, listing.listingCurrency);
+
+            remainingProfit -= royaltyAmount;
         }
 
         return remainingProfit;
