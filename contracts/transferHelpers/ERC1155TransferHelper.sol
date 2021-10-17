@@ -5,6 +5,9 @@ import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import {ZoraProposalManager} from "../ZoraProposalManager.sol";
 import {BaseTransferHelper} from "./BaseTransferHelper.sol";
 
+/// @title ERC-20 Transfer Helper
+/// @author kulkarohan <rohan@zora.co>
+/// @notice This contract provides modules the ability to transfer ZORA user ERC-1155s with their permission
 contract ERC1155TransferHelper is BaseTransferHelper {
     constructor(address _approvalsManager) BaseTransferHelper(_approvalsManager) {}
 

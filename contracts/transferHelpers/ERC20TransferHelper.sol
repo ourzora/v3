@@ -7,6 +7,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ZoraProposalManager} from "../ZoraProposalManager.sol";
 import {BaseTransferHelper} from "./BaseTransferHelper.sol";
 
+/// @title ERC-20 Transfer Helper
+/// @author tbtstl <t@zora.co>
+/// @notice This contract provides modules the ability to transfer ZORA user ERC-20s with their permission
 contract ERC20TransferHelper is BaseTransferHelper {
     using SafeERC20 for IERC20;
 

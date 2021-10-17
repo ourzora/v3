@@ -2,6 +2,9 @@
 
 pragma solidity 0.8.5;
 
+/// @title ZORA Module Proposal Manager
+/// @author tbtstl <t@zora.co>
+/// @notice This contract accepts proposals and registers new modules, granting them access to the ZORA Module Approval Manager
 contract ZoraProposalManager {
     enum ProposalStatus {
         Nonexistent,
@@ -10,22 +13,23 @@ contract ZoraProposalManager {
         Failed,
         Frozen
     }
+    /// @notice A Proposal object that tracks a proposal and its status
+    /// @member proposer The address that created the proposal
+    /// @member status The status of the proposal (see ProposalStatus)
     struct Proposal {
         address proposer;
         ProposalStatus status;
     }
 
+    /// @notice The registrar address that can register, cancel, or freeze modules
     address public registrar;
+    /// @notice A mapping of module addresses to proposals
     mapping(address => Proposal) public proposedModuleToProposal;
 
     event ModuleProposed(address indexed contractAddress, address indexed proposer);
-
     event ModuleRegistered(address indexed contractAddress);
-
     event ModuleCanceled(address indexed contractAddress);
-
     event ModuleFrozen(address indexed contractAddress);
-
     event RegistrarChanged(address indexed newRegistrar);
 
     modifier onlyRegistrar() {
@@ -33,16 +37,22 @@ contract ZoraProposalManager {
         _;
     }
 
+    /// @param _registrarAddress The initial registrar for the manager
     constructor(address _registrarAddress) {
         require(_registrarAddress != address(0), "ZPM::must set registrar to non-zero address");
 
         registrar = _registrarAddress;
     }
 
+    /// @notice Returns true if the module has been registered
+    /// @param _proposalImpl The address of the proposed module
+    /// @return True if the module has been registered and is not frozen, false otherwise
     function isPassedProposal(address _proposalImpl) public view returns (bool) {
         return proposedModuleToProposal[_proposalImpl].status == ProposalStatus.Passed;
     }
 
+    /// @notice Creates a new proposal for a module
+    /// @param _impl The address of the deployed module being proposed
     function proposeModule(address _impl) public {
         require(proposedModuleToProposal[_impl].proposer == address(0), "ZPM::proposeModule proposal already exists");
         require(_impl != address(0), "ZPM::proposeModule proposed contract cannot be zero address");
@@ -53,6 +63,8 @@ contract ZoraProposalManager {
         emit ModuleProposed(_impl, msg.sender);
     }
 
+    /// @notice Registers a proposed module
+    /// @param _proposalAddress The address of the proposed module
     function registerModule(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
@@ -63,6 +75,8 @@ contract ZoraProposalManager {
         emit ModuleRegistered(_proposalAddress);
     }
 
+    /// @notice Cancels a proposed module
+    /// @param _proposalAddress The address of the proposed module
     function cancelProposal(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
@@ -73,6 +87,8 @@ contract ZoraProposalManager {
         emit ModuleCanceled(_proposalAddress);
     }
 
+    /// @notice Freezes a registered module, ensuring no future users can approve its usage (in case of critical bugs)
+    /// @param _proposalAddress The address of the proposed module
     function freezeProposal(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
@@ -83,6 +99,8 @@ contract ZoraProposalManager {
         emit ModuleFrozen(_proposalAddress);
     }
 
+    /// @notice Sets the registrar for this manager
+    /// @param _registrarAddress the address of the new registrar
     function setRegistrar(address _registrarAddress) public onlyRegistrar {
         require(_registrarAddress != address(0), "ZPM::setRegistrar must set registrar to non-zero address");
         registrar = _registrarAddress;

@@ -14,6 +14,9 @@ import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
 
+/// @title Reserve Auction V1 Library
+/// @author tbtstl <t@zora.co>
+/// @notice This library manages the creation and execution of reserve auctions for any ERC-721 token
 library LibReserveAuctionV1 {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
@@ -36,10 +39,10 @@ library LibReserveAuctionV1 {
     bytes4 constant ERC721_INTERFACE_ID = 0x80ac58cd;
     bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
 
-    // The minimum percentage difference between the last bid amount and the current bid.
+    /// @notice The minimum percentage difference between the last bid amount and the current bid.
     uint8 constant minBidIncrementPercentage = 10; // 10%
 
-    // The minimum amount of time left in an auction after a new bid is created
+    /// @notice The minimum amount of time left in an auction after a new bid is created
     uint256 constant timeBuffer = 15 * 60; // 15 minutes
 
     struct Auction {
@@ -117,14 +120,17 @@ library LibReserveAuctionV1 {
 
     event AuctionCanceled(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, address tokenOwner);
 
-    /**
-     * @notice Require that the specified auction exists
-     */
     modifier auctionExists(ReserveAuctionStorage storage _self, uint256 auctionId) {
         require(_exists(_self, auctionId), "auctionExists auction doesn't exist");
         _;
     }
 
+    /// @notice Initialize a storage slot for the library to run in
+    /// @param _self The storage slot to use
+    /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
+    /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
+    /// @param _zoraV1ProtocolMedia The ZORA NFT Protocol Media Contract address
+    /// @param _wethAddress WETH token address
     function init(
         ReserveAuctionStorage storage _self,
         address _erc20TransferHelper,
@@ -143,10 +149,19 @@ library LibReserveAuctionV1 {
         _self.auctionIdTracker.increment();
     }
 
-    /**
-     * @notice Create an auction.
-     * @dev Store the auction details in the auctions mapping and emit an AuctionCreated event.
-     */
+    /// @notice Create an auction.
+    /// @dev Store the auction details in the auctions mapping and emit an AuctionCreated event.
+    /// @param _self Storage slot
+    /// @param _tokenId The ID of the ERC-721 token being listed for sale
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _duration The amount of time the auction should run for after the initial bid is placed
+    /// @param _reservePrice The minimum bid amount to start the auction
+    /// @param _host The host of the sale, who can receive _listingFeePercentage of the sale price
+    /// @param _fundsRecipient The address to send funds to once the token is sold
+    /// @param _listingFeePercentage The percentage of the sale amount to be sent to the host
+    /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
+    /// @param _auctionCurrency The address of the ERC-20 token to accept bids in, or address(0) for ETH
+    /// @return The ID of the created auction
     function createAuction(
         ReserveAuctionStorage storage _self,
         uint256 _tokenId,
@@ -211,12 +226,10 @@ library LibReserveAuctionV1 {
         return auctionId;
     }
 
-    /**
-     * @notice Create a bid on a token, with a given amount.
-     * @dev If provided a valid bid, transfers the provided amount to this contract.
-     * If the auction is run in native ETH, the ETH is wrapped so it can be identically to other
-     * auction currencies in this contract.
-     */
+    /// @notice Update the reserve price for a given auction
+    /// @param _self Storage slot
+    /// @param _auctionId The ID for the auction
+    /// @param _reservePrice The new reserve price for the auction
     function setAuctionReservePrice(
         ReserveAuctionStorage storage _self,
         uint256 _auctionId,
@@ -231,10 +244,11 @@ library LibReserveAuctionV1 {
         emit AuctionReservePriceUpdated(_auctionId, auction.tokenId, auction.tokenContract, _reservePrice);
     }
 
-    /**
-     * @notice Create a bid on a token, with a given amount.
-     * @dev If provided a valid bid, transfers the provided amount to this contract.
-     */
+    /// @notice Places a bid on the auction, holding the bids in escrow and refunding any previous bids
+    /// @param _self The storage slot
+    /// @param _auctionId The ID of the auction
+    /// @param _amount The bid amount to be transferred
+    /// @param _finder The address of the referrer for this bid
     function createBid(
         ReserveAuctionStorage storage _self,
         uint256 _auctionId,
@@ -302,11 +316,9 @@ library LibReserveAuctionV1 {
         }
     }
 
-    /**
-     * @notice End an auction, finalizing the bid on Zora if applicable and paying out the respective parties.
-     * @dev If for some reason the auction cannot be finalized (invalid token recipient, for example),
-     * The auction is settled and the NFT is transferred to the auction winner.
-     */
+    /// @notice End an auction, paying out respective parties and transferring the token to the winning bidder
+    /// @param _self The storage slot
+    /// @param _auctionId The ID of  the auction
     function settleAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
         require(auction.firstBidTime != 0, "settleAuction auction hasn't begun");
@@ -349,10 +361,9 @@ library LibReserveAuctionV1 {
         delete _self.auctions[_auctionId];
     }
 
-    /**
-     * @notice Cancel an auction.
-     * @dev emits an AuctionCanceled event
-     */
+    /// @notice Cancel an auction
+    /// @param _self The storage slot
+    /// @param _auctionId The ID of the auction
     function cancelAuction(ReserveAuctionStorage storage _self, uint256 _auctionId) internal auctionExists(_self, _auctionId) {
         Auction storage auction = _self.auctions[_auctionId];
 

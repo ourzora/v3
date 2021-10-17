@@ -14,6 +14,9 @@ import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.so
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 
+/// @title Offers V1
+/// @author kulkarohan <rohan@zora.co>
+/// @notice This module allows buyers to make an offer on any ERC-721
 contract OffersV1 is ReentrancyGuard {
     using Counters for Counters.Counter;
     using SafeERC20 for IERC20;

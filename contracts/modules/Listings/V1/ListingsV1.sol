@@ -14,6 +14,9 @@ import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {RoyaltyRegistryV1} from "../../RoyaltyRegistry/V1/RoyaltyRegistryV1.sol";
 
+/// @title Listings V1
+/// @author tbtstl <t@zora.co>
+/// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those listings
 contract ListingsV1 is ReentrancyGuard {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
@@ -30,14 +33,14 @@ contract ListingsV1 is ReentrancyGuard {
 
     Counters.Counter listingCounter;
 
-    // listing by user
+    /// @notice The listings created by a given user
     mapping(address => uint256[]) public listingsForUser;
 
-    // listing by NFT
-    // NFT address => NFT ID => listing ID
+    /// @notice The listing for a given NFT, if one exists
+    /// @dev NFT address => NFT ID => listing ID
     mapping(address => mapping(uint256 => uint256)) public listingForNFT;
 
-    // listing by ID
+    /// @notice A mapping of IDs to their respective listing
     mapping(uint256 => Listing) public listings;
 
     enum ListingStatus {
@@ -60,13 +63,15 @@ contract ListingsV1 is ReentrancyGuard {
     }
 
     event ListingCreated(uint256 indexed id, Listing listing);
-
     event ListingPriceUpdated(uint256 indexed id, Listing listing);
-
     event ListingCanceled(uint256 indexed id, Listing listing);
-
     event ListingFilled(uint256 indexed id, address buyer, Listing listing);
 
+    /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
+    /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
+    /// @param _zoraV1ProtocolMedia The ZORA NFT Protocol Media Contract address
+    /// @param _royaltyRegistry The ZORA Collection Royalty Registry address
+    /// @param _wethAddress WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
@@ -82,6 +87,16 @@ contract ListingsV1 is ReentrancyGuard {
         royaltyRegistry = RoyaltyRegistryV1(_royaltyRegistry);
     }
 
+    /// @notice Lists an NFT for sale
+    /// @param _tokenContract The address of the ERC-721 token contract for the token to be sold
+    /// @param _tokenId The ERC-721 token ID for the token to be sold
+    /// @param _listingPrice The price of the sale
+    /// @param _listingCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
+    /// @param _fundsRecipient The address to send funds to once the token is sold
+    /// @param _host The host of the sale, who can receive _listingFeePercentage of the sale price
+    /// @param _listingFeePercentage The percentage of the sale amount to be sent to the host
+    /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
+    /// @return The ID of the created listing
     function createListing(
         address _tokenContract,
         uint256 _tokenId,
@@ -127,6 +142,10 @@ contract ListingsV1 is ReentrancyGuard {
         return listingId;
     }
 
+    /// @notice Updates the listing price for a given listing
+    /// @param _listingId the ID of the listing to update
+    /// @param _listingPrice the price to update the listing to
+    /// @param _listingCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
     function setListingPrice(
         uint256 _listingId,
         uint256 _listingPrice,
@@ -143,6 +162,8 @@ contract ListingsV1 is ReentrancyGuard {
         emit ListingPriceUpdated(_listingId, listing);
     }
 
+    /// @notice Cancels a listing
+    /// @param _listingId the ID of the listing to cancel
     function cancelListing(uint256 _listingId) external {
         Listing storage listing = listings[_listingId];
 
@@ -158,6 +179,9 @@ contract ListingsV1 is ReentrancyGuard {
         emit ListingCanceled(_listingId, listing);
     }
 
+    /// @notice Purchase an NFT from a listing, transferring the NFT to the buyer and funds to the recipients
+    /// @param _listingId The ID of the listing
+    /// @param _finder The address of the referrer for this listing
     function fillListing(uint256 _listingId, address _finder) external payable nonReentrant {
         Listing storage listing = listings[_listingId];
 
@@ -198,6 +222,9 @@ contract ListingsV1 is ReentrancyGuard {
         emit ListingFilled(_listingId, msg.sender, listing);
     }
 
+    /// @notice Pays out royalties for ZORA NFTs
+    /// @param listing The listing to use as a reference for the royalty calculations
+    /// @return The remaining profit from the sale
     function _handleZoraPayout(Listing memory listing) private returns (uint256) {
         IZoraV1Market.BidShares memory bidShares = zoraV1Market.bidSharesForToken(listing.tokenId);
 
@@ -217,6 +244,9 @@ contract ListingsV1 is ReentrancyGuard {
         return remainingProfit;
     }
 
+    /// @notice Pays out royalties for EIP-2981 compliant NFTs
+    /// @param listing The listing to use as a reference for the royalty calculations
+    /// @return The remaining profit from the sale
     function _handleEIP2981Payout(Listing memory listing) private returns (uint256) {
         (address royaltyReceiver, uint256 royaltyAmount) = IERC2981(listing.tokenContract).royaltyInfo(listing.tokenId, listing.listingPrice);
 
@@ -229,6 +259,9 @@ contract ListingsV1 is ReentrancyGuard {
         return remainingProfit;
     }
 
+    /// @notice Pays out royalties for collections
+    /// @param listing The listing to use as a reference for the royalty calculations
+    /// @return The remaining profit from the sale
     function _handleRoyaltyRegistryPayout(Listing memory listing) private returns (uint256) {
         (address royaltyReceiver, uint8 royaltyPercentage) = royaltyRegistry.collectionRoyalty(listing.tokenContract);
 
@@ -244,6 +277,9 @@ contract ListingsV1 is ReentrancyGuard {
         return remainingProfit;
     }
 
+    /// @notice Handle an incoming funds transfer, ensuring the sent amount is valid and the sender is solvent
+    /// @param _amount The amount to be received
+    /// @param _currency The currency to receive funds in, or address(0) for ETH
     function _handleIncomingTransfer(uint256 _amount, address _currency) private {
         if (_currency == address(0)) {
             require(msg.value >= _amount, "_handleIncomingTransfer msg value less than expected amount");
@@ -259,6 +295,11 @@ contract ListingsV1 is ReentrancyGuard {
         }
     }
 
+    /// @notice Handle an outgoing funds transfer
+    /// @dev Wraps ETH in WETH if the receiver cannot receive ETH
+    /// @param _dest The destination for the funds
+    /// @param _amount The amount to be sent
+    /// @param _currency The currency to send funds in, or address(0) for ETH
     function _handleOutgoingTransfer(
         address _dest,
         uint256 _amount,
