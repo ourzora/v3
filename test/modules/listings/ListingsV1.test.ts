@@ -401,5 +401,34 @@ describe('ListingsV1', () => {
 
       expect(await zoraV1.ownerOf(0)).to.eq(await buyerA.getAddress());
     });
+
+    it('should emit an ExchangeExecuted event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+
+      await listings
+        .connect(buyerA)
+        .fillListing(1, await finder.getAddress(), { value: ONE_ETH });
+
+      const events = await listings.queryFilter(
+        listings.filters.ExchangeExecuted(null, null, null, null),
+        block
+      );
+
+      expect(events.length).to.eq(1);
+
+      const logDescription = listings.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ExchangeExecuted');
+      expect(logDescription.args.userA).to.eq(await deployer.getAddress());
+      expect(logDescription.args.userB).to.eq(await buyerA.getAddress());
+
+      expect(logDescription.args.a.tokenContract).to.eq(
+        await (
+          await listings.listings(1)
+        ).tokenContract
+      );
+      expect(logDescription.args.b.tokenContract).to.eq(
+        ethers.constants.AddressZero
+      );
+    });
   });
 });

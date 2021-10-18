@@ -13,11 +13,12 @@ import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.so
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {CollectionRoyaltyRegistryV1} from "../../CollectionRoyaltyRegistry/V1/CollectionRoyaltyRegistryV1.sol";
+import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 
 /// @title Listings V1
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those listings
-contract ListingsV1 is ReentrancyGuard {
+contract ListingsV1 is ReentrancyGuard, UniversalExchangeEventV1 {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeMath for uint8;
@@ -217,6 +218,10 @@ contract ListingsV1 is ReentrancyGuard {
 
         listing.status = ListingStatus.Filled;
 
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: listing.tokenContract, tokenID: listing.tokenId, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: listing.listingCurrency, tokenID: 0, amount: msg.value});
+
+        emit ExchangeExecuted(listing.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit ListingFilled(_listingId, msg.sender, listing);
     }
 
