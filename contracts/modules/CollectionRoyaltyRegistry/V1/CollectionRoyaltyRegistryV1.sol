@@ -5,10 +5,10 @@ interface Ownable {
     function owner() external view returns (address);
 }
 
-/// @title Royalty Registry V1
+/// @title Collection Royalty Registry V1
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows collection owners to set a collection-wide royalty on all sales in ZORA
-contract RoyaltyRegistryV1 {
+contract CollectionRoyaltyRegistryV1 {
     struct CollectionRoyalty {
         address recipient;
         uint8 royaltyPercentage;
@@ -22,14 +22,13 @@ contract RoyaltyRegistryV1 {
     /// @param _collectionAddress The address of the ERC-721 contract
     /// @param _recipientAddress The address of the funds recipient for royalty payments
     /// @param _royaltyPercentage The % of sale price to send to the _recipientAddress
-    function setRoyaltyRegistry(
+    function setRoyalty(
         address _collectionAddress,
         address _recipientAddress,
         uint8 _royaltyPercentage
     ) public {
         address owner = _getCollectionOwner(_collectionAddress);
-        require(msg.sender == _collectionAddress || msg.sender == owner, "setRoyaltyRegistry must be called as owner or collection");
-        require(_royaltyPercentage <= 10, "setRoyaltyRegistry royalty percentage cannot be greater than 10%");
+        require(msg.sender == _collectionAddress || msg.sender == owner, "setRoyalty must be called as owner or collection");
 
         collectionRoyalty[_collectionAddress] = CollectionRoyalty({recipient: _recipientAddress, royaltyPercentage: _royaltyPercentage});
 

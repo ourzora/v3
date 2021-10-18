@@ -59,14 +59,16 @@ contract ReserveAuctionV1 is ReentrancyGuard {
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _zoraV1ProtocolMedia The ZORA NFT Protocol Media Contract address
+    /// @param _royaltyRegistry The ZORA Collection Royalty Registry address
     /// @param _wethAddress WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
         address _zoraV1ProtocolMedia,
+        address _royaltyRegistry,
         address _wethAddress
     ) {
-        reserveAuctionStorage.init(_erc20TransferHelper, _erc721TransferHelper, _zoraV1ProtocolMedia, _wethAddress);
+        reserveAuctionStorage.init(_erc20TransferHelper, _erc721TransferHelper, _zoraV1ProtocolMedia, _royaltyRegistry, _wethAddress);
     }
 
     /// @notice Returns an auction for a given ID

@@ -7,6 +7,7 @@ import {
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployReserveAuctionV1,
+  deployRoyaltyRegistry,
   deployTestEIP2981ERC721,
   deployTestERC271,
   deployWETH,
@@ -36,6 +37,7 @@ import {
   Weth,
   Erc20TransferHelper,
   Erc721TransferHelper,
+  CollectionRoyaltyRegistryV1,
 } from '../../../typechain';
 
 chai.use(asPromised);
@@ -56,6 +58,7 @@ describe('ReserveAuctionV1 integration', () => {
   let finder: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
+  let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {
     await ethers.provider.send('hardhat_reset', []);
@@ -72,6 +75,7 @@ describe('ReserveAuctionV1 integration', () => {
     badERC721 = await deployBadERC721();
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
+    royaltyRegistry = await deployRoyaltyRegistry();
     weth = await deployWETH();
     const proposalManager = await deployZoraProposalManager(
       await deployer.getAddress()
@@ -89,6 +93,7 @@ describe('ReserveAuctionV1 integration', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       zoraV1.address,
+      royaltyRegistry.address,
       weth.address
     );
     await proposeModule(proposalManager, reserveAuction.address);

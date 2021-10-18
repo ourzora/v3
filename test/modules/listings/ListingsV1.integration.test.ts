@@ -8,7 +8,7 @@ import {
   Erc20TransferHelper,
   Erc721TransferHelper,
   ListingsV1,
-  RoyaltyRegistryV1,
+  CollectionRoyaltyRegistryV1,
   TestEip2981Erc721,
   TestErc721,
   Weth,
@@ -53,7 +53,7 @@ describe('ListingsV1 integration', () => {
   let finder: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
-  let royaltyRegistry: RoyaltyRegistryV1;
+  let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();

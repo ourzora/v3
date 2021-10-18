@@ -12,7 +12,7 @@ import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.
 import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
-import {RoyaltyRegistryV1} from "../../RoyaltyRegistry/V1/RoyaltyRegistryV1.sol";
+import {CollectionRoyaltyRegistryV1} from "../../CollectionRoyaltyRegistry/V1/CollectionRoyaltyRegistryV1.sol";
 
 /// @title Listings V1
 /// @author tbtstl <t@zora.co>
@@ -29,7 +29,7 @@ contract ListingsV1 is ReentrancyGuard {
     IZoraV1Media zoraV1Media;
     IZoraV1Market zoraV1Market;
     IWETH weth;
-    RoyaltyRegistryV1 royaltyRegistry;
+    CollectionRoyaltyRegistryV1 royaltyRegistry;
 
     Counters.Counter listingCounter;
 
@@ -84,7 +84,7 @@ contract ListingsV1 is ReentrancyGuard {
         zoraV1Media = IZoraV1Media(_zoraV1ProtocolMedia);
         zoraV1Market = IZoraV1Market(zoraV1Media.marketContract());
         weth = IWETH(_wethAddress);
-        royaltyRegistry = RoyaltyRegistryV1(_royaltyRegistry);
+        royaltyRegistry = CollectionRoyaltyRegistryV1(_royaltyRegistry);
     }
 
     /// @notice Lists an NFT for sale

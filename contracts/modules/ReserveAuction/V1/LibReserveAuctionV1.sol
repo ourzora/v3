@@ -13,6 +13,7 @@ import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
+import {CollectionRoyaltyRegistryV1} from "../../CollectionRoyaltyRegistry/V1/CollectionRoyaltyRegistryV1.sol";
 
 /// @title Reserve Auction V1 Library
 /// @author tbtstl <t@zora.co>
@@ -27,6 +28,7 @@ library LibReserveAuctionV1 {
         bool initialized;
         address erc20TransferHelper;
         address erc721TransferHelper;
+        address royaltyRegistry;
         address zoraV1ProtocolMedia;
         address zoraV1ProtocolMarket;
         address wethAddress;
@@ -130,12 +132,14 @@ library LibReserveAuctionV1 {
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _zoraV1ProtocolMedia The ZORA NFT Protocol Media Contract address
+    /// @param _royaltyRegistry The ZORA Collection Royalty Registry address
     /// @param _wethAddress WETH token address
     function init(
         ReserveAuctionStorage storage _self,
         address _erc20TransferHelper,
         address _erc721TransferHelper,
         address _zoraV1ProtocolMedia,
+        address _royaltyRegistry,
         address _wethAddress
     ) internal {
         require(_self.initialized != true, "init already initialized");
@@ -144,6 +148,7 @@ library LibReserveAuctionV1 {
         _self.wethAddress = _wethAddress;
         _self.erc20TransferHelper = _erc20TransferHelper;
         _self.erc721TransferHelper = _erc721TransferHelper;
+        _self.royaltyRegistry = _royaltyRegistry;
         _self.initialized = true;
         // Ensure auction IDs start at 1 so we can reserve 0 for "nonexistant"
         _self.auctionIdTracker.increment();
@@ -329,6 +334,8 @@ library LibReserveAuctionV1 {
             remainingProfit = _handleZoraAuctionPayout(_self, _auctionId);
         } else if (IERC165(auction.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
             remainingProfit = _handleEIP2981AuctionPayout(_self, _auctionId);
+        } else {
+            remainingProfit = _handleRoyaltyRegistryPayout(_self, _auctionId);
         }
 
         uint256 hostProfit;
@@ -481,5 +488,21 @@ library LibReserveAuctionV1 {
         _handleOutgoingTransfer(_self, royaltyReceiver, royaltyAmount, auction.auctionCurrency);
 
         return auction.amount.sub(royaltyAmount);
+    }
+
+    function _handleRoyaltyRegistryPayout(ReserveAuctionStorage storage _self, uint256 _auctionId) private returns (uint256) {
+        Auction memory auction = _self.auctions[_auctionId];
+        (address royaltyReceiver, uint8 royaltyPercentage) = CollectionRoyaltyRegistryV1(_self.royaltyRegistry).collectionRoyalty(auction.tokenContract);
+
+        uint256 remainingProfit = auction.amount;
+
+        if (royaltyReceiver != address(0) && royaltyPercentage != 0) {
+            uint256 royaltyAmount = remainingProfit.mul(100).div(royaltyPercentage);
+            _handleOutgoingTransfer(_self, royaltyReceiver, royaltyAmount, auction.auctionCurrency);
+
+            remainingProfit -= royaltyAmount;
+        }
+
+        return remainingProfit;
     }
 }

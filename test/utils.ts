@@ -17,7 +17,7 @@ import {
   Erc1155TransferHelper,
   TestErc1155,
   TestModuleV2,
-  RoyaltyRegistryV1,
+  CollectionRoyaltyRegistryV1,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -132,12 +132,12 @@ export const deployERC1155TransferHelper = async (approvalsManager: string) => {
 
 export const deployRoyaltyRegistry = async () => {
   const RoyaltyRegistryFactory = await ethers.getContractFactory(
-    'RoyaltyRegistryV1'
+    'CollectionRoyaltyRegistryV1'
   );
   const royaltyRegistry = await RoyaltyRegistryFactory.deploy();
   await royaltyRegistry.deployed();
 
-  return royaltyRegistry as RoyaltyRegistryV1;
+  return royaltyRegistry as CollectionRoyaltyRegistryV1;
 };
 
 export const deployTestModule = async (
@@ -211,6 +211,7 @@ export const deployReserveAuctionV1 = async (
   erc20TransferHelper: string,
   erc721TransferHelper: string,
   zoraV1Media: string,
+  royaltyRegistry: string,
   weth: string
 ) => {
   const ReserveAuctionV1Factory = await ethers.getContractFactory(
@@ -220,6 +221,7 @@ export const deployReserveAuctionV1 = async (
     erc20TransferHelper,
     erc721TransferHelper,
     zoraV1Media,
+    royaltyRegistry,
     weth
   );
   await reserveAuction.deployed();
@@ -342,6 +344,7 @@ export async function deployListingsV1(
 export async function deployOffersV1(
   erc20Helper: string,
   erc721Helper: string,
+  royaltyRegistry: string,
   zoraV1Media: string,
   weth: string
 ) {
@@ -349,6 +352,7 @@ export async function deployOffersV1(
   const offers = await OffersV1Factory.deploy(
     erc20Helper,
     erc721Helper,
+    royaltyRegistry,
     zoraV1Media,
     weth
   );
