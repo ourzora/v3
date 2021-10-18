@@ -207,6 +207,9 @@ contract OffersV1 is ReentrancyGuard {
         uint256 _amount,
         address _currency
     ) private {
+        if (_amount == 0 || _dest == address(0)) {
+            return;
+        }
         // Handle ETH payment
         if (_currency == address(0)) {
             require(address(this).balance >= _amount, "_handleOutgoingTransfer insolvent");
@@ -232,13 +235,9 @@ contract OffersV1 is ReentrancyGuard {
         uint256 remainingProfit = offer.offerPrice - creatorProfit - prevOwnerProfit;
 
         // Pay out creator
-        if (creatorProfit != 0) {
-            _handleOutgoingTransfer(zoraV1Media.tokenCreators(offer.tokenId), creatorProfit, offer.offerCurrency);
-        }
+        _handleOutgoingTransfer(zoraV1Media.tokenCreators(offer.tokenId), creatorProfit, offer.offerCurrency);
         // Pay out prev owner
-        if (prevOwnerProfit != 0) {
-            _handleOutgoingTransfer(zoraV1Media.previousTokenOwner(offer.tokenId), prevOwnerProfit, offer.offerCurrency);
-        }
+        _handleOutgoingTransfer(zoraV1Media.previousTokenOwners(offer.tokenId), prevOwnerProfit, offer.offerCurrency);
 
         return remainingProfit;
     }
@@ -248,9 +247,7 @@ contract OffersV1 is ReentrancyGuard {
 
         uint256 remainingProfit = offer.offerPrice - royaltyAmount;
 
-        if (royaltyAmount != 0 && royaltyReceiver != address(0)) {
-            _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, offer.offerCurrency);
-        }
+        _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, offer.offerCurrency);
 
         return remainingProfit;
     }
@@ -259,13 +256,10 @@ contract OffersV1 is ReentrancyGuard {
         (address royaltyReceiver, uint8 royaltyPercentage) = royaltyRegistry.collectionRoyalty(offer.tokenContract);
 
         uint256 remainingProfit = offer.offerPrice;
+        uint256 royaltyAmount = (remainingProfit * royaltyPercentage) / 100;
+        _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, offer.offerCurrency);
 
-        if (royaltyReceiver != address(0) && royaltyPercentage != 0) {
-            uint256 royaltyAmount = (remainingProfit * 100) / royaltyPercentage;
-            _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, offer.offerCurrency);
-
-            remainingProfit -= royaltyAmount;
-        }
+        remainingProfit -= royaltyAmount;
 
         return remainingProfit;
     }

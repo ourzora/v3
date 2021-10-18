@@ -462,19 +462,9 @@ library LibReserveAuctionV1 {
         uint256 prevOwnerProfit = IZoraV1Market(_self.zoraV1ProtocolMarket).splitShare(bidShares.prevOwner, auction.amount);
 
         // Pay out creator
-        if (creatorProfit != 0) {
-            _handleOutgoingTransfer(_self, IZoraV1Media(_self.zoraV1ProtocolMedia).tokenCreators(auction.tokenId), creatorProfit, auction.auctionCurrency);
-        }
-
+        _handleOutgoingTransfer(_self, IZoraV1Media(_self.zoraV1ProtocolMedia).tokenCreators(auction.tokenId), creatorProfit, auction.auctionCurrency);
         // Pay out prev owner
-        if (prevOwnerProfit != 0) {
-            _handleOutgoingTransfer(
-                _self,
-                IZoraV1Media(_self.zoraV1ProtocolMedia).previousTokenOwner(auction.tokenId),
-                prevOwnerProfit,
-                auction.auctionCurrency
-            );
-        }
+        _handleOutgoingTransfer(_self, IZoraV1Media(_self.zoraV1ProtocolMedia).previousTokenOwners(auction.tokenId), prevOwnerProfit, auction.auctionCurrency);
 
         return auction.amount.sub(creatorProfit).sub(prevOwnerProfit);
     }
@@ -496,12 +486,10 @@ library LibReserveAuctionV1 {
 
         uint256 remainingProfit = auction.amount;
 
-        if (royaltyReceiver != address(0) && royaltyPercentage != 0) {
-            uint256 royaltyAmount = remainingProfit.mul(100).div(royaltyPercentage);
-            _handleOutgoingTransfer(_self, royaltyReceiver, royaltyAmount, auction.auctionCurrency);
+        uint256 royaltyAmount = remainingProfit.mul(royaltyPercentage).div(100);
+        _handleOutgoingTransfer(_self, royaltyReceiver, royaltyAmount, auction.auctionCurrency);
 
-            remainingProfit -= royaltyAmount;
-        }
+        remainingProfit -= royaltyAmount;
 
         return remainingProfit;
     }

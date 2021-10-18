@@ -205,14 +205,12 @@ contract ListingsV1 is ReentrancyGuard {
         uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
         uint256 finderFee = remainingProfit.mul(listing.findersFeePercentage).div(100);
 
-        if (hostProfit != 0 && listing.host != address(0)) {
-            _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
-        }
-        if (finderFee != 0) {
-            _handleOutgoingTransfer(_finder, finderFee, listing.listingCurrency);
-        }
+        _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
+        _handleOutgoingTransfer(_finder, finderFee, listing.listingCurrency);
 
-        _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit.sub(hostProfit).sub(finderFee), listing.listingCurrency);
+        remainingProfit = remainingProfit.sub(hostProfit).sub(finderFee);
+
+        _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit, listing.listingCurrency);
 
         // Transfer NFT to auction winner
         erc721TransferHelper.transferFrom(listing.tokenContract, listing.seller, msg.sender, listing.tokenId);
@@ -233,13 +231,9 @@ contract ListingsV1 is ReentrancyGuard {
         uint256 remainingProfit = listing.listingPrice.sub(creatorProfit).sub(prevOwnerProfit);
 
         // Pay out creator
-        if (creatorProfit != 0) {
-            _handleOutgoingTransfer(zoraV1Media.tokenCreators(listing.tokenId), creatorProfit, listing.listingCurrency);
-        }
+        _handleOutgoingTransfer(zoraV1Media.tokenCreators(listing.tokenId), creatorProfit, listing.listingCurrency);
         // Pay out prev owner
-        if (prevOwnerProfit != 0) {
-            _handleOutgoingTransfer(zoraV1Media.previousTokenOwner(listing.tokenId), prevOwnerProfit, listing.listingCurrency);
-        }
+        _handleOutgoingTransfer(zoraV1Media.previousTokenOwners(listing.tokenId), prevOwnerProfit, listing.listingCurrency);
 
         return remainingProfit;
     }
@@ -267,12 +261,10 @@ contract ListingsV1 is ReentrancyGuard {
 
         uint256 remainingProfit = listing.listingPrice;
 
-        if (royaltyReceiver != address(0) && royaltyPercentage != 0) {
-            uint256 royaltyAmount = remainingProfit.mul(100).div(royaltyPercentage);
-            _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, listing.listingCurrency);
+        uint256 royaltyAmount = remainingProfit.mul(royaltyPercentage).div(100);
+        _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, listing.listingCurrency);
 
-            remainingProfit -= royaltyAmount;
-        }
+        remainingProfit -= royaltyAmount;
 
         return remainingProfit;
     }
@@ -296,7 +288,7 @@ contract ListingsV1 is ReentrancyGuard {
     }
 
     /// @notice Handle an outgoing funds transfer
-    /// @dev Wraps ETH in WETH if the receiver cannot receive ETH
+    /// @dev Wraps ETH in WETH if the receiver cannot receive ETH, noop if the funds to be sent are 0 or recipient is invalid
     /// @param _dest The destination for the funds
     /// @param _amount The amount to be sent
     /// @param _currency The currency to send funds in, or address(0) for ETH
@@ -305,6 +297,9 @@ contract ListingsV1 is ReentrancyGuard {
         uint256 _amount,
         address _currency
     ) private {
+        if (_amount == 0 || _dest == address(0)) {
+            return;
+        }
         // Handle ETH payment
         if (_currency == address(0)) {
             require(address(this).balance >= _amount, "_handleOutgoingTransfer insolvent");
