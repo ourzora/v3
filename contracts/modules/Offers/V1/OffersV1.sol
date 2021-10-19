@@ -13,7 +13,11 @@ import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.
 import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
+import {CollectionRoyaltyRegistryV1} from "../../CollectionRoyaltyRegistry/V1/CollectionRoyaltyRegistryV1.sol";
 
+/// @title Offers V1
+/// @author kulkarohan <rohan@zora.co>
+/// @notice This module allows buyers to make an offer on any ERC-721
 contract OffersV1 is ReentrancyGuard {
     using Counters for Counters.Counter;
     using SafeERC20 for IERC20;
@@ -22,6 +26,7 @@ contract OffersV1 is ReentrancyGuard {
 
     ERC20TransferHelper erc20TransferHelper;
     ERC721TransferHelper erc721TransferHelper;
+    CollectionRoyaltyRegistryV1 royaltyRegistry;
     IZoraV1Media zoraV1Media;
     IZoraV1Market zoraV1Market;
     IWETH weth;
@@ -91,11 +96,13 @@ contract OffersV1 is ReentrancyGuard {
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
+        address _royaltyRegistry,
         address _zoraV1ProtocolMedia,
         address _wethAddress
     ) {
         erc20TransferHelper = ERC20TransferHelper(_erc20TransferHelper);
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
+        royaltyRegistry = CollectionRoyaltyRegistryV1(_royaltyRegistry);
         zoraV1Media = IZoraV1Media(_zoraV1ProtocolMedia);
         zoraV1Market = IZoraV1Market(zoraV1Media.marketContract());
         weth = IWETH(_wethAddress);
@@ -261,6 +268,8 @@ contract OffersV1 is ReentrancyGuard {
             remainingProfit = _handleZoraPayout(offer);
         } else if (IERC165(offer.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
             remainingProfit = _handleEIP2981Payout(offer);
+        } else {
+            remainingProfit = _handleRoyaltyRegistryPayout(offer);
         }
 
         // Transfer sale proceeds to seller
@@ -326,6 +335,9 @@ contract OffersV1 is ReentrancyGuard {
         uint256 _amount,
         address _currency
     ) private {
+        if (_amount == 0 || _dest == address(0)) {
+            return;
+        }
         // Handle ETH payment
         if (_currency == address(0)) {
             require(address(this).balance >= _amount, "_handleOutgoingTransfer insolvent");
@@ -351,13 +363,9 @@ contract OffersV1 is ReentrancyGuard {
         uint256 remainingProfit = offer.offerPrice - creatorProfit - prevOwnerProfit;
 
         // Pay out creator
-        if (creatorProfit != 0) {
-            _handleOutgoingTransfer(zoraV1Media.tokenCreators(offer.tokenID), creatorProfit, offer.offerCurrency);
-        }
+        _handleOutgoingTransfer(zoraV1Media.tokenCreators(offer.tokenID), creatorProfit, offer.offerCurrency);
         // Pay out prev owner
-        if (prevOwnerProfit != 0) {
-            _handleOutgoingTransfer(zoraV1Media.previousTokenOwner(offer.tokenID), prevOwnerProfit, offer.offerCurrency);
-        }
+        _handleOutgoingTransfer(zoraV1Media.previousTokenOwners(offer.tokenID), prevOwnerProfit, offer.offerCurrency);
 
         return remainingProfit;
     }
@@ -367,9 +375,19 @@ contract OffersV1 is ReentrancyGuard {
 
         uint256 remainingProfit = offer.offerPrice - royaltyAmount;
 
-        if (royaltyAmount != 0 && royaltyReceiver != address(0)) {
-            _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, offer.offerCurrency);
-        }
+        _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, offer.offerCurrency);
+
+        return remainingProfit;
+    }
+
+    function _handleRoyaltyRegistryPayout(NFTOffer memory offer) private returns (uint256) {
+        (address royaltyReceiver, uint8 royaltyPercentage) = royaltyRegistry.collectionRoyalty(offer.tokenContract);
+
+        uint256 remainingProfit = offer.offerPrice;
+        uint256 royaltyAmount = (remainingProfit * royaltyPercentage) / 100;
+        _handleOutgoingTransfer(royaltyReceiver, royaltyAmount, offer.offerCurrency);
+
+        remainingProfit -= royaltyAmount;
 
         return remainingProfit;
     }

@@ -6,6 +6,9 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {ZoraProposalManager} from "../ZoraProposalManager.sol";
 import {BaseTransferHelper} from "./BaseTransferHelper.sol";
 
+/// @title ERC-721 Transfer Helper
+/// @author tbtstl <t@zora.co>
+/// @notice This contract provides modules the ability to transfer ZORA user ERC-721s with their permission
 contract ERC721TransferHelper is BaseTransferHelper {
     constructor(address _approvalsManager) BaseTransferHelper(_approvalsManager) {}
 

@@ -29,5 +29,5 @@ interface IZoraV1Media is IERC721 {
 
     function tokenCreators(uint256 tokenId) external view returns (address);
 
-    function previousTokenOwner(uint256 tokenId) external view returns (address);
+    function previousTokenOwners(uint256 tokenId) external view returns (address);
 }

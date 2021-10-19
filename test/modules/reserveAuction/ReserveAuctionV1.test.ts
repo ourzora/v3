@@ -10,6 +10,7 @@ import {
   ReserveAuctionV1Factory,
   TestEip2981Erc721,
   TestErc721,
+  CollectionRoyaltyRegistryV1,
   Weth,
 } from '../../../typechain';
 
@@ -40,6 +41,7 @@ import {
   TWO_ETH,
   TENTH_ETH,
   THOUSANDTH_ETH,
+  deployRoyaltyRegistry,
 } from '../../utils';
 
 import { BigNumber, Signer } from 'ethers';
@@ -63,6 +65,7 @@ describe('ReserveAuctionV1', () => {
   let finder: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
+  let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {
     await ethers.provider.send('hardhat_reset', []);
@@ -79,6 +82,7 @@ describe('ReserveAuctionV1', () => {
     badERC721 = await deployBadERC721();
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
+    royaltyRegistry = await deployRoyaltyRegistry();
     weth = await deployWETH();
     const proposalManager = await deployZoraProposalManager(
       await deployer.getAddress()
@@ -96,6 +100,7 @@ describe('ReserveAuctionV1', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       zoraV1.address,
+      royaltyRegistry.address,
       weth.address
     );
 
@@ -115,27 +120,6 @@ describe('ReserveAuctionV1', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
-    });
-
-    it('should revert if the 721 token does not support the ERC721 interface', async () => {
-      const duration = 60 * 68 * 24;
-      const reservePrice = BigNumber.from(10).pow(18).div(2);
-
-      await expect(
-        reserveAuction.createAuction(
-          0,
-          badERC721.address,
-          duration,
-          reservePrice,
-          await host.getAddress(),
-          await fundsRecipient.getAddress(),
-          5,
-          10,
-          ethers.constants.AddressZero
-        )
-      ).eventually.rejectedWith(
-        revert`createAuction tokenContract does not support ERC721 interface`
-      );
     });
 
     it('should revert if the token owner has not approved an auction', async () => {

@@ -9,6 +9,7 @@ import {
   OffersV1,
   TestEip2981Erc721,
   TestErc721,
+  CollectionRoyaltyRegistryV1,
   Weth,
 } from '../../../typechain';
 import {
@@ -18,6 +19,7 @@ import {
   deployOffersV1,
   deployTestEIP2981ERC721,
   deployTestERC271,
+  deployRoyaltyRegistry,
   deployWETH,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
@@ -48,6 +50,7 @@ describe('OffersV1 integration', () => {
   let otherUser: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
+  let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -76,10 +79,12 @@ describe('OffersV1 integration', () => {
     erc721TransferHelper = await deployERC721TransferHelper(
       approvalManager.address
     );
+    royaltyRegistry = await deployRoyaltyRegistry();
 
     offers = await deployOffersV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
+      royaltyRegistry.address,
       zoraV1.address,
       weth.address
     );
