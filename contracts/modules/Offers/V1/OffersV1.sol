@@ -77,6 +77,7 @@ contract OffersV1 is ReentrancyGuard {
         address offerCurrency;
         address tokenContract;
         uint256 offerPrice;
+        uint8 findersFeePercentage;
         OfferStatus status;
     }
 
@@ -86,6 +87,7 @@ contract OffersV1 is ReentrancyGuard {
         address tokenContract;
         uint256 tokenID;
         uint256 offerPrice;
+        uint8 findersFeePercentage;
         OfferStatus status;
     }
 
@@ -129,14 +131,16 @@ contract OffersV1 is ReentrancyGuard {
     /// @param _tokenContract The address of the ERC-721 token contract to place the offer
     /// @param _offerPrice The price of the offer
     /// @param _offerCurrency The address of the ERC-20 token to place an offer in, or address(0) for ETH
+    /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
     /// @return The ID of the created collection offer
     function createCollectionOffer(
         address _tokenContract,
         uint256 _offerPrice,
-        address _offerCurrency
+        address _offerCurrency,
+        uint8 _findersFeePercentage
     ) external payable nonReentrant returns (uint256) {
         require(userHasActiveCollectionOffer[msg.sender][_tokenContract] == false, "createCollectionOffer must update or cancel existing offer");
-
+        require(_findersFeePercentage <= 100, "createCollectionOffer finders fee percentage must be less than 100");
         // Ensure offered payment is valid and take custody of payment
         _handleIncomingTransfer(_offerPrice, _offerCurrency);
 
@@ -148,6 +152,7 @@ contract OffersV1 is ReentrancyGuard {
             offerCurrency: _offerCurrency,
             tokenContract: _tokenContract,
             offerPrice: _offerPrice,
+            findersFeePercentage: _findersFeePercentage,
             status: OfferStatus.Active
         });
 
@@ -165,15 +170,18 @@ contract OffersV1 is ReentrancyGuard {
     /// @param _tokenID The ID of the ERC-721 token to place the offer
     /// @param _offerPrice The price of the offer
     /// @param _offerCurrency The address of the ERC-20 token to place an offer in, or address(0) for ETH
+    /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
     /// @return The ID of the created NFT offer
     function createNFTOffer(
         address _tokenContract,
         uint256 _tokenID,
         uint256 _offerPrice,
-        address _offerCurrency
+        address _offerCurrency,
+        uint8 _findersFeePercentage
     ) external payable nonReentrant returns (uint256) {
         require(IERC721(_tokenContract).ownerOf(_tokenID) != msg.sender, "createNFTOffer cannot make offer on NFT you own");
         require(userHasActiveNFTOffer[msg.sender][_tokenContract][_tokenID] == false, "createNFTOffer must update or cancel existing offer");
+        require(_findersFeePercentage <= 100, "createNFTOffer finders fee percentage must be less than 100");
 
         // Ensure offered payment is valid and take custody of payment
         _handleIncomingTransfer(_offerPrice, _offerCurrency);
@@ -187,6 +195,7 @@ contract OffersV1 is ReentrancyGuard {
             tokenContract: _tokenContract,
             tokenID: _tokenID,
             offerPrice: _offerPrice,
+            findersFeePercentage: _findersFeePercentage,
             status: OfferStatus.Active
         });
 
@@ -294,22 +303,32 @@ contract OffersV1 is ReentrancyGuard {
     /// @notice Accepts a collection offer
     /// @param _offerID The ID of the collection offer
     /// @param _tokenID The ID of the NFT to transfer
-    function acceptCollectionOffer(uint256 _offerID, uint256 _tokenID) external nonReentrant {
+    /// @param _finder The address of the referrer for this offer
+    function acceptCollectionOffer(
+        uint256 _offerID,
+        uint256 _tokenID,
+        address _finder
+    ) external nonReentrant {
         CollectionOffer storage collectionOffer = collectionOffers[_offerID];
 
         require(collectionOffer.status == OfferStatus.Active, "acceptCollectionOffer must be active offer");
+        require(_finder != address(0), "acceptCollectionOffer _finder must not be 0 address");
         require(msg.sender == IERC721(collectionOffer.tokenContract).ownerOf(_tokenID), "acceptCollectionOffer must own token associated with offer");
 
         // Convert to NFTOffer for royalty payouts
         NFTOffer memory offer = _convertAcceptedCollectionOffer(collectionOffer, _tokenID);
 
         uint256 remainingProfit = offer.offerPrice;
-
         if (offer.tokenContract == address(zoraV1Media)) {
             remainingProfit = _handleZoraPayout(offer);
         } else if (IERC165(offer.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
             remainingProfit = _handleEIP2981Payout(offer);
         }
+
+        uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
+        _handleOutgoingTransfer(_finder, finderFee, offer.offerCurrency);
+
+        remainingProfit = remainingProfit - finderFee;
 
         // Transfer sale proceeds to seller
         _handleOutgoingTransfer(msg.sender, remainingProfit, offer.offerCurrency);
@@ -325,10 +344,12 @@ contract OffersV1 is ReentrancyGuard {
 
     /// @notice Accepts a NFT offer
     /// @param _offerID The ID of the NFT offer
-    function acceptNFTOffer(uint256 _offerID) external nonReentrant {
+    /// @param _finder The address of the referrer for this offer
+    function acceptNFTOffer(uint256 _offerID, address _finder) external nonReentrant {
         NFTOffer storage offer = nftOffers[_offerID];
 
         require(offer.status == OfferStatus.Active, "acceptNFTOffer must be active offer");
+        require(_finder != address(0), "acceptNFTOffer _finder must not be 0 address");
         require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenID), "acceptNFTOffer must own token associated with offer");
 
         // Payout respective parties, ensuring royalties are honored
@@ -341,6 +362,11 @@ contract OffersV1 is ReentrancyGuard {
         } else {
             remainingProfit = _handleRoyaltyRegistryPayout(offer);
         }
+
+        uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
+        _handleOutgoingTransfer(_finder, finderFee, offer.offerCurrency);
+
+        remainingProfit = remainingProfit - finderFee;
 
         // Transfer sale proceeds to seller
         _handleOutgoingTransfer(msg.sender, remainingProfit, offer.offerCurrency);
@@ -462,6 +488,7 @@ contract OffersV1 is ReentrancyGuard {
                 tokenContract: _collectionOffer.tokenContract,
                 tokenID: _tokenID,
                 offerPrice: _collectionOffer.offerPrice,
+                findersFeePercentage: _collectionOffer.findersFeePercentage,
                 status: OfferStatus.Accepted
             });
     }
