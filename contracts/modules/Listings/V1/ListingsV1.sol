@@ -219,7 +219,7 @@ contract ListingsV1 is ReentrancyGuard, UniversalExchangeEventV1 {
         listing.status = ListingStatus.Filled;
 
         ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: listing.tokenContract, tokenID: listing.tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: listing.listingCurrency, tokenID: 0, amount: msg.value});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: listing.listingCurrency, tokenID: 0, amount: listing.listingPrice});
 
         emit ExchangeExecuted(listing.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit ListingFilled(_listingId, msg.sender, listing);
