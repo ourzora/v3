@@ -33,24 +33,34 @@ contract OffersV1 is ReentrancyGuard {
 
     // ============ Mutable Storage ============
 
-    // User to NFT collection offer IDs
+    /// @notice The NFT collection offers created by a given user
+    /// @dev User address => collection offer ID
     mapping(address => uint256[]) public userToCollectionOffers;
-    // User to NFT offer IDs
+
+    /// @notice The NFT offers created by a given user
+    /// @dev User address => NFT offer ID
     mapping(address => uint256[]) public userToNFTOffers;
 
-    // NFT collection address to offer IDs
+    /// @notice The offers for a given NFT collection
+    /// @dev NFT address => offer IDs
     mapping(address => uint256[]) public collectionToOffers;
-    // NFT address + ID to offer IDs
+
+    /// @notice The offers for a given NFT
+    /// @dev NFT address => NFT ID => offer IDs
     mapping(address => mapping(uint256 => uint256[])) public nftToOffers;
 
-    // User + collection address to whether active offer exists
+    /// @notice Whether a user has an active offer for a given collection
+    /// @dev User address => NFT address => boolean
     mapping(address => mapping(address => bool)) public userHasActiveCollectionOffer;
-    // User + NFT (address + id) to whether active offer exists
+
+    /// @notice Whether a user has an active offer for a given NFT
+    /// @dev User address => NFT address => NFT ID => boolean
     mapping(address => mapping(address => mapping(uint256 => bool))) public userHasActiveNFTOffer;
 
-    // Collection offer ID to collection offer
+    /// @notice A mapping of IDs to their respective collection offer
     mapping(uint256 => CollectionOffer) public collectionOffers;
-    // NFT offer ID to NFT offer
+
+    /// @notice A mapping of IDs to their respective NFT offer
     mapping(uint256 => NFTOffer) public nftOffers;
 
     Counters.Counter collectionOfferCounter;
@@ -93,6 +103,11 @@ contract OffersV1 is ReentrancyGuard {
 
     // ============ Constructor ============
 
+    /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
+    /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
+    /// @param _zoraV1ProtocolMedia The ZORA NFT Protocol Media Contract address
+    /// @param _royaltyRegistry The ZORA Collection Royalty Registry address
+    /// @param _wethAddress WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
@@ -110,6 +125,11 @@ contract OffersV1 is ReentrancyGuard {
 
     // ============ Create Offers ============
 
+    /// @notice Places an offer on a NFT collection
+    /// @param _tokenContract The address of the ERC-721 token contract to place the offer
+    /// @param _offerPrice The price of the offer
+    /// @param _offerCurrency The address of the ERC-20 token to place an offer in, or address(0) for ETH
+    /// @return The ID of the created collection offer
     function createCollectionOffer(
         address _tokenContract,
         uint256 _offerPrice,
@@ -140,6 +160,12 @@ contract OffersV1 is ReentrancyGuard {
         return offerId;
     }
 
+    /// @notice Places an offer on a NFT
+    /// @param _tokenContract The address of the ERC-721 token contract to place the offer
+    /// @param _tokenID The ID of the ERC-721 token to place the offer
+    /// @param _offerPrice The price of the offer
+    /// @param _offerCurrency The address of the ERC-20 token to place an offer in, or address(0) for ETH
+    /// @return The ID of the created NFT offer
     function createNFTOffer(
         address _tokenContract,
         uint256 _tokenID,
@@ -175,30 +201,9 @@ contract OffersV1 is ReentrancyGuard {
 
     // ============ Update Offers ============
 
-    function updateNFTPrice(uint256 _offerID, uint256 _newOffer) external payable nonReentrant {
-        NFTOffer storage offer = nftOffers[_offerID];
-
-        require(offer.buyer == msg.sender, "updateNFTPrice must be buyer from original offer");
-        require(offer.status == OfferStatus.Active, "updateNFTPrice must be active offer");
-
-        if (_newOffer > offer.offerPrice) {
-            uint256 increaseAmount = _newOffer - offer.offerPrice;
-            // Ensure increased offer payment is valid and take custody of payment
-            _handleIncomingTransfer(increaseAmount, offer.offerCurrency);
-
-            offer.offerPrice += increaseAmount;
-
-            emit NFTOfferUpdated(_offerID, offer);
-        } else if (_newOffer < offer.offerPrice) {
-            uint256 decreaseAmount = offer.offerPrice - _newOffer;
-
-            _handleOutgoingTransfer(offer.buyer, decreaseAmount, offer.offerCurrency);
-            offer.offerPrice -= decreaseAmount;
-
-            emit NFTOfferUpdated(_offerID, offer);
-        }
-    }
-
+    /// @notice Updates the price of a collection offer
+    /// @param _offerID The ID of the collection offer
+    /// @param _newOffer The new offer price
     function updateCollectionPrice(uint256 _offerID, uint256 _newOffer) external payable nonReentrant {
         CollectionOffer storage offer = collectionOffers[_offerID];
 
@@ -223,22 +228,37 @@ contract OffersV1 is ReentrancyGuard {
         }
     }
 
-    // ============ Cancel Offers ============
-
-    function cancelNFTOffer(uint256 _offerID) external nonReentrant {
+    /// @notice Updates the price of a NFT offer
+    /// @param _offerID The ID of the NFT offer
+    /// @param _newOffer The new offer price
+    function updateNFTPrice(uint256 _offerID, uint256 _newOffer) external payable nonReentrant {
         NFTOffer storage offer = nftOffers[_offerID];
 
-        require(offer.buyer == msg.sender, "cancelNFTOffer must be buyer from original offer");
-        require(offer.status == OfferStatus.Active, "cancelNFTOffer must be active offer");
+        require(offer.buyer == msg.sender, "updateNFTPrice must be buyer from original offer");
+        require(offer.status == OfferStatus.Active, "updateNFTPrice must be active offer");
 
-        _handleOutgoingTransfer(offer.buyer, offer.offerPrice, offer.offerCurrency);
+        if (_newOffer > offer.offerPrice) {
+            uint256 increaseAmount = _newOffer - offer.offerPrice;
+            // Ensure increased offer payment is valid and take custody of payment
+            _handleIncomingTransfer(increaseAmount, offer.offerCurrency);
 
-        offer.status = OfferStatus.Canceled;
-        userHasActiveNFTOffer[offer.buyer][offer.tokenContract][offer.tokenID] = false;
+            offer.offerPrice += increaseAmount;
 
-        emit NFTOfferCanceled(_offerID, offer);
+            emit NFTOfferUpdated(_offerID, offer);
+        } else if (_newOffer < offer.offerPrice) {
+            uint256 decreaseAmount = offer.offerPrice - _newOffer;
+
+            _handleOutgoingTransfer(offer.buyer, decreaseAmount, offer.offerCurrency);
+            offer.offerPrice -= decreaseAmount;
+
+            emit NFTOfferUpdated(_offerID, offer);
+        }
     }
 
+    // ============ Cancel Offers ============
+
+    /// @notice Cancels a collection offer
+    /// @param _offerID The ID of the collection offer
     function cancelCollectionOffer(uint256 _offerID) external nonReentrant {
         CollectionOffer storage offer = collectionOffers[_offerID];
 
@@ -253,37 +273,27 @@ contract OffersV1 is ReentrancyGuard {
         emit CollectionOfferCanceled(_offerID, offer);
     }
 
-    // ============ Accept Offers ============
-
-    function acceptNFTOffer(uint256 _offerID) external nonReentrant {
+    /// @notice Cancels a NFT offer
+    /// @param _offerID The ID of the NFT offer
+    function cancelNFTOffer(uint256 _offerID) external nonReentrant {
         NFTOffer storage offer = nftOffers[_offerID];
 
-        require(offer.status == OfferStatus.Active, "acceptNFTOffer must be active offer");
-        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenID), "acceptNFTOffer must own token associated with offer");
+        require(offer.buyer == msg.sender, "cancelNFTOffer must be buyer from original offer");
+        require(offer.status == OfferStatus.Active, "cancelNFTOffer must be active offer");
 
-        // Payout respective parties, ensuring royalties are honored
-        uint256 remainingProfit = offer.offerPrice;
+        _handleOutgoingTransfer(offer.buyer, offer.offerPrice, offer.offerCurrency);
 
-        if (offer.tokenContract == address(zoraV1Media)) {
-            remainingProfit = _handleZoraPayout(offer);
-        } else if (IERC165(offer.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
-            remainingProfit = _handleEIP2981Payout(offer);
-        } else {
-            remainingProfit = _handleRoyaltyRegistryPayout(offer);
-        }
-
-        // Transfer sale proceeds to seller
-        _handleOutgoingTransfer(msg.sender, remainingProfit, offer.offerCurrency);
-
-        // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(offer.tokenContract, msg.sender, offer.buyer, offer.tokenID);
-
-        offer.status = OfferStatus.Accepted;
+        offer.status = OfferStatus.Canceled;
         userHasActiveNFTOffer[offer.buyer][offer.tokenContract][offer.tokenID] = false;
 
-        emit NFTOfferAccepted(_offerID, offer);
+        emit NFTOfferCanceled(_offerID, offer);
     }
 
+    // ============ Accept Offers ============
+
+    /// @notice Accepts a collection offer
+    /// @param _offerID The ID of the collection offer
+    /// @param _tokenID The ID of the NFT to transfer
     function acceptCollectionOffer(uint256 _offerID, uint256 _tokenID) external nonReentrant {
         CollectionOffer storage collectionOffer = collectionOffers[_offerID];
 
@@ -313,8 +323,42 @@ contract OffersV1 is ReentrancyGuard {
         emit CollectionOfferAccepted(_offerID, _tokenID, collectionOffer);
     }
 
+    /// @notice Accepts a NFT offer
+    /// @param _offerID The ID of the NFT offer
+    function acceptNFTOffer(uint256 _offerID) external nonReentrant {
+        NFTOffer storage offer = nftOffers[_offerID];
+
+        require(offer.status == OfferStatus.Active, "acceptNFTOffer must be active offer");
+        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenID), "acceptNFTOffer must own token associated with offer");
+
+        // Payout respective parties, ensuring royalties are honored
+        uint256 remainingProfit = offer.offerPrice;
+
+        if (offer.tokenContract == address(zoraV1Media)) {
+            remainingProfit = _handleZoraPayout(offer);
+        } else if (IERC165(offer.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
+            remainingProfit = _handleEIP2981Payout(offer);
+        } else {
+            remainingProfit = _handleRoyaltyRegistryPayout(offer);
+        }
+
+        // Transfer sale proceeds to seller
+        _handleOutgoingTransfer(msg.sender, remainingProfit, offer.offerCurrency);
+
+        // Transfer NFT to buyer
+        erc721TransferHelper.transferFrom(offer.tokenContract, msg.sender, offer.buyer, offer.tokenID);
+
+        offer.status = OfferStatus.Accepted;
+        userHasActiveNFTOffer[offer.buyer][offer.tokenContract][offer.tokenID] = false;
+
+        emit NFTOfferAccepted(_offerID, offer);
+    }
+
     // ============ Private ============
 
+    /// @notice Handle an incoming funds transfer, ensuring the sent amount is valid and the sender is solvent
+    /// @param _amount The amount to be received
+    /// @param _currency The currency to receive funds in, or address(0) for ETH
     function _handleIncomingTransfer(uint256 _amount, address _currency) private {
         if (_currency == address(0)) {
             require(msg.value >= _amount, "_handleIncomingTransfer msg value less than expected amount");
@@ -330,6 +374,11 @@ contract OffersV1 is ReentrancyGuard {
         }
     }
 
+    /// @notice Handle an outgoing funds transfer
+    /// @dev Wraps ETH in WETH if the receiver cannot receive ETH, noop if the funds to be sent are 0 or recipient is invalid
+    /// @param _dest The destination for the funds
+    /// @param _amount The amount to be sent
+    /// @param _currency The currency to send funds in, or address(0) for ETH
     function _handleOutgoingTransfer(
         address _dest,
         uint256 _amount,
@@ -355,6 +404,9 @@ contract OffersV1 is ReentrancyGuard {
         }
     }
 
+    /// @notice Pays out royalties for ZORA NFTs
+    /// @param offer The offer to use as a reference for the royalty calculations
+    /// @return The remaining profit from the sale
     function _handleZoraPayout(NFTOffer memory offer) private returns (uint256) {
         IZoraV1Market.BidShares memory bidShares = zoraV1Market.bidSharesForToken(offer.tokenID);
 
@@ -370,6 +422,9 @@ contract OffersV1 is ReentrancyGuard {
         return remainingProfit;
     }
 
+    /// @notice Pays out royalties for EIP-2981 compliant NFTs
+    /// @param offer The offer to use as a reference for the royalty calculations
+    /// @return The remaining profit from the sale
     function _handleEIP2981Payout(NFTOffer memory offer) private returns (uint256) {
         (address royaltyReceiver, uint256 royaltyAmount) = IERC2981(offer.tokenContract).royaltyInfo(offer.tokenID, offer.offerPrice);
 
@@ -380,6 +435,9 @@ contract OffersV1 is ReentrancyGuard {
         return remainingProfit;
     }
 
+    /// @notice Pays out royalties for collections
+    /// @param offer The offer to use as a reference for the royalty calculations
+    /// @return The remaining profit from the sale
     function _handleRoyaltyRegistryPayout(NFTOffer memory offer) private returns (uint256) {
         (address royaltyReceiver, uint8 royaltyPercentage) = royaltyRegistry.collectionRoyalty(offer.tokenContract);
 
@@ -392,7 +450,11 @@ contract OffersV1 is ReentrancyGuard {
         return remainingProfit;
     }
 
-    function _convertAcceptedCollectionOffer(CollectionOffer memory _collectionOffer, uint256 _tokenID) private view returns (NFTOffer memory offer) {
+    /// @notice Converts an accepted collection offer to a NFT offer to use as a reference for the royalty calculations
+    /// @param _collectionOffer The accepted collection offer
+    /// @param _tokenID The NFT ID to complete the conversion
+    /// @return The offer to use as a reference for the royalty calculations
+    function _convertAcceptedCollectionOffer(CollectionOffer memory _collectionOffer, uint256 _tokenID) private view returns (NFTOffer memory) {
         return
             NFTOffer({
                 buyer: msg.sender,
