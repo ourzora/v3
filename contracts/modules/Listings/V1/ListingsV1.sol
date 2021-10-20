@@ -13,11 +13,12 @@ import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.so
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {CollectionRoyaltyRegistryV1} from "../../CollectionRoyaltyRegistry/V1/CollectionRoyaltyRegistryV1.sol";
+import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 
 /// @title Listings V1
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those listings
-contract ListingsV1 is ReentrancyGuard {
+contract ListingsV1 is ReentrancyGuard, UniversalExchangeEventV1 {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeMath for uint8;
@@ -54,7 +55,7 @@ contract ListingsV1 is ReentrancyGuard {
         address seller;
         address fundsRecipient;
         address listingCurrency;
-        address host;
+        address listingFeeRecipient;
         uint256 tokenId;
         uint256 listingPrice;
         uint8 listingFeePercentage;
@@ -62,10 +63,14 @@ contract ListingsV1 is ReentrancyGuard {
         ListingStatus status;
     }
 
+    // CREATE
     event ListingCreated(uint256 indexed id, Listing listing);
+    // UPDATE
     event ListingPriceUpdated(uint256 indexed id, Listing listing);
+    // DELETE
     event ListingCanceled(uint256 indexed id, Listing listing);
-    event ListingFilled(uint256 indexed id, address buyer, Listing listing);
+    // DELETE
+    event ListingFilled(uint256 indexed id, address buyer, address finder, Listing listing);
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -93,8 +98,8 @@ contract ListingsV1 is ReentrancyGuard {
     /// @param _listingPrice The price of the sale
     /// @param _listingCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
     /// @param _fundsRecipient The address to send funds to once the token is sold
-    /// @param _host The host of the sale, who can receive _listingFeePercentage of the sale price
-    /// @param _listingFeePercentage The percentage of the sale amount to be sent to the host
+    /// @param _listingFeeRecipient The listingFeeRecipient of the sale, who can receive _listingFeePercentage of the sale price
+    /// @param _listingFeePercentage The percentage of the sale amount to be sent to the listingFeeRecipient
     /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
     /// @return The ID of the created listing
     function createListing(
@@ -103,7 +108,7 @@ contract ListingsV1 is ReentrancyGuard {
         uint256 _listingPrice,
         address _listingCurrency,
         address _fundsRecipient,
-        address _host,
+        address _listingFeeRecipient,
         uint8 _listingFeePercentage,
         uint8 _findersFeePercentage
     ) external nonReentrant returns (uint256) {
@@ -125,7 +130,7 @@ contract ListingsV1 is ReentrancyGuard {
             seller: msg.sender,
             fundsRecipient: _fundsRecipient,
             listingCurrency: _listingCurrency,
-            host: _host,
+            listingFeeRecipient: _listingFeeRecipient,
             tokenId: _tokenId,
             listingPrice: _listingPrice,
             listingFeePercentage: _listingFeePercentage,
@@ -202,13 +207,13 @@ contract ListingsV1 is ReentrancyGuard {
             remainingProfit = _handleRoyaltyRegistryPayout(listing);
         }
 
-        uint256 hostProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
+        uint256 listingFeeRecipientProfit = remainingProfit.mul(listing.listingFeePercentage).div(100);
         uint256 finderFee = remainingProfit.mul(listing.findersFeePercentage).div(100);
 
-        _handleOutgoingTransfer(listing.host, hostProfit, listing.listingCurrency);
+        _handleOutgoingTransfer(listing.listingFeeRecipient, listingFeeRecipientProfit, listing.listingCurrency);
         _handleOutgoingTransfer(_finder, finderFee, listing.listingCurrency);
 
-        remainingProfit = remainingProfit.sub(hostProfit).sub(finderFee);
+        remainingProfit = remainingProfit.sub(listingFeeRecipientProfit).sub(finderFee);
 
         _handleOutgoingTransfer(listing.fundsRecipient, remainingProfit, listing.listingCurrency);
 
@@ -217,7 +222,11 @@ contract ListingsV1 is ReentrancyGuard {
 
         listing.status = ListingStatus.Filled;
 
-        emit ListingFilled(_listingId, msg.sender, listing);
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: listing.tokenContract, tokenID: listing.tokenId, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: listing.listingCurrency, tokenID: 0, amount: listing.listingPrice});
+
+        emit ExchangeExecuted(listing.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
+        emit ListingFilled(_listingId, msg.sender, _finder, listing);
     }
 
     /// @notice Pays out royalties for ZORA NFTs
