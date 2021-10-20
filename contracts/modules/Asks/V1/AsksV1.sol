@@ -53,7 +53,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
     struct Ask {
         address tokenContract;
         address seller;
-        address fundsRecipient;
+        address sellerFundsRecipient;
         address askCurrency;
         address askFeeRecipient;
         uint256 tokenId;
@@ -97,7 +97,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
     /// @param _tokenId The ERC-721 token ID for the token to be sold
     /// @param _askPrice The price of the sale
     /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
-    /// @param _fundsRecipient The address to send funds to once the token is sold
+    /// @param _sellerFundsRecipient The address to send funds to once the token is sold
     /// @param _askFeeRecipient The askFeeRecipient of the sale, who can receive _askFeePercentage of the sale price
     /// @param _askFeePercentage The percentage of the sale amount to be sent to the askFeeRecipient
     /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
@@ -107,7 +107,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
         uint256 _tokenId,
         uint256 _askPrice,
         address _askCurrency,
-        address _fundsRecipient,
+        address _sellerFundsRecipient,
         address _askFeeRecipient,
         uint8 _askFeePercentage,
         uint8 _findersFeePercentage
@@ -119,7 +119,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
                 IERC721(_tokenContract).getApproved(_tokenId) == msg.sender,
             "createAsk must be token owner or approved operator"
         );
-        require(_fundsRecipient != address(0), "createAsk must specify fundsRecipient");
+        require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
         require(_askFeePercentage.add(_findersFeePercentage) <= 100, "createAsk ask fee and finders fee percentage must be less than 100");
 
         // Create a ask
@@ -128,7 +128,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
         asks[askId] = Ask({
             tokenContract: _tokenContract,
             seller: msg.sender,
-            fundsRecipient: _fundsRecipient,
+            sellerFundsRecipient: _sellerFundsRecipient,
             askCurrency: _askCurrency,
             askFeeRecipient: _askFeeRecipient,
             tokenId: _tokenId,
@@ -212,7 +212,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
 
         remainingProfit = remainingProfit.sub(askFeeRecipientProfit).sub(finderFee);
 
-        _handleOutgoingTransfer(ask.fundsRecipient, remainingProfit, ask.askCurrency);
+        _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency);
 
         // Transfer NFT to auction winner
         erc721TransferHelper.transferFrom(ask.tokenContract, ask.seller, msg.sender, ask.tokenId);

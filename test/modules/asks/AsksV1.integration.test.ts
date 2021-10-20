@@ -47,7 +47,7 @@ describe('AsksV1 integration', () => {
   let weth: Weth;
   let deployer: Signer;
   let buyerA: Signer;
-  let fundsRecipient: Signer;
+  let sellerFundsRecipient: Signer;
   let askFeeRecipient: Signer;
   let otherUser: Signer;
   let finder: Signer;
@@ -59,7 +59,7 @@ describe('AsksV1 integration', () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     buyerA = signers[1];
-    fundsRecipient = signers[2];
+    sellerFundsRecipient = signers[2];
     askFeeRecipient = signers[3];
     otherUser = signers[4];
     finder = signers[5];
@@ -111,7 +111,7 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await fundsRecipient.getAddress(),
+          await sellerFundsRecipient.getAddress(),
           await askFeeRecipient.getAddress(),
           10,
           10
@@ -139,9 +139,9 @@ describe('AsksV1 integration', () => {
       });
 
       it('should pay the funds recipient', async () => {
-        const beforeBalance = await fundsRecipient.getBalance();
+        const beforeBalance = await sellerFundsRecipient.getBalance();
         await run();
-        const afterBalance = await fundsRecipient.getBalance();
+        const afterBalance = await sellerFundsRecipient.getBalance();
 
         // 15% creator fee + 10% ask fee + 10% finders fee
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -201,7 +201,7 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await fundsRecipient.getAddress(),
+          await sellerFundsRecipient.getAddress(),
           await askFeeRecipient.getAddress(),
           10,
           10
@@ -227,11 +227,11 @@ describe('AsksV1 integration', () => {
 
       it('should pay the funds recipient', async () => {
         const beforeBalance = await weth.balanceOf(
-          await fundsRecipient.getAddress()
+          await sellerFundsRecipient.getAddress()
         );
         await run();
         const afterBalance = await weth.balanceOf(
-          await fundsRecipient.getAddress()
+          await sellerFundsRecipient.getAddress()
         );
 
         // 15% creator fee + 10% askFeeRecipient fee + 10% finders fee -> 1 WETH * 15% * 20%  = .68WETH
@@ -299,7 +299,7 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await fundsRecipient.getAddress(),
+          await sellerFundsRecipient.getAddress(),
           await askFeeRecipient.getAddress(),
           10,
           10
@@ -329,9 +329,9 @@ describe('AsksV1 integration', () => {
       });
 
       it('should pay the funds recipient', async () => {
-        const beforeBalance = await fundsRecipient.getBalance();
+        const beforeBalance = await sellerFundsRecipient.getBalance();
         await run();
-        const afterBalance = await fundsRecipient.getBalance();
+        const afterBalance = await sellerFundsRecipient.getBalance();
 
         // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 20% fees -> .4 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -391,7 +391,7 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await fundsRecipient.getAddress(),
+          await sellerFundsRecipient.getAddress(),
           await askFeeRecipient.getAddress(),
           10,
           10
@@ -419,11 +419,11 @@ describe('AsksV1 integration', () => {
 
       it('should pay the funds recipient', async () => {
         const beforeBalance = await weth.balanceOf(
-          await fundsRecipient.getAddress()
+          await sellerFundsRecipient.getAddress()
         );
         await run();
         const afterBalance = await weth.balanceOf(
-          await fundsRecipient.getAddress()
+          await sellerFundsRecipient.getAddress()
         );
 
         // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 20% fees -> .4 ETH
@@ -492,7 +492,7 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await fundsRecipient.getAddress(),
+          await sellerFundsRecipient.getAddress(),
           await askFeeRecipient.getAddress(),
           10,
           10
@@ -520,9 +520,9 @@ describe('AsksV1 integration', () => {
       });
 
       it('should pay the funds recipient', async () => {
-        const beforeBalance = await fundsRecipient.getBalance();
+        const beforeBalance = await sellerFundsRecipient.getBalance();
         await run();
-        const afterBalance = await fundsRecipient.getBalance();
+        const afterBalance = await sellerFundsRecipient.getBalance();
 
         // 20% fees -> 0.8 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -570,7 +570,7 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await fundsRecipient.getAddress(),
+          await sellerFundsRecipient.getAddress(),
           await askFeeRecipient.getAddress(),
           10,
           10
@@ -597,11 +597,11 @@ describe('AsksV1 integration', () => {
 
       it('should pay the funds recipient', async () => {
         const beforeBalance = await weth.balanceOf(
-          await fundsRecipient.getAddress()
+          await sellerFundsRecipient.getAddress()
         );
         await run();
         const afterBalance = await weth.balanceOf(
-          await fundsRecipient.getAddress()
+          await sellerFundsRecipient.getAddress()
         );
 
         // 20% fees -> 0.8 ETH

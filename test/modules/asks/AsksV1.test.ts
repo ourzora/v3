@@ -43,7 +43,7 @@ describe('AsksV1', () => {
   let weth: Weth;
   let deployer: Signer;
   let buyerA: Signer;
-  let fundsRecipient: Signer;
+  let sellerFundsRecipient: Signer;
   let askFeeRecipient: Signer;
   let finder: Signer;
   let otherUser: Signer;
@@ -55,7 +55,7 @@ describe('AsksV1', () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     buyerA = signers[1];
-    fundsRecipient = signers[2];
+    sellerFundsRecipient = signers[2];
     askFeeRecipient = signers[3];
     otherUser = signers[4];
     finder = signers[5];
@@ -104,7 +104,7 @@ describe('AsksV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress(),
+        await sellerFundsRecipient.getAddress(),
         await askFeeRecipient.getAddress(),
         10,
         10
@@ -114,7 +114,9 @@ describe('AsksV1', () => {
 
       expect(ask.tokenContract).to.eq(zoraV1.address);
       expect(ask.seller).to.eq(await deployer.getAddress());
-      expect(ask.fundsRecipient).to.eq(await fundsRecipient.getAddress());
+      expect(ask.sellerFundsRecipient).to.eq(
+        await sellerFundsRecipient.getAddress()
+      );
       expect(ask.askCurrency).to.eq(ethers.constants.AddressZero);
       expect(ask.tokenId.toNumber()).to.eq(0);
       expect(ask.askPrice.toString()).to.eq(ONE_ETH.toString());
@@ -133,7 +135,7 @@ describe('AsksV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress(),
+        await sellerFundsRecipient.getAddress(),
         await askFeeRecipient.getAddress(),
         10,
         10
@@ -182,7 +184,7 @@ describe('AsksV1', () => {
           10,
           10
         )
-      ).eventually.rejectedWith('createAsk must specify fundsRecipient');
+      ).eventually.rejectedWith('createAsk must specify sellerFundsRecipient');
     });
 
     it('should revert if the lising fee percentage is greater than 100', async () => {
@@ -192,7 +194,7 @@ describe('AsksV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await fundsRecipient.getAddress(),
+          await sellerFundsRecipient.getAddress(),
           await askFeeRecipient.getAddress(),
           101,
           10
@@ -210,7 +212,7 @@ describe('AsksV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress(),
+        await sellerFundsRecipient.getAddress(),
         await askFeeRecipient.getAddress(),
         10,
         10
@@ -273,7 +275,7 @@ describe('AsksV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress(),
+        await sellerFundsRecipient.getAddress(),
         await askFeeRecipient.getAddress(),
         10,
         10
@@ -340,7 +342,7 @@ describe('AsksV1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
-        await fundsRecipient.getAddress(),
+        await sellerFundsRecipient.getAddress(),
         await askFeeRecipient.getAddress(),
         10,
         10
@@ -350,7 +352,8 @@ describe('AsksV1', () => {
     it('should fill an ask', async () => {
       const buyerBeforeBalance = await buyerA.getBalance();
       const minterBeforeBalance = await deployer.getBalance();
-      const fundsRecipientBeforeBalance = await fundsRecipient.getBalance();
+      const sellerFundsRecipientBeforeBalance =
+        await sellerFundsRecipient.getBalance();
       const listingFeeRecipientBeforeBalance =
         await askFeeRecipient.getBalance();
       const finderBeforeBalance = await finder.getBalance();
@@ -359,7 +362,8 @@ describe('AsksV1', () => {
         .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
       const buyerAfterBalance = await buyerA.getBalance();
       const minterAfterBalance = await deployer.getBalance();
-      const fundsRecipientAfterBalance = await fundsRecipient.getBalance();
+      const sellerFundsRecipientAfterBalance =
+        await sellerFundsRecipient.getBalance();
       const listingFeeRecipientAfterBalance =
         await askFeeRecipient.getBalance();
       const finderAfterBalance = await finder.getBalance();
@@ -389,9 +393,9 @@ describe('AsksV1', () => {
       );
 
       // ask fee - creator fee - finder fee -> .68 ETH profit
-      expect(toRoundedNumber(fundsRecipientAfterBalance)).to.eq(
+      expect(toRoundedNumber(sellerFundsRecipientAfterBalance)).to.eq(
         toRoundedNumber(
-          fundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(680))
+          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(680))
         )
       );
 
