@@ -11,6 +11,7 @@ import { deployTransferHelper } from './scripts/deployTransferHelper';
 import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
 import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
+import { deployRoyaltyRegistryV1 } from './scripts/deployRoyaltyRegistryV1';
 
 const env = dotenv.config().parsed;
 
@@ -76,6 +77,11 @@ task('deployAsksV1', 'Deploy Asks V1')
   )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployAsksV1);
+
+task(
+  'deployCollectionRoyaltyRegistryV1',
+  'Deploy Collection Royalty Registry V1'
+).setAction(deployRoyaltyRegistryV1);
 
 const config: HardhatUserConfig = {
   solidity: {
