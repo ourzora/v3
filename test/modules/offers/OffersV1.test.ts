@@ -36,7 +36,6 @@ import {
   toRoundedNumber,
   TWO_ETH,
 } from '../../utils';
-
 chai.use(asPromised);
 
 describe('OffersV1', () => {
@@ -45,7 +44,7 @@ describe('OffersV1', () => {
   let testERC721: TestErc721;
   let weth: Weth;
   let deployer: Signer;
-  let buyerA: Signer;
+  let buyer: Signer;
   let otherUser: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
@@ -54,7 +53,7 @@ describe('OffersV1', () => {
   beforeEach(async () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
-    buyerA = signers[1];
+    buyer = signers[1];
     otherUser = signers[2];
 
     const zoraProtocol = await deployZoraProtocol();
@@ -91,36 +90,46 @@ describe('OffersV1', () => {
 
     await approvalManager.setApprovalForModule(offers.address, true);
     await approvalManager
-      .connect(buyerA)
+      .connect(buyer)
       .setApprovalForModule(offers.address, true);
 
     await mintZoraNFT(zoraV1);
     await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
   });
 
-  describe('#createOffer', () => {
+  /**
+   * NFT offers
+   */
+
+  describe('#createNFTOffer', () => {
     it('should create an offer for an NFT', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      const offer = await offers.offers(1);
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      const offer = await offers.nftOffers(1);
 
-      expect(offer.buyer).to.eq(await buyerA.getAddress());
+      expect(offer.buyer).to.eq(await buyer.getAddress());
       expect(offer.tokenContract).to.eq(zoraV1.address);
-      expect(offer.tokenId.toNumber()).to.eq(0);
+      expect(offer.tokenID.toNumber()).to.eq(0);
       expect(offer.offerPrice.toString()).to.eq(ONE_ETH.toString());
       expect(offer.offerCurrency).to.eq(ethers.constants.AddressZero);
       expect(offer.status).to.eq(0);
 
       expect(
-        (await offers.userToOffers(await buyerA.getAddress(), 0)).toNumber()
+        (await offers.userToNFTOffers(await buyer.getAddress(), 0)).toNumber()
       ).to.eq(1);
 
       expect(
-        await offers.userHasActiveOffer(
-          await buyerA.getAddress(),
+        await offers.userHasActiveNFTOffer(
+          await buyer.getAddress(),
           zoraV1.address,
           0
         )
@@ -136,7 +145,7 @@ describe('OffersV1', () => {
       await expect(
         offers
           .connect(owner)
-          .createOffer(
+          .createNFTOffer(
             zoraV1.address,
             0,
             ONE_ETH,
@@ -146,21 +155,27 @@ describe('OffersV1', () => {
             }
           )
       ).eventually.rejectedWith(
-        revert`createOffer cannot make offer on NFT you own`
+        revert`createNFTOffer cannot make offer on NFT you own`
       );
     });
 
     it('should revert creating a second active offer for a NFT', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
 
       await expect(
         offers
-          .connect(buyerA)
-          .createOffer(
+          .connect(buyer)
+          .createNFTOffer(
             zoraV1.address,
             0,
             TWO_ETH,
@@ -168,17 +183,471 @@ describe('OffersV1', () => {
             { value: TWO_ETH }
           )
       ).eventually.rejectedWith(
-        revert`createOffer must update or cancel existing offer`
+        revert`createNFTOffer must update or cancel existing offer`
       );
     });
 
     it('should revert creating an offer without attaching associated funds', async () => {
       await expect(
         offers
-          .connect(buyerA)
-          .createOffer(
+          .connect(buyer)
+          .createNFTOffer(
             zoraV1.address,
             0,
+            ONE_ETH,
+            ethers.constants.AddressZero,
+            {
+              value: ONE_HALF_ETH,
+            }
+          )
+      ).eventually.rejectedWith(
+        revert`_handleIncomingTransfer msg value less than expected amount`
+      );
+    });
+
+    it('should emit an NFTOfferCreated event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+
+      const events = await offers.queryFilter(
+        offers.filters.NFTOfferCreated(null, null),
+        block
+      );
+
+      expect(events.length).to.eq(1);
+      const logDescription = offers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('NFTOfferCreated');
+      expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.offer.buyer).to.eq(await buyer.getAddress());
+    });
+  });
+
+  describe('#updateNFTPrice', () => {
+    it('should increase an offer price', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers
+        .connect(buyer)
+        .updateNFTPrice(1, TWO_ETH, { value: ONE_ETH });
+      expect((await (await offers.nftOffers(1)).offerPrice).toString()).to.eq(
+        TWO_ETH.toString()
+      );
+    });
+
+    it('should decrease an offer price', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+
+      await offers.connect(buyer).updateNFTPrice(1, ONE_HALF_ETH);
+      expect((await (await offers.nftOffers(1)).offerPrice).toString()).to.eq(
+        ONE_HALF_ETH.toString()
+      );
+    });
+
+    it('should revert user increasing an offer they did not create', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await expect(
+        offers.connect(otherUser).updateNFTPrice(1, TWO_ETH, { value: TWO_ETH })
+      ).eventually.rejectedWith(
+        revert`updateNFTPrice must be buyer from original offer`
+      );
+    });
+
+    it('should revert user decreasing an offer they did not create', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await expect(
+        offers.connect(otherUser).updateNFTPrice(1, ONE_HALF_ETH)
+      ).eventually.rejectedWith(
+        revert`updateNFTPrice must be buyer from original offer`
+      );
+    });
+
+    it('should revert increasing an offer without attaching funds', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await expect(
+        offers.connect(buyer).updateNFTPrice(1, TWO_ETH)
+      ).eventually.rejectedWith(
+        revert`_handleIncomingTransfer msg value less than expected amount`
+      );
+    });
+
+    it('should revert updating an inactive offer', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.acceptNFTOffer(1);
+
+      await expect(
+        offers.connect(buyer).updateNFTPrice(1, ONE_HALF_ETH)
+      ).eventually.rejectedWith(revert`updateNFTPrice must be active offer`);
+    });
+
+    it('should emit an NFTOfferUpdated event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers
+        .connect(buyer)
+        .updateNFTPrice(1, TWO_ETH, { value: ONE_ETH });
+
+      const events = await offers.queryFilter(
+        offers.filters.NFTOfferUpdated(null, null),
+        block
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = offers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('NFTOfferUpdated');
+      expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.offer.offerPrice.toString()).to.eq(
+        TWO_ETH.toString()
+      );
+    });
+  });
+
+  describe('#cancelNFTOffer', () => {
+    it('should cancel an active NFT offer', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.connect(buyer).cancelNFTOffer(1);
+      expect(await (await offers.nftOffers(1)).status).to.eq(1);
+    });
+
+    it('should revert canceling an inactive offer', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.acceptNFTOffer(1);
+      await expect(
+        offers.connect(buyer).cancelNFTOffer(1)
+      ).eventually.rejectedWith(revert`cancelNFTOffer must be active offer`);
+    });
+
+    it('should revert canceling an offer not originally made', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+
+      await expect(
+        offers.connect(otherUser).cancelNFTOffer(1)
+      ).eventually.rejectedWith(
+        revert`cancelNFTOffer must be buyer from original offer`
+      );
+    });
+
+    it('should create new offer on same NFT after canceling', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.connect(buyer).cancelNFTOffer(1);
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          TENTH_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: TENTH_ETH,
+          }
+        );
+      expect((await (await offers.nftOffers(2)).offerPrice).toString()).to.eq(
+        TENTH_ETH.toString()
+      );
+    });
+
+    it('should emit an NFTOfferCanceled event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.connect(buyer).cancelNFTOffer(1);
+      const events = await offers.queryFilter(
+        offers.filters.NFTOfferCanceled(null, null),
+        block
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = offers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('NFTOfferCanceled');
+      expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.offer.status).to.eq(1);
+    });
+  });
+
+  describe('#acceptNFTOffer', () => {
+    it('should accept an offer', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+
+      await offers.acceptNFTOffer(1);
+
+      expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
+    });
+
+    it('should revert accepting an inactive offer', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+
+      await offers.acceptNFTOffer(1);
+
+      await expect(offers.acceptNFTOffer(1)).eventually.rejectedWith(
+        revert`acceptNFTOffer must be active offer`
+      );
+    });
+
+    it('should revert accepting an offer from non-token holder', async () => {
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+
+      await expect(
+        offers.connect(otherUser).acceptNFTOffer(1)
+      ).eventually.rejectedWith(
+        revert`acceptNFTOffer must own token associated with offer`
+      );
+    });
+
+    it('should emit an NFTOfferAccepted event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.acceptNFTOffer(1);
+      const events = await offers.queryFilter(
+        offers.filters.NFTOfferAccepted(null, null),
+        block
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = offers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('NFTOfferAccepted');
+      expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.offer.status).to.eq(2);
+    });
+  });
+
+  /**
+   * Collection offers
+   */
+
+  describe('#createCollectionOffer', () => {
+    it('should create an offer for a NFT collection', async () => {
+      await offers
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      const offer = await offers.collectionOffers(1);
+
+      expect(offer.buyer).to.eq(await buyer.getAddress());
+      expect(offer.tokenContract).to.eq(zoraV1.address);
+      expect(offer.offerPrice.toString()).to.eq(ONE_ETH.toString());
+      expect(offer.offerCurrency).to.eq(ethers.constants.AddressZero);
+      expect(offer.status).to.eq(0);
+
+      expect(
+        (
+          await offers.userToCollectionOffers(await buyer.getAddress(), 0)
+        ).toNumber()
+      ).to.eq(1);
+
+      expect(
+        await offers.userHasActiveCollectionOffer(
+          await buyer.getAddress(),
+          zoraV1.address
+        )
+      ).to.eq(true);
+
+      expect(
+        (await offers.collectionToOffers(zoraV1.address, 0)).toNumber()
+      ).to.eq(1);
+    });
+
+    it('should revert a second active offer', async () => {
+      await offers
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+
+      await expect(
+        offers
+          .connect(buyer)
+          .createCollectionOffer(
+            zoraV1.address,
+            TWO_ETH,
+            ethers.constants.AddressZero,
+            { value: TWO_ETH }
+          )
+      ).eventually.rejectedWith(
+        revert`createCollectionOffer must update or cancel existing offer`
+      );
+    });
+
+    it('should revert creating an offer without attaching associated funds', async () => {
+      await expect(
+        offers
+          .connect(buyer)
+          .createCollectionOffer(
+            zoraV1.address,
             ONE_ETH,
             ethers.constants.AddressZero,
             {
@@ -193,84 +662,118 @@ describe('OffersV1', () => {
     it('should emit an OfferCreated event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
 
       const events = await offers.queryFilter(
-        offers.filters.OfferCreated(null, null),
+        offers.filters.CollectionOfferCreated(null, null),
         block
       );
 
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('OfferCreated');
+      expect(logDescription.name).to.eq('CollectionOfferCreated');
       expect(logDescription.args.id.toNumber()).to.eq(1);
-      expect(logDescription.args.offer.buyer).to.eq(await buyerA.getAddress());
+      expect(logDescription.args.offer.buyer).to.eq(await buyer.getAddress());
     });
   });
 
-  describe('#updatePrice', () => {
-    it('should increase an offer price', async () => {
+  describe('#updateCollectionPrice', () => {
+    it('should increase a collection offer price', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.connect(buyerA).updatePrice(1, TWO_ETH, { value: ONE_ETH });
-      expect((await (await offers.offers(1)).offerPrice).toString()).to.eq(
-        TWO_ETH.toString()
-      );
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers
+        .connect(buyer)
+        .updateCollectionPrice(1, TWO_ETH, { value: ONE_ETH });
+      expect(
+        (await (await offers.collectionOffers(1)).offerPrice).toString()
+      ).to.eq(TWO_ETH.toString());
     });
 
     it('should decrease an offer price', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
 
-      await offers.connect(buyerA).updatePrice(1, ONE_HALF_ETH);
-      expect((await (await offers.offers(1)).offerPrice).toString()).to.eq(
-        ONE_HALF_ETH.toString()
-      );
+      await offers.connect(buyer).updateCollectionPrice(1, ONE_HALF_ETH);
+      expect(
+        (await (await offers.collectionOffers(1)).offerPrice).toString()
+      ).to.eq(ONE_HALF_ETH.toString());
     });
 
     it('should revert user increasing an offer they did not create', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
       await expect(
-        offers.connect(otherUser).updatePrice(1, TWO_ETH, { value: TWO_ETH })
+        offers
+          .connect(otherUser)
+          .updateCollectionPrice(1, TWO_ETH, { value: TWO_ETH })
       ).eventually.rejectedWith(
-        revert`updatePrice must be buyer from original offer`
+        revert`updateCollectionPrice must be buyer from original offer`
       );
     });
 
     it('should revert user decreasing an offer they did not create', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
       await expect(
-        offers.connect(otherUser).updatePrice(1, ONE_HALF_ETH)
+        offers.connect(otherUser).updateCollectionPrice(1, ONE_HALF_ETH)
       ).eventually.rejectedWith(
-        revert`updatePrice must be buyer from original offer`
+        revert`updateCollectionPrice must be buyer from original offer`
       );
     });
 
     it('should revert increasing an offer without attaching funds', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
       await expect(
-        offers.connect(buyerA).updatePrice(1, TWO_ETH)
+        offers.connect(buyer).updateCollectionPrice(1, TWO_ETH)
       ).eventually.rejectedWith(
         revert`_handleIncomingTransfer msg value less than expected amount`
       );
@@ -278,33 +781,47 @@ describe('OffersV1', () => {
 
     it('should revert updating an inactive offer', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.acceptOffer(1);
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.acceptCollectionOffer(1, 0);
 
       await expect(
-        offers.connect(buyerA).updatePrice(1, ONE_HALF_ETH)
-      ).eventually.rejectedWith(revert`updatePrice must be active offer`);
+        offers.connect(buyer).updateCollectionPrice(1, ONE_HALF_ETH)
+      ).eventually.rejectedWith(
+        revert`updateCollectionPrice must be active offer`
+      );
     });
 
-    it('should emit an OfferUpdated event', async () => {
+    it('should emit an CollectionOfferUpdated event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.connect(buyerA).updatePrice(1, TWO_ETH, { value: ONE_ETH });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers
+        .connect(buyer)
+        .updateCollectionPrice(1, TWO_ETH, { value: ONE_ETH });
 
       const events = await offers.queryFilter(
-        offers.filters.OfferUpdated(null, null),
+        offers.filters.CollectionOfferUpdated(null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('OfferUpdated');
+      expect(logDescription.name).to.eq('CollectionOfferUpdated');
       expect(logDescription.args.id.toNumber()).to.eq(1);
       expect(logDescription.args.offer.offerPrice.toString()).to.eq(
         TWO_ETH.toString()
@@ -312,142 +829,188 @@ describe('OffersV1', () => {
     });
   });
 
-  describe('#cancelOffer', () => {
-    it('should cancel an active offer', async () => {
+  describe('#cancelCollectionOffer', () => {
+    it('should cancel an active collection offer', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.connect(buyerA).cancelOffer(1);
-      expect(await (await offers.offers(1)).status).to.eq(1);
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.connect(buyer).cancelCollectionOffer(1);
+      expect(await (await offers.collectionOffers(1)).status).to.eq(1);
     });
 
     it('should revert canceling an inactive offer', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.acceptOffer(1);
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.acceptCollectionOffer(1, 0);
       await expect(
-        offers.connect(buyerA).cancelOffer(1)
-      ).eventually.rejectedWith(revert`cancelOffer must be active offer`);
+        offers.connect(buyer).cancelCollectionOffer(1)
+      ).eventually.rejectedWith(
+        revert`cancelCollectionOffer must be active offer`
+      );
     });
 
     it('should revert canceling an offer not originally made', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
 
       await expect(
-        offers.connect(otherUser).cancelOffer(1)
+        offers.connect(otherUser).cancelCollectionOffer(1)
       ).eventually.rejectedWith(
-        revert`cancelOffer must be buyer from original offer`
+        revert`cancelCollectionOffer must be buyer from original offer`
       );
     });
 
     it('should create new offer on same NFT after canceling', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.connect(buyerA).cancelOffer(1);
-      await offers
-        .connect(buyerA)
-        .createOffer(
+        .connect(buyer)
+        .createCollectionOffer(
           zoraV1.address,
-          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.connect(buyer).cancelCollectionOffer(1);
+      await offers
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
           TENTH_ETH,
           ethers.constants.AddressZero,
           {
             value: TENTH_ETH,
           }
         );
-      expect((await (await offers.offers(2)).offerPrice).toString()).to.eq(
-        TENTH_ETH.toString()
-      );
+      expect(
+        (await (await offers.collectionOffers(2)).offerPrice).toString()
+      ).to.eq(TENTH_ETH.toString());
     });
 
-    it('should emit an OfferCanceled event', async () => {
+    it('should emit an CollectionOfferCanceled event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.connect(buyerA).cancelOffer(1);
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.connect(buyer).cancelCollectionOffer(1);
       const events = await offers.queryFilter(
-        offers.filters.OfferCanceled(null, null),
+        offers.filters.CollectionOfferCanceled(null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('OfferCanceled');
+      expect(logDescription.name).to.eq('CollectionOfferCanceled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
       expect(logDescription.args.offer.status).to.eq(1);
     });
   });
 
-  describe('#acceptOffer', () => {
-    it('should accept an offer', async () => {
+  describe('#acceptCollectionOffer', () => {
+    it('should accept a collection offer', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
 
-      await offers.acceptOffer(1);
+      await offers.acceptCollectionOffer(1, 0);
 
-      expect(await zoraV1.ownerOf(0)).to.eq(await buyerA.getAddress());
+      expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
     });
 
-    it('should revert accepting an inactive offer', async () => {
+    it('should revert accepting an inactive collection offer', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
 
-      await offers.acceptOffer(1);
+      await offers.acceptCollectionOffer(1, 0);
 
-      await expect(offers.acceptOffer(1)).eventually.rejectedWith(
-        revert`acceptOffer must be active offer`
+      await expect(offers.acceptCollectionOffer(1, 0)).eventually.rejectedWith(
+        revert`acceptCollectionOffer must be active offer`
       );
     });
 
-    it('should revert accepting an offer from non-token holder', async () => {
+    it('should revert accepting a collection offer from a non-collection token holder', async () => {
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
 
       await expect(
-        offers.connect(otherUser).acceptOffer(1)
+        offers.connect(otherUser).acceptCollectionOffer(1, 0)
       ).eventually.rejectedWith(
-        revert`acceptOffer must own token associated with offer`
+        revert`acceptCollectionOffer must own token associated with offer`
       );
     });
 
-    it('should emit an OfferAccepted event', async () => {
+    it('should emit a CollectionOfferAccepted event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyerA)
-        .createOffer(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero, {
-          value: ONE_ETH,
-        });
-      await offers.acceptOffer(1);
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.acceptCollectionOffer(1, 0);
       const events = await offers.queryFilter(
-        offers.filters.OfferAccepted(null, null),
+        offers.filters.CollectionOfferAccepted(null, null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('OfferAccepted');
+      expect(logDescription.name).to.eq('CollectionOfferAccepted');
       expect(logDescription.args.id.toNumber()).to.eq(1);
       expect(logDescription.args.offer.status).to.eq(2);
     });
