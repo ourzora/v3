@@ -1,7 +1,10 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as fs from 'fs-extra';
 
-export async function deployRoyaltyRegistryV1(hre: HardhatRuntimeEnvironment) {
+export async function deployRoyaltyRegistryV1(
+  _,
+  hre: HardhatRuntimeEnvironment
+) {
   const [deployer] = await hre.ethers.getSigners();
   const { chainId } = await deployer.provider.getNetwork();
 
