@@ -8,7 +8,7 @@ export interface Args {
   weth: string;
 }
 
-export async function deployReserveAuctionV1(
+export async function deployAsksV1(
   { zoraV1Media, royaltyRegistry, weth }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
@@ -27,13 +27,10 @@ export async function deployReserveAuctionV1(
     `missing ERC721TransferHelper in ${addressPath}`
   );
 
-  console.log(
-    `Deploying ReserveAuctionV1 from address ${await deployer.getAddress()}`
-  );
-  const ReserveAuctionFactory = await hre.ethers.getContractFactory(
-    'ReserveAuctionV1'
-  );
-  const reserveAuction = await ReserveAuctionFactory.deploy(
+  console.log(`Deploying AsksV1 from address ${await deployer.getAddress()}`);
+
+  const AsksFactory = await hre.ethers.getContractFactory('AsksV1');
+  const asks = await AsksFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
     zoraV1Media,
@@ -41,10 +38,11 @@ export async function deployReserveAuctionV1(
     weth
   );
   console.log(
-    `Deploying ReserveAuctionV1 with tx ${reserveAuction.deployTransaction.hash} to address ${reserveAuction.address}`
+    `Deploying AsksV1 with tx ${asks.deployTransaction.hash} to address ${asks.address}`
   );
-  await reserveAuction.deployed();
-  addressBook.ReserveAuctionV1 = reserveAuction.address;
+
+  await asks.deployed();
+  addressBook.AsksV1 = asks.address;
   await fs.writeFile(addressPath, JSON.stringify(addressBook, null, 2));
-  console.log(`Deployed ReserveAuctionV1`);
+  console.log(`Deployed AsksV1`);
 }
