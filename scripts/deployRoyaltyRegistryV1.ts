@@ -22,7 +22,7 @@ export async function deployRoyaltyRegistryV1(hre: HardhatRuntimeEnvironment) {
   );
 
   await royaltyRegistry.deployed();
-  addressBook.AsksV1 = royaltyRegistry.address;
+  addressBook.CollectionRoyaltyRegistryV1 = royaltyRegistry.address;
   await fs.writeFile(addressPath, JSON.stringify(addressBook, null, 2));
   console.log(`Deployed CollectionRoyaltyRegistryV1`);
 }
