@@ -12,7 +12,7 @@ import {
   Erc20TransferHelper,
   Erc721TransferHelper,
   SimpleModule,
-  ListingsV1,
+  AsksV1,
   OffersV1,
   Erc1155TransferHelper,
   TestErc1155,
@@ -322,23 +322,23 @@ export async function mintERC721Token(erc721: TestErc721, to: string) {
   await erc721.mint(to, 0);
 }
 
-export async function deployListingsV1(
+export async function deployAsksV1(
   erc20Helper: string,
   erc721Helper: string,
   zoraV1Media: string,
   royaltyRegistry: string,
   weth: string
 ) {
-  const ListingsV1Factory = await ethers.getContractFactory('ListingsV1');
-  const listings = await ListingsV1Factory.deploy(
+  const AsksV1Factory = await ethers.getContractFactory('AsksV1');
+  const asks = await AsksV1Factory.deploy(
     erc20Helper,
     erc721Helper,
     zoraV1Media,
     royaltyRegistry,
     weth
   );
-  await listings.deployed();
-  return listings as ListingsV1;
+  await asks.deployed();
+  return asks as AsksV1;
 }
 
 export async function deployOffersV1(
