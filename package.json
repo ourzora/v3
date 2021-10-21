@@ -1,4 +1,18 @@
 {
+  "name": "@zoralabs/auction-house",
+  "version": "0.1.0",
+  "private": false,
+  "homepage": "https://github.com/ourzora/v3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ourzora/v3.git"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist/**/*",
+    "./dist/*"
+  ],
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.6",
@@ -37,6 +51,7 @@
   "scripts": {
     "prepare": "husky install",
     "build": "hardhat compile",
-    "test": "hardhat test"
+    "test": "hardhat test",
+    "prepublishOnly": "yarn build && rm -rf ./dist && tsc && cp typechain/*.d.ts dist/typechain && cp -R addresses dist && cp -R artifacts/contracts dist/artifacts && cp -R contracts dist"
   }
 }
