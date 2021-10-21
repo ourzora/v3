@@ -10,6 +10,8 @@ import { deployZMAM } from './scripts/deployZMAM';
 import { deployTransferHelper } from './scripts/deployTransferHelper';
 import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
 import { proposeModule } from './scripts/proposeModule';
+import { deployAsksV1 } from './scripts/deployAsksV1';
+import { deployRoyaltyRegistryV1 } from './scripts/deployRoyaltyRegistryV1';
 
 const env = dotenv.config().parsed;
 
@@ -36,13 +38,19 @@ task('deployTransferHelper', 'Deploy A Transfer Helper')
   .setAction(deployTransferHelper);
 
 task('deployReserveAuctionV1', 'Deploy Reserve Auction V1')
-  .addParam('weth', 'WETH address', undefined, types.string)
   .addParam(
     'zoraV1Media',
-    'Zora V1 Media Address (for royalties)',
+    'ZORA V1 Media Address (for royalties)',
     undefined,
     types.string
   )
+  .addParam(
+    'royaltyRegistry',
+    'ZORA Collection Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployReserveAuctionV1);
 
 task('proposeModule', 'Propose a new module')
@@ -53,6 +61,27 @@ task('proposeModule', 'Propose a new module')
     types.string
   )
   .setAction(proposeModule);
+
+task('deployAsksV1', 'Deploy Asks V1')
+  .addParam(
+    'zoraV1Media',
+    'ZORA V1 Media Address (for royalties)',
+    undefined,
+    types.string
+  )
+  .addParam(
+    'royaltyRegistry',
+    'ZORA Collection Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam('weth', 'WETH address', undefined, types.string)
+  .setAction(deployAsksV1);
+
+task(
+  'deployCollectionRoyaltyRegistryV1',
+  'Deploy Collection Royalty Registry V1'
+).setAction(deployRoyaltyRegistryV1);
 
 const config: HardhatUserConfig = {
   solidity: {
