@@ -10,8 +10,7 @@ contract ZoraProposalManager {
         Nonexistent,
         Pending,
         Passed,
-        Failed,
-        Frozen
+        Failed
     }
     /// @notice A Proposal object that tracks a proposal and its status
     /// @member proposer The address that created the proposal
@@ -29,7 +28,6 @@ contract ZoraProposalManager {
     event ModuleProposed(address indexed contractAddress, address indexed proposer);
     event ModuleRegistered(address indexed contractAddress);
     event ModuleCanceled(address indexed contractAddress);
-    event ModuleFrozen(address indexed contractAddress);
     event RegistrarChanged(address indexed newRegistrar);
 
     modifier onlyRegistrar() {
@@ -46,7 +44,7 @@ contract ZoraProposalManager {
 
     /// @notice Returns true if the module has been registered
     /// @param _proposalImpl The address of the proposed module
-    /// @return True if the module has been registered and is not frozen, false otherwise
+    /// @return True if the module has been registered, false otherwise
     function isPassedProposal(address _proposalImpl) public view returns (bool) {
         return proposedModuleToProposal[_proposalImpl].status == ProposalStatus.Passed;
     }
@@ -85,18 +83,6 @@ contract ZoraProposalManager {
         proposal.status = ProposalStatus.Failed;
 
         emit ModuleCanceled(_proposalAddress);
-    }
-
-    /// @notice Freezes a registered module, ensuring no future users can approve its usage (in case of critical bugs)
-    /// @param _proposalAddress The address of the proposed module
-    function freezeProposal(address _proposalAddress) public onlyRegistrar {
-        Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
-
-        require(proposal.status == ProposalStatus.Passed, "ZPM::freezeProposal can only freeze passed proposals");
-
-        proposal.status = ProposalStatus.Frozen;
-
-        emit ModuleFrozen(_proposalAddress);
     }
 
     /// @notice Sets the registrar for this manager
