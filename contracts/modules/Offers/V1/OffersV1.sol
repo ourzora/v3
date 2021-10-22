@@ -14,11 +14,12 @@ import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.so
 import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {CollectionRoyaltyRegistryV1} from "../../CollectionRoyaltyRegistry/V1/CollectionRoyaltyRegistryV1.sol";
+import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 
 /// @title Offers V1
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This module allows buyers to make an offer on any ERC-721
-contract OffersV1 is ReentrancyGuard {
+contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1 {
     using Counters for Counters.Counter;
     using SafeERC20 for IERC20;
 
@@ -26,9 +27,9 @@ contract OffersV1 is ReentrancyGuard {
 
     ERC20TransferHelper erc20TransferHelper;
     ERC721TransferHelper erc721TransferHelper;
-    CollectionRoyaltyRegistryV1 royaltyRegistry;
     IZoraV1Media zoraV1Media;
     IZoraV1Market zoraV1Market;
+    CollectionRoyaltyRegistryV1 royaltyRegistry;
     IWETH weth;
 
     // ============ Mutable Storage ============
@@ -69,7 +70,7 @@ contract OffersV1 is ReentrancyGuard {
     enum OfferStatus {
         Active,
         Canceled,
-        Accepted
+        Filled
     }
 
     struct CollectionOffer {
@@ -94,14 +95,14 @@ contract OffersV1 is ReentrancyGuard {
     // ============ Events ============
 
     event CollectionOfferCreated(uint256 indexed id, CollectionOffer offer);
+    event CollectionOfferPriceUpdated(uint256 indexed id, CollectionOffer offer);
     event CollectionOfferCanceled(uint256 indexed id, CollectionOffer offer);
-    event CollectionOfferUpdated(uint256 indexed id, CollectionOffer offer);
-    event CollectionOfferAccepted(uint256 indexed id, uint256 indexed tokenID, CollectionOffer offer);
+    event CollectionOfferFilled(uint256 indexed id, address seller, address finder, CollectionOffer offer);
 
     event NFTOfferCreated(uint256 indexed id, NFTOffer offer);
+    event NFTOfferPriceUpdated(uint256 indexed id, NFTOffer offer);
     event NFTOfferCanceled(uint256 indexed id, NFTOffer offer);
-    event NFTOfferUpdated(uint256 indexed id, NFTOffer offer);
-    event NFTOfferAccepted(uint256 indexed id, NFTOffer offer);
+    event NFTOfferFilled(uint256 indexed id, address seller, address finder, NFTOffer offer);
 
     // ============ Constructor ============
 
@@ -113,8 +114,8 @@ contract OffersV1 is ReentrancyGuard {
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
-        address _royaltyRegistry,
         address _zoraV1ProtocolMedia,
+        address _royaltyRegistry,
         address _wethAddress
     ) {
         erc20TransferHelper = ERC20TransferHelper(_erc20TransferHelper);
@@ -213,11 +214,11 @@ contract OffersV1 is ReentrancyGuard {
     /// @notice Updates the price of a collection offer
     /// @param _offerID The ID of the collection offer
     /// @param _newOffer The new offer price
-    function updateCollectionPrice(uint256 _offerID, uint256 _newOffer) external payable nonReentrant {
+    function setCollectionOfferPrice(uint256 _offerID, uint256 _newOffer) external payable nonReentrant {
         CollectionOffer storage offer = collectionOffers[_offerID];
 
-        require(offer.buyer == msg.sender, "updateCollectionPrice must be buyer from original offer");
-        require(offer.status == OfferStatus.Active, "updateCollectionPrice must be active offer");
+        require(offer.buyer == msg.sender, "setCollectionOfferPrice must be buyer from original offer");
+        require(offer.status == OfferStatus.Active, "setCollectionOfferPrice must be active offer");
 
         if (_newOffer > offer.offerPrice) {
             uint256 increaseAmount = _newOffer - offer.offerPrice;
@@ -226,25 +227,25 @@ contract OffersV1 is ReentrancyGuard {
 
             offer.offerPrice += increaseAmount;
 
-            emit CollectionOfferUpdated(_offerID, offer);
+            emit CollectionOfferPriceUpdated(_offerID, offer);
         } else if (_newOffer < offer.offerPrice) {
             uint256 decreaseAmount = offer.offerPrice - _newOffer;
 
             _handleOutgoingTransfer(offer.buyer, decreaseAmount, offer.offerCurrency);
             offer.offerPrice -= decreaseAmount;
 
-            emit CollectionOfferUpdated(_offerID, offer);
+            emit CollectionOfferPriceUpdated(_offerID, offer);
         }
     }
 
     /// @notice Updates the price of a NFT offer
     /// @param _offerID The ID of the NFT offer
     /// @param _newOffer The new offer price
-    function updateNFTPrice(uint256 _offerID, uint256 _newOffer) external payable nonReentrant {
+    function setNFTOfferPrice(uint256 _offerID, uint256 _newOffer) external payable nonReentrant {
         NFTOffer storage offer = nftOffers[_offerID];
 
-        require(offer.buyer == msg.sender, "updateNFTPrice must be buyer from original offer");
-        require(offer.status == OfferStatus.Active, "updateNFTPrice must be active offer");
+        require(offer.buyer == msg.sender, "setNFTOfferPrice must be buyer from original offer");
+        require(offer.status == OfferStatus.Active, "setNFTOfferPrice must be active offer");
 
         if (_newOffer > offer.offerPrice) {
             uint256 increaseAmount = _newOffer - offer.offerPrice;
@@ -253,14 +254,14 @@ contract OffersV1 is ReentrancyGuard {
 
             offer.offerPrice += increaseAmount;
 
-            emit NFTOfferUpdated(_offerID, offer);
+            emit NFTOfferPriceUpdated(_offerID, offer);
         } else if (_newOffer < offer.offerPrice) {
             uint256 decreaseAmount = offer.offerPrice - _newOffer;
 
             _handleOutgoingTransfer(offer.buyer, decreaseAmount, offer.offerCurrency);
             offer.offerPrice -= decreaseAmount;
 
-            emit NFTOfferUpdated(_offerID, offer);
+            emit NFTOfferPriceUpdated(_offerID, offer);
         }
     }
 
@@ -298,31 +299,33 @@ contract OffersV1 is ReentrancyGuard {
         emit NFTOfferCanceled(_offerID, offer);
     }
 
-    // ============ Accept Offers ============
+    // ============ Fill Offers ============
 
-    /// @notice Accepts a collection offer
+    /// @notice Fills a collection offer
     /// @param _offerID The ID of the collection offer
     /// @param _tokenID The ID of the NFT to transfer
     /// @param _finder The address of the referrer for this offer
-    function acceptCollectionOffer(
+    function fillCollectionOffer(
         uint256 _offerID,
         uint256 _tokenID,
         address _finder
     ) external nonReentrant {
         CollectionOffer storage collectionOffer = collectionOffers[_offerID];
 
-        require(collectionOffer.status == OfferStatus.Active, "acceptCollectionOffer must be active offer");
-        require(_finder != address(0), "acceptCollectionOffer _finder must not be 0 address");
-        require(msg.sender == IERC721(collectionOffer.tokenContract).ownerOf(_tokenID), "acceptCollectionOffer must own token associated with offer");
+        require(collectionOffer.status == OfferStatus.Active, "fillCollectionOffer must be active offer");
+        require(_finder != address(0), "fillCollectionOffer _finder must not be 0 address");
+        require(msg.sender == IERC721(collectionOffer.tokenContract).ownerOf(_tokenID), "fillCollectionOffer must own token associated with offer");
 
         // Convert to NFTOffer for royalty payouts
-        NFTOffer memory offer = _convertAcceptedCollectionOffer(collectionOffer, _tokenID);
+        NFTOffer memory offer = _convertFilledCollectionOffer(collectionOffer, _tokenID);
 
         uint256 remainingProfit = offer.offerPrice;
         if (offer.tokenContract == address(zoraV1Media)) {
             remainingProfit = _handleZoraPayout(offer);
         } else if (IERC165(offer.tokenContract).supportsInterface(ERC2981_INTERFACE_ID)) {
             remainingProfit = _handleEIP2981Payout(offer);
+        } else {
+            remainingProfit = _handleRoyaltyRegistryPayout(offer);
         }
 
         uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
@@ -334,23 +337,27 @@ contract OffersV1 is ReentrancyGuard {
         _handleOutgoingTransfer(msg.sender, remainingProfit, offer.offerCurrency);
 
         // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(collectionOffer.tokenContract, msg.sender, collectionOffer.buyer, _tokenID);
+        erc721TransferHelper.transferFrom(offer.tokenContract, msg.sender, offer.buyer, _tokenID);
 
-        collectionOffer.status = OfferStatus.Accepted;
+        collectionOffer.status = OfferStatus.Filled;
         userHasActiveCollectionOffer[offer.buyer][offer.tokenContract] = false;
 
-        emit CollectionOfferAccepted(_offerID, _tokenID, collectionOffer);
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenID: offer.tokenID, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenID: 0, amount: offer.offerPrice});
+
+        emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
+        emit CollectionOfferFilled(_offerID, msg.sender, _finder, collectionOffer);
     }
 
-    /// @notice Accepts a NFT offer
+    /// @notice Fills a NFT offer
     /// @param _offerID The ID of the NFT offer
     /// @param _finder The address of the referrer for this offer
-    function acceptNFTOffer(uint256 _offerID, address _finder) external nonReentrant {
+    function fillNFTOffer(uint256 _offerID, address _finder) external nonReentrant {
         NFTOffer storage offer = nftOffers[_offerID];
 
-        require(offer.status == OfferStatus.Active, "acceptNFTOffer must be active offer");
-        require(_finder != address(0), "acceptNFTOffer _finder must not be 0 address");
-        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenID), "acceptNFTOffer must own token associated with offer");
+        require(offer.status == OfferStatus.Active, "fillNFTOffer must be active offer");
+        require(_finder != address(0), "fillNFTOffer _finder must not be 0 address");
+        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenID), "fillNFTOffer must own token associated with offer");
 
         // Payout respective parties, ensuring royalties are honored
         uint256 remainingProfit = offer.offerPrice;
@@ -374,10 +381,14 @@ contract OffersV1 is ReentrancyGuard {
         // Transfer NFT to buyer
         erc721TransferHelper.transferFrom(offer.tokenContract, msg.sender, offer.buyer, offer.tokenID);
 
-        offer.status = OfferStatus.Accepted;
+        offer.status = OfferStatus.Filled;
         userHasActiveNFTOffer[offer.buyer][offer.tokenContract][offer.tokenID] = false;
 
-        emit NFTOfferAccepted(_offerID, offer);
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenID: offer.tokenID, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenID: 0, amount: offer.offerPrice});
+
+        emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
+        emit NFTOfferFilled(_offerID, msg.sender, _finder, offer);
     }
 
     // ============ Private ============
@@ -480,16 +491,16 @@ contract OffersV1 is ReentrancyGuard {
     /// @param _collectionOffer The accepted collection offer
     /// @param _tokenID The NFT ID to complete the conversion
     /// @return The offer to use as a reference for the royalty calculations
-    function _convertAcceptedCollectionOffer(CollectionOffer memory _collectionOffer, uint256 _tokenID) private view returns (NFTOffer memory) {
+    function _convertFilledCollectionOffer(CollectionOffer memory _collectionOffer, uint256 _tokenID) private pure returns (NFTOffer memory) {
         return
             NFTOffer({
-                buyer: msg.sender,
+                buyer: _collectionOffer.buyer,
                 offerCurrency: _collectionOffer.offerCurrency,
                 tokenContract: _collectionOffer.tokenContract,
                 tokenID: _tokenID,
                 offerPrice: _collectionOffer.offerPrice,
                 findersFeePercentage: _collectionOffer.findersFeePercentage,
-                status: OfferStatus.Accepted
+                status: OfferStatus.Filled
             });
     }
 }
