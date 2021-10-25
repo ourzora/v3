@@ -12,7 +12,6 @@ import {
   deploySimpleModule,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
-  freezeModule,
   proposeModule,
   registerModule,
   revert,
@@ -95,17 +94,6 @@ describe('ZoraModuleApprovalsManager', () => {
       const m = await deploySimpleModule();
       await proposeModule(proposalManager.connect(registrar), m.address);
       await cancelModule(proposalManager.connect(registrar), m.address);
-
-      await expect(
-        manager.setApprovalForModule(m.address, true)
-      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
-    });
-
-    it('should not allow a user to approve a module that has been frozen', async () => {
-      const m = await deploySimpleModule();
-      await proposeModule(proposalManager.connect(registrar), m.address);
-      await registerModule(proposalManager.connect(registrar), m.address);
-      await freezeModule(proposalManager.connect(registrar), m.address);
 
       await expect(
         manager.setApprovalForModule(m.address, true)
