@@ -44,7 +44,7 @@ describe('AsksV1', () => {
   let deployer: Signer;
   let buyerA: Signer;
   let sellerFundsRecipient: Signer;
-  let askFeeRecipient: Signer;
+  let listingFeeRecipient: Signer;
   let finder: Signer;
   let otherUser: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
@@ -56,7 +56,7 @@ describe('AsksV1', () => {
     deployer = signers[0];
     buyerA = signers[1];
     sellerFundsRecipient = signers[2];
-    askFeeRecipient = signers[3];
+    listingFeeRecipient = signers[3];
     otherUser = signers[4];
     finder = signers[5];
     const zoraProtocol = await deployZoraProtocol();
@@ -105,7 +105,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await askFeeRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
         10,
         10
       );
@@ -136,7 +136,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await askFeeRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
         10,
         10
       );
@@ -163,7 +163,7 @@ describe('AsksV1', () => {
             ONE_ETH,
             ethers.constants.AddressZero,
             ethers.constants.AddressZero,
-            await askFeeRecipient.getAddress(),
+            await listingFeeRecipient.getAddress(),
             10,
             10
           )
@@ -180,7 +180,7 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
-          await askFeeRecipient.getAddress(),
+          await listingFeeRecipient.getAddress(),
           10,
           10
         )
@@ -195,7 +195,7 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          await askFeeRecipient.getAddress(),
+          await listingFeeRecipient.getAddress(),
           101,
           10
         )
@@ -213,7 +213,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await askFeeRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
         10,
         10
       );
@@ -247,7 +247,7 @@ describe('AsksV1', () => {
 
     it('should revert when the msg.sender is not the seller', async () => {
       await expect(
-        asks.connect(askFeeRecipient).setAskPrice(1, TWO_ETH, weth.address)
+        asks.connect(listingFeeRecipient).setAskPrice(1, TWO_ETH, weth.address)
       ).eventually.rejectedWith(revert`setAskPrice must be seller`);
     });
     it('should revert if the ask has been sold', async () => {
@@ -276,7 +276,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await askFeeRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
         10,
         10
       );
@@ -343,7 +343,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await askFeeRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
         10,
         10
       );
@@ -355,7 +355,7 @@ describe('AsksV1', () => {
       const sellerFundsRecipientBeforeBalance =
         await sellerFundsRecipient.getBalance();
       const listingFeeRecipientBeforeBalance =
-        await askFeeRecipient.getBalance();
+        await listingFeeRecipient.getBalance();
       const finderBeforeBalance = await finder.getBalance();
       await asks
         .connect(buyerA)
@@ -365,7 +365,7 @@ describe('AsksV1', () => {
       const sellerFundsRecipientAfterBalance =
         await sellerFundsRecipient.getBalance();
       const listingFeeRecipientAfterBalance =
-        await askFeeRecipient.getBalance();
+        await listingFeeRecipient.getBalance();
       const finderAfterBalance = await finder.getBalance();
 
       const ask = await asks.asks(1);
