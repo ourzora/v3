@@ -12,6 +12,7 @@ import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
 import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployRoyaltyRegistryV1 } from './scripts/deployRoyaltyRegistryV1';
+import { deployOffersV1 } from './scripts/deployOffersV1';
 
 const env = dotenv.config().parsed;
 
@@ -82,6 +83,22 @@ task(
   'deployCollectionRoyaltyRegistryV1',
   'Deploy Collection Royalty Registry V1'
 ).setAction(deployRoyaltyRegistryV1);
+
+task('deployOffersV1', 'Deploy Offers V1')
+  .addParam(
+    'zoraV1Media',
+    'ZORA V1 Media Address (for royalties)',
+    undefined,
+    types.string
+  )
+  .addParam(
+    'royaltyRegistry',
+    'ZORA Collection Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam('weth', 'WETH address', undefined, types.string)
+  .setAction(deployOffersV1);
 
 const config: HardhatUserConfig = {
   solidity: {
