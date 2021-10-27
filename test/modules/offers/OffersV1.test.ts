@@ -46,6 +46,7 @@ describe('OffersV1', () => {
   let deployer: Signer;
   let buyer: Signer;
   let otherUser: Signer;
+  let finder: Signer;
   let erc20TransferHelper: Erc20TransferHelper;
   let erc721TransferHelper: Erc721TransferHelper;
   let royaltyRegistry: CollectionRoyaltyRegistryV1;
@@ -55,6 +56,7 @@ describe('OffersV1', () => {
     deployer = signers[0];
     buyer = signers[1];
     otherUser = signers[2];
+    finder = signers[3];
 
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
@@ -80,8 +82,8 @@ describe('OffersV1', () => {
     offers = await deployOffersV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
-      royaltyRegistry.address,
       zoraV1.address,
+      royaltyRegistry.address,
       weth.address
     );
 
@@ -110,6 +112,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -150,6 +153,7 @@ describe('OffersV1', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
+            10,
             {
               value: ONE_ETH,
             }
@@ -167,6 +171,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -180,6 +185,7 @@ describe('OffersV1', () => {
             0,
             TWO_ETH,
             ethers.constants.AddressZero,
+            10,
             { value: TWO_ETH }
           )
       ).eventually.rejectedWith(
@@ -196,6 +202,7 @@ describe('OffersV1', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
+            10,
             {
               value: ONE_HALF_ETH,
             }
@@ -214,6 +221,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -232,7 +240,7 @@ describe('OffersV1', () => {
     });
   });
 
-  describe('#updateNFTPrice', () => {
+  describe('#setNFTOfferPrice', () => {
     it('should increase an offer price', async () => {
       await offers
         .connect(buyer)
@@ -241,13 +249,14 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await offers
         .connect(buyer)
-        .updateNFTPrice(1, TWO_ETH, { value: ONE_ETH });
+        .setNFTOfferPrice(1, TWO_ETH, { value: ONE_ETH });
       expect((await (await offers.nftOffers(1)).offerPrice).toString()).to.eq(
         TWO_ETH.toString()
       );
@@ -261,12 +270,13 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
-      await offers.connect(buyer).updateNFTPrice(1, ONE_HALF_ETH);
+      await offers.connect(buyer).setNFTOfferPrice(1, ONE_HALF_ETH);
       expect((await (await offers.nftOffers(1)).offerPrice).toString()).to.eq(
         ONE_HALF_ETH.toString()
       );
@@ -280,14 +290,17 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await expect(
-        offers.connect(otherUser).updateNFTPrice(1, TWO_ETH, { value: TWO_ETH })
+        offers
+          .connect(otherUser)
+          .setNFTOfferPrice(1, TWO_ETH, { value: TWO_ETH })
       ).eventually.rejectedWith(
-        revert`updateNFTPrice must be buyer from original offer`
+        revert`setNFTOfferPrice must be buyer from original offer`
       );
     });
 
@@ -299,14 +312,15 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await expect(
-        offers.connect(otherUser).updateNFTPrice(1, ONE_HALF_ETH)
+        offers.connect(otherUser).setNFTOfferPrice(1, ONE_HALF_ETH)
       ).eventually.rejectedWith(
-        revert`updateNFTPrice must be buyer from original offer`
+        revert`setNFTOfferPrice must be buyer from original offer`
       );
     });
 
@@ -318,12 +332,13 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await expect(
-        offers.connect(buyer).updateNFTPrice(1, TWO_ETH)
+        offers.connect(buyer).setNFTOfferPrice(1, TWO_ETH)
       ).eventually.rejectedWith(
         revert`_handleIncomingTransfer msg value less than expected amount`
       );
@@ -337,18 +352,19 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
-      await offers.acceptNFTOffer(1);
+      await offers.fillNFTOffer(1, await finder.getAddress());
 
       await expect(
-        offers.connect(buyer).updateNFTPrice(1, ONE_HALF_ETH)
-      ).eventually.rejectedWith(revert`updateNFTPrice must be active offer`);
+        offers.connect(buyer).setNFTOfferPrice(1, ONE_HALF_ETH)
+      ).eventually.rejectedWith(revert`setNFTOfferPrice must be active offer`);
     });
 
-    it('should emit an NFTOfferUpdated event', async () => {
+    it('should emit an NFTOfferPriceUpdated event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
         .connect(buyer)
@@ -357,21 +373,22 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await offers
         .connect(buyer)
-        .updateNFTPrice(1, TWO_ETH, { value: ONE_ETH });
+        .setNFTOfferPrice(1, TWO_ETH, { value: ONE_ETH });
 
       const events = await offers.queryFilter(
-        offers.filters.NFTOfferUpdated(null, null),
+        offers.filters.NFTOfferPriceUpdated(null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('NFTOfferUpdated');
+      expect(logDescription.name).to.eq('NFTOfferPriceUpdated');
       expect(logDescription.args.id.toNumber()).to.eq(1);
       expect(logDescription.args.offer.offerPrice.toString()).to.eq(
         TWO_ETH.toString()
@@ -388,6 +405,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -404,11 +422,12 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
-      await offers.acceptNFTOffer(1);
+      await offers.fillNFTOffer(1, await finder.getAddress());
       await expect(
         offers.connect(buyer).cancelNFTOffer(1)
       ).eventually.rejectedWith(revert`cancelNFTOffer must be active offer`);
@@ -422,6 +441,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -442,6 +462,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -454,6 +475,7 @@ describe('OffersV1', () => {
           0,
           TENTH_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: TENTH_ETH,
           }
@@ -472,6 +494,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -489,7 +512,7 @@ describe('OffersV1', () => {
     });
   });
 
-  describe('#acceptNFTOffer', () => {
+  describe('#fillNFTOffer', () => {
     it('should accept an offer', async () => {
       await offers
         .connect(buyer)
@@ -498,12 +521,13 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
-      await offers.acceptNFTOffer(1);
+      await offers.fillNFTOffer(1, await finder.getAddress());
 
       expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
     });
@@ -516,16 +540,17 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
-      await offers.acceptNFTOffer(1);
+      await offers.fillNFTOffer(1, await finder.getAddress());
 
-      await expect(offers.acceptNFTOffer(1)).eventually.rejectedWith(
-        revert`acceptNFTOffer must be active offer`
-      );
+      await expect(
+        offers.fillNFTOffer(1, await finder.getAddress())
+      ).eventually.rejectedWith(revert`fillNFTOffer must be active offer`);
     });
 
     it('should revert accepting an offer from non-token holder', async () => {
@@ -536,19 +561,20 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
       await expect(
-        offers.connect(otherUser).acceptNFTOffer(1)
+        offers.connect(otherUser).fillNFTOffer(1, await finder.getAddress())
       ).eventually.rejectedWith(
-        revert`acceptNFTOffer must own token associated with offer`
+        revert`fillNFTOffer must own token associated with offer`
       );
     });
 
-    it('should emit an NFTOfferAccepted event', async () => {
+    it('should emit an NFTOfferFilled event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
         .connect(buyer)
@@ -557,20 +583,57 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
-      await offers.acceptNFTOffer(1);
+      await offers.fillNFTOffer(1, await finder.getAddress());
       const events = await offers.queryFilter(
-        offers.filters.NFTOfferAccepted(null, null),
+        offers.filters.NFTOfferFilled(null, null, null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('NFTOfferAccepted');
+      expect(logDescription.name).to.eq('NFTOfferFilled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
       expect(logDescription.args.offer.status).to.eq(2);
+    });
+
+    it('should emit an ExchangeExecuted event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await offers
+        .connect(buyer)
+        .createNFTOffer(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          10,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.fillNFTOffer(1, await finder.getAddress());
+      const events = await offers.queryFilter(
+        offers.filters.ExchangeExecuted(null, null, null, null),
+        block
+      );
+
+      expect(events.length).to.eq(1);
+      const logDescription = offers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ExchangeExecuted');
+      expect(logDescription.args.userA).to.eq(await deployer.getAddress());
+      expect(logDescription.args.userB).to.eq(await buyer.getAddress());
+
+      expect(logDescription.args.a.tokenContract).to.eq(
+        await (
+          await offers.nftOffers(1)
+        ).tokenContract
+      );
+      expect(logDescription.args.b.tokenContract).to.eq(
+        ethers.constants.AddressZero
+      );
     });
   });
 
@@ -586,6 +649,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -623,6 +687,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -635,6 +700,7 @@ describe('OffersV1', () => {
             zoraV1.address,
             TWO_ETH,
             ethers.constants.AddressZero,
+            10,
             { value: TWO_ETH }
           )
       ).eventually.rejectedWith(
@@ -650,6 +716,7 @@ describe('OffersV1', () => {
             zoraV1.address,
             ONE_ETH,
             ethers.constants.AddressZero,
+            10,
             {
               value: ONE_HALF_ETH,
             }
@@ -659,7 +726,7 @@ describe('OffersV1', () => {
       );
     });
 
-    it('should emit an OfferCreated event', async () => {
+    it('should emit an CollectionOfferCreated event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
         .connect(buyer)
@@ -667,6 +734,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -685,7 +753,7 @@ describe('OffersV1', () => {
     });
   });
 
-  describe('#updateCollectionPrice', () => {
+  describe('#setCollectionOfferPrice', () => {
     it('should increase a collection offer price', async () => {
       await offers
         .connect(buyer)
@@ -693,13 +761,14 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await offers
         .connect(buyer)
-        .updateCollectionPrice(1, TWO_ETH, { value: ONE_ETH });
+        .setCollectionOfferPrice(1, TWO_ETH, { value: ONE_ETH });
       expect(
         (await (await offers.collectionOffers(1)).offerPrice).toString()
       ).to.eq(TWO_ETH.toString());
@@ -712,12 +781,13 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
-      await offers.connect(buyer).updateCollectionPrice(1, ONE_HALF_ETH);
+      await offers.connect(buyer).setCollectionOfferPrice(1, ONE_HALF_ETH);
       expect(
         (await (await offers.collectionOffers(1)).offerPrice).toString()
       ).to.eq(ONE_HALF_ETH.toString());
@@ -730,6 +800,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -737,9 +808,9 @@ describe('OffersV1', () => {
       await expect(
         offers
           .connect(otherUser)
-          .updateCollectionPrice(1, TWO_ETH, { value: TWO_ETH })
+          .setCollectionOfferPrice(1, TWO_ETH, { value: TWO_ETH })
       ).eventually.rejectedWith(
-        revert`updateCollectionPrice must be buyer from original offer`
+        revert`setCollectionOfferPrice must be buyer from original offer`
       );
     });
 
@@ -750,14 +821,15 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await expect(
-        offers.connect(otherUser).updateCollectionPrice(1, ONE_HALF_ETH)
+        offers.connect(otherUser).setCollectionOfferPrice(1, ONE_HALF_ETH)
       ).eventually.rejectedWith(
-        revert`updateCollectionPrice must be buyer from original offer`
+        revert`setCollectionOfferPrice must be buyer from original offer`
       );
     });
 
@@ -768,12 +840,13 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await expect(
-        offers.connect(buyer).updateCollectionPrice(1, TWO_ETH)
+        offers.connect(buyer).setCollectionOfferPrice(1, TWO_ETH)
       ).eventually.rejectedWith(
         revert`_handleIncomingTransfer msg value less than expected amount`
       );
@@ -786,20 +859,21 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
-      await offers.acceptCollectionOffer(1, 0);
+      await offers.fillCollectionOffer(1, 0, await finder.getAddress());
 
       await expect(
-        offers.connect(buyer).updateCollectionPrice(1, ONE_HALF_ETH)
+        offers.connect(buyer).setCollectionOfferPrice(1, ONE_HALF_ETH)
       ).eventually.rejectedWith(
-        revert`updateCollectionPrice must be active offer`
+        revert`setCollectionOfferPrice must be active offer`
       );
     });
 
-    it('should emit an CollectionOfferUpdated event', async () => {
+    it('should emit an CollectionOfferPriceUpdated event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
         .connect(buyer)
@@ -807,21 +881,22 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
       await offers
         .connect(buyer)
-        .updateCollectionPrice(1, TWO_ETH, { value: ONE_ETH });
+        .setCollectionOfferPrice(1, TWO_ETH, { value: ONE_ETH });
 
       const events = await offers.queryFilter(
-        offers.filters.CollectionOfferUpdated(null, null),
+        offers.filters.CollectionOfferPriceUpdated(null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('CollectionOfferUpdated');
+      expect(logDescription.name).to.eq('CollectionOfferPriceUpdated');
       expect(logDescription.args.id.toNumber()).to.eq(1);
       expect(logDescription.args.offer.offerPrice.toString()).to.eq(
         TWO_ETH.toString()
@@ -837,6 +912,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -852,11 +928,12 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
-      await offers.acceptCollectionOffer(1, 0);
+      await offers.fillCollectionOffer(1, 0, await finder.getAddress());
       await expect(
         offers.connect(buyer).cancelCollectionOffer(1)
       ).eventually.rejectedWith(
@@ -871,6 +948,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -890,6 +968,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -901,6 +980,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           TENTH_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: TENTH_ETH,
           }
@@ -918,6 +998,7 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
@@ -935,7 +1016,7 @@ describe('OffersV1', () => {
     });
   });
 
-  describe('#acceptCollectionOffer', () => {
+  describe('#fillCollectionOffer', () => {
     it('should accept a collection offer', async () => {
       await offers
         .connect(buyer)
@@ -943,12 +1024,13 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
-      await offers.acceptCollectionOffer(1, 0);
+      await offers.fillCollectionOffer(1, 0, await finder.getAddress());
 
       expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
     });
@@ -960,15 +1042,18 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
-      await offers.acceptCollectionOffer(1, 0);
+      await offers.fillCollectionOffer(1, 0, await finder.getAddress());
 
-      await expect(offers.acceptCollectionOffer(1, 0)).eventually.rejectedWith(
-        revert`acceptCollectionOffer must be active offer`
+      await expect(
+        offers.fillCollectionOffer(1, 0, await finder.getAddress())
+      ).eventually.rejectedWith(
+        revert`fillCollectionOffer must be active offer`
       );
     });
 
@@ -979,19 +1064,22 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
 
       await expect(
-        offers.connect(otherUser).acceptCollectionOffer(1, 0)
+        offers
+          .connect(otherUser)
+          .fillCollectionOffer(1, 0, await finder.getAddress())
       ).eventually.rejectedWith(
-        revert`acceptCollectionOffer must own token associated with offer`
+        revert`fillCollectionOffer must own token associated with offer`
       );
     });
 
-    it('should emit a CollectionOfferAccepted event', async () => {
+    it('should emit a CollectionOfferFilled event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
         .connect(buyer)
@@ -999,20 +1087,56 @@ describe('OffersV1', () => {
           zoraV1.address,
           ONE_ETH,
           ethers.constants.AddressZero,
+          10,
           {
             value: ONE_ETH,
           }
         );
-      await offers.acceptCollectionOffer(1, 0);
+      await offers.fillCollectionOffer(1, 0, await finder.getAddress());
       const events = await offers.queryFilter(
-        offers.filters.CollectionOfferAccepted(null, null, null),
+        offers.filters.CollectionOfferFilled(null, null, null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('CollectionOfferAccepted');
+      expect(logDescription.name).to.eq('CollectionOfferFilled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
       expect(logDescription.args.offer.status).to.eq(2);
+    });
+
+    it('should emit an ExchangeExecuted event', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await offers
+        .connect(buyer)
+        .createCollectionOffer(
+          zoraV1.address,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          10,
+          {
+            value: ONE_ETH,
+          }
+        );
+      await offers.fillCollectionOffer(1, 0, await finder.getAddress());
+      const events = await offers.queryFilter(
+        offers.filters.ExchangeExecuted(null, null, null, null),
+        block
+      );
+
+      expect(events.length).to.eq(1);
+      const logDescription = offers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ExchangeExecuted');
+      expect(logDescription.args.userA).to.eq(await deployer.getAddress());
+      expect(logDescription.args.userB).to.eq(await buyer.getAddress());
+
+      expect(logDescription.args.a.tokenContract).to.eq(
+        await (
+          await offers.collectionOffers(1)
+        ).tokenContract
+      );
+      expect(logDescription.args.b.tokenContract).to.eq(
+        ethers.constants.AddressZero
+      );
     });
   });
 });

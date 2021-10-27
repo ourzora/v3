@@ -4,11 +4,12 @@ pragma solidity 0.8.5;
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {LibReserveAuctionV1} from "./LibReserveAuctionV1.sol";
+import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 
 /// @title Reserve Auction V1
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to list and bid on ERC-721 tokens with timed reserve auctions
-contract ReserveAuctionV1 is ReentrancyGuard {
+contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1 {
     using LibReserveAuctionV1 for LibReserveAuctionV1.ReserveAuctionStorage;
 
     LibReserveAuctionV1.ReserveAuctionStorage reserveAuctionStorage;
