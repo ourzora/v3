@@ -14,6 +14,7 @@ import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
 import {CollectionRoyaltyRegistryV1} from "../../CollectionRoyaltyRegistry/V1/CollectionRoyaltyRegistryV1.sol";
+import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 
 /// @title Reserve Auction V1 Library
 /// @author tbtstl <t@zora.co>
@@ -121,6 +122,13 @@ library LibReserveAuctionV1 {
     );
 
     event AuctionCanceled(uint256 indexed auctionId, uint256 indexed tokenId, address indexed tokenContract, address tokenOwner);
+
+    event ExchangeExecuted(
+        address indexed userA,
+        address indexed userB,
+        UniversalExchangeEventV1.ExchangeDetails a,
+        UniversalExchangeEventV1.ExchangeDetails b
+    );
 
     modifier auctionExists(ReserveAuctionStorage storage _self, uint256 auctionId) {
         require(_exists(_self, auctionId), "auctionExists auction doesn't exist");
@@ -351,6 +359,20 @@ library LibReserveAuctionV1 {
 
         // Transfer NFT to winner
         IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
+
+        UniversalExchangeEventV1.ExchangeDetails memory userAExchangeDetails = UniversalExchangeEventV1.ExchangeDetails({
+            tokenContract: auction.tokenContract,
+            tokenID: auction.tokenId,
+            amount: 1
+        });
+
+        UniversalExchangeEventV1.ExchangeDetails memory userBExchangeDetails = UniversalExchangeEventV1.ExchangeDetails({
+            tokenContract: auction.auctionCurrency,
+            tokenID: 0,
+            amount: auction.amount
+        });
+
+        emit ExchangeExecuted(auction.tokenOwner, auction.bidder, userAExchangeDetails, userBExchangeDetails);
 
         emit AuctionEnded(
             _auctionId,

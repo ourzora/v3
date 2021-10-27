@@ -828,6 +828,8 @@ describe('ReserveAuctionV1', () => {
     });
 
     xit('should emit an AuctionEnded event', async () => {});
+
+    xit('should emit an ExchangeExecuted event', async () => {});
   });
 
   describe('#cancelAuction', () => {
