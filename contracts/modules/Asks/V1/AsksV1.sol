@@ -55,10 +55,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
         address seller;
         address sellerFundsRecipient;
         address askCurrency;
-        address askFeeRecipient;
+        address listingFeeRecipient;
         uint256 tokenId;
         uint256 askPrice;
-        uint8 askFeePercentage;
+        uint8 listingFeePercentage;
         uint8 findersFeePercentage;
         AskStatus status;
     }
@@ -98,8 +98,8 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
     /// @param _askPrice The price of the sale
     /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
     /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _askFeeRecipient The askFeeRecipient of the sale, who can receive _askFeePercentage of the sale price
-    /// @param _askFeePercentage The percentage of the sale amount to be sent to the askFeeRecipient
+    /// @param _listingFeeRecipient The listingFeeRecipient of the sale, who can receive _listingFeePercentage of the sale price
+    /// @param _listingFeePercentage The percentage of the sale amount to be sent to the listingFeeRecipient
     /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
     /// @return The ID of the created ask
     function createAsk(
@@ -108,8 +108,8 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
         uint256 _askPrice,
         address _askCurrency,
         address _sellerFundsRecipient,
-        address _askFeeRecipient,
-        uint8 _askFeePercentage,
+        address _listingFeeRecipient,
+        uint8 _listingFeePercentage,
         uint8 _findersFeePercentage
     ) external nonReentrant returns (uint256) {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
@@ -120,7 +120,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
             "createAsk must be token owner or approved operator"
         );
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
-        require(_askFeePercentage.add(_findersFeePercentage) <= 100, "createAsk ask fee and finders fee percentage must be less than 100");
+        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk ask fee and finders fee percentage must be less than 100");
 
         // Create a ask
         askCounter.increment();
@@ -130,10 +130,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
             seller: msg.sender,
             sellerFundsRecipient: _sellerFundsRecipient,
             askCurrency: _askCurrency,
-            askFeeRecipient: _askFeeRecipient,
+            listingFeeRecipient: _listingFeeRecipient,
             tokenId: _tokenId,
             askPrice: _askPrice,
-            askFeePercentage: _askFeePercentage,
+            listingFeePercentage: _listingFeePercentage,
             findersFeePercentage: _findersFeePercentage,
             status: AskStatus.Active
         });
@@ -204,13 +204,13 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1 {
             remainingProfit = _handleRoyaltyRegistryPayout(ask);
         }
 
-        uint256 askFeeRecipientProfit = remainingProfit.mul(ask.askFeePercentage).div(100);
+        uint256 listingFeeRecipientProfit = remainingProfit.mul(ask.listingFeePercentage).div(100);
         uint256 finderFee = remainingProfit.mul(ask.findersFeePercentage).div(100);
 
-        _handleOutgoingTransfer(ask.askFeeRecipient, askFeeRecipientProfit, ask.askCurrency);
+        _handleOutgoingTransfer(ask.listingFeeRecipient, listingFeeRecipientProfit, ask.askCurrency);
         _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency);
 
-        remainingProfit = remainingProfit.sub(askFeeRecipientProfit).sub(finderFee);
+        remainingProfit = remainingProfit.sub(listingFeeRecipientProfit).sub(finderFee);
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency);
 
