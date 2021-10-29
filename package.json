@@ -50,8 +50,9 @@
     "*.sol": "solhint"
   },
   "scripts": {
+    "preinstall": "git submodule init && git submodule update",
     "prepare": "husky install",
-    "build": "git submodule init && git submodule update && hardhat compile",
+    "build": "hardhat compile",
     "test": "hardhat test",
     "prepublishOnly": "yarn build && rm -rf ./dist && tsc && cp typechain/*.d.ts dist/typechain && cp -R addresses dist && cp -R artifacts/contracts dist/artifacts && cp -R contracts dist"
   }
