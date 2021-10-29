@@ -42,7 +42,8 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.3.2",
-    "@zoralabs/core": "^1.0.5"
+    "@zoralabs/core": "^1.0.5",
+    "royalty-registry": "file:contracts/external/royalty-registry"
   },
   "lint-staged": {
     "*.{ts,js,css,md,sol}": "prettier --write",
@@ -50,7 +51,7 @@
   },
   "scripts": {
     "prepare": "husky install",
-    "build": "hardhat compile",
+    "build": "git submodule init && git submodule update && hardhat compile",
     "test": "hardhat test",
     "prepublishOnly": "yarn build && rm -rf ./dist && tsc && cp typechain/*.d.ts dist/typechain && cp -R addresses dist && cp -R artifacts/contracts dist/artifacts && cp -R contracts dist"
   }
