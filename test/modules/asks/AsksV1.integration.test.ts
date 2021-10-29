@@ -5,13 +5,13 @@ import asPromised from 'chai-as-promised';
 import { Signer } from 'ethers';
 import { Media } from '@zoralabs/core/dist/typechain';
 import {
-  Erc20TransferHelper,
-  Erc721TransferHelper,
+  ERC20TransferHelper,
+  ERC721TransferHelper,
   AsksV1,
   CollectionRoyaltyRegistryV1,
-  TestEip2981Erc721,
-  TestErc721,
-  Weth,
+  TestEIP2981ERC721,
+  TestERC721,
+  WETH,
 } from '../../../typechain';
 import {
   approveNFTTransfer,
@@ -24,35 +24,32 @@ import {
   deployWETH,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
-  deployZoraProtocol,
   mintERC2981Token,
   mintERC721Token,
   mintZoraNFT,
   ONE_ETH,
   proposeModule,
   registerModule,
-  revert,
   TENTH_ETH,
   THOUSANDTH_ETH,
   toRoundedNumber,
-  TWO_ETH,
 } from '../../utils';
 chai.use(asPromised);
 
 describe('AsksV1 integration', () => {
   let asks: AsksV1;
   let zoraV1: Media;
-  let testERC721: TestErc721;
-  let testEIP2981ERC721: TestEip2981Erc721;
-  let weth: Weth;
+  let testERC721: TestERC721;
+  let testEIP2981ERC721: TestEIP2981ERC721;
+  let weth: WETH;
   let deployer: Signer;
   let buyerA: Signer;
   let sellerFundsRecipient: Signer;
   let listingFeeRecipient: Signer;
   let otherUser: Signer;
   let finder: Signer;
-  let erc20TransferHelper: Erc20TransferHelper;
-  let erc721TransferHelper: Erc721TransferHelper;
+  let erc20TransferHelper: ERC20TransferHelper;
+  let erc721TransferHelper: ERC721TransferHelper;
   let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {
@@ -63,8 +60,6 @@ describe('AsksV1 integration', () => {
     listingFeeRecipient = signers[3];
     otherUser = signers[4];
     finder = signers[5];
-    const zoraProtocol = await deployZoraProtocol();
-    zoraV1 = zoraProtocol.media;
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     royaltyRegistry = await deployRoyaltyRegistry();
@@ -84,7 +79,6 @@ describe('AsksV1 integration', () => {
     asks = await deployAsksV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
-      zoraV1.address,
       royaltyRegistry.address,
       weth.address
     );

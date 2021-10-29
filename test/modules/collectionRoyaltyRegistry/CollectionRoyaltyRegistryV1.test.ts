@@ -3,8 +3,8 @@ import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import { Signer } from 'ethers';
 import {
-  BadErc721,
-  TestErc721,
+  BadERC721,
+  TestERC721,
   CollectionRoyaltyRegistryV1,
 } from '../../../typechain';
 import {
@@ -19,8 +19,8 @@ chai.use(asPromised);
 describe('CollectionRoyaltyRegistryV1', async () => {
   let deployer: Signer;
   let otherUser: Signer;
-  let badNFT: BadErc721;
-  let testNFT: TestErc721;
+  let badNFT: BadERC721;
+  let testNFT: TestERC721;
   let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {

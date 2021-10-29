@@ -4,12 +4,12 @@ import { ethers } from 'hardhat';
 import { Signer } from 'ethers';
 import { Media } from '@zoralabs/core/dist/typechain';
 import {
-  Erc20TransferHelper,
-  Erc721TransferHelper,
+  ERC20TransferHelper,
+  ERC721TransferHelper,
   OffersV1,
-  TestErc721,
+  TestERC721,
   CollectionRoyaltyRegistryV1,
-  Weth,
+  WETH,
 } from '../../../typechain';
 
 import {
@@ -41,14 +41,14 @@ chai.use(asPromised);
 describe('OffersV1', () => {
   let offers: OffersV1;
   let zoraV1: Media;
-  let testERC721: TestErc721;
-  let weth: Weth;
+  let testERC721: TestERC721;
+  let weth: WETH;
   let deployer: Signer;
   let buyer: Signer;
   let otherUser: Signer;
   let finder: Signer;
-  let erc20TransferHelper: Erc20TransferHelper;
-  let erc721TransferHelper: Erc721TransferHelper;
+  let erc20TransferHelper: ERC20TransferHelper;
+  let erc721TransferHelper: ERC721TransferHelper;
   let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {
