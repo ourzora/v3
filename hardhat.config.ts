@@ -1,6 +1,6 @@
 import { HardhatUserConfig, task, types } from 'hardhat/config';
 import '@nomiclabs/hardhat-ethers';
-import 'hardhat-typechain';
+import '@typechain/hardhat';
 import 'tsconfig-paths/register';
 import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-etherscan';
@@ -122,6 +122,9 @@ const config: HardhatUserConfig = {
       accounts: env ? [`0x${env.RINKEBY_PRIVATE_KEY}`] : [],
       url: env ? env.RINKEBY_RPC_URL : '',
     },
+  },
+  typechain: {
+    outDir: 'typechain',
   },
 };
 
