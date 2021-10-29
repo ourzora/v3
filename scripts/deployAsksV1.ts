@@ -3,13 +3,12 @@ import * as fs from 'fs-extra';
 import assert from 'assert';
 
 export interface Args {
-  zoraV1Media: string;
   royaltyRegistry: string;
   weth: string;
 }
 
 export async function deployAsksV1(
-  { zoraV1Media, royaltyRegistry, weth }: Args,
+  { royaltyRegistry, weth }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
   const [deployer] = await hre.ethers.getSigners();
@@ -33,7 +32,6 @@ export async function deployAsksV1(
   const asks = await AsksFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
-    zoraV1Media,
     royaltyRegistry,
     weth
   );

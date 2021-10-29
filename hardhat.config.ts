@@ -65,12 +65,6 @@ task('proposeModule', 'Propose a new module')
 
 task('deployAsksV1', 'Deploy Asks V1')
   .addParam(
-    'zoraV1Media',
-    'ZORA V1 Media Address (for royalties)',
-    undefined,
-    types.string
-  )
-  .addParam(
     'royaltyRegistry',
     'ZORA Collection Royalty Registry',
     undefined,
