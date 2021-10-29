@@ -5,29 +5,24 @@ import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC721, IERC165} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
-import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 import {RoyaltyPayoutSupportV1} from "../../../common/RoyaltyPayoutSupport/V1/RoyaltyPayoutSupportV1.sol";
+import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
 
 /// @title Asks V1
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those asks
-contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, RoyaltyPayoutSupportV1 {
+contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1 {
     using Counters for Counters.Counter;
     using SafeMath for uint256;
     using SafeMath for uint8;
-    using SafeERC20 for IERC20;
 
     bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
-    ERC20TransferHelper erc20TransferHelper;
     ERC721TransferHelper erc721TransferHelper;
-    IZoraV1Media zoraV1Media;
-    IZoraV1Market zoraV1Market;
 
     Counters.Counter askCounter;
 
@@ -71,20 +66,15 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, RoyaltyPayoutSuppo
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
-    /// @param _zoraV1ProtocolMedia The ZORA NFT Protocol Media Contract address
     /// @param _royaltyEngine The Manifold Royalty Engine address
     /// @param _wethAddress WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
-        address _zoraV1ProtocolMedia,
         address _royaltyEngine,
         address _wethAddress
-    ) RoyaltyPayoutSupportV1(_royaltyEngine, _wethAddress) {
-        erc20TransferHelper = ERC20TransferHelper(_erc20TransferHelper);
+    ) IncomingTransferSupportV1(_erc20TransferHelper) RoyaltyPayoutSupportV1(_royaltyEngine, _wethAddress) {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
-        zoraV1Media = IZoraV1Media(_zoraV1ProtocolMedia);
-        zoraV1Market = IZoraV1Market(zoraV1Media.marketContract());
     }
 
     /// @notice Lists an NFT for sale
@@ -211,23 +201,5 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, RoyaltyPayoutSuppo
 
         emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit AskFilled(_askId, msg.sender, _finder, ask);
-    }
-
-    /// @notice Handle an incoming funds transfer, ensuring the sent amount is valid and the sender is solvent
-    /// @param _amount The amount to be received
-    /// @param _currency The currency to receive funds in, or address(0) for ETH
-    function _handleIncomingTransfer(uint256 _amount, address _currency) private {
-        if (_currency == address(0)) {
-            require(msg.value >= _amount, "_handleIncomingTransfer msg value less than expected amount");
-        } else {
-            // We must check the balance that was actually transferred to this contract,
-            // as some tokens impose a transfer fee and would not actually transfer the
-            // full amount to the market, resulting in potentally locked funds
-            IERC20 token = IERC20(_currency);
-            uint256 beforeBalance = token.balanceOf(address(this));
-            erc20TransferHelper.safeTransferFrom(_currency, msg.sender, address(this), _amount);
-            uint256 afterBalance = token.balanceOf(address(this));
-            require(beforeBalance.add(_amount) == afterBalance, "_handleIncomingTransfer token transfer call did not transfer expected amount");
-        }
     }
 }
