@@ -8,17 +8,17 @@ import {
   ERC20TransferHelper,
   ERC721TransferHelper,
   AsksV1,
-  CollectionRoyaltyRegistryV1,
   TestEIP2981ERC721,
   TestERC721,
   WETH,
+  RoyaltyEngineV1,
 } from '../../../typechain';
 import {
   approveNFTTransfer,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployAsksV1,
-  deployRoyaltyRegistry,
+  deployRoyaltyEngine,
   deployTestEIP2981ERC721,
   deployTestERC271,
   deployWETH,
@@ -33,7 +33,9 @@ import {
   TENTH_ETH,
   THOUSANDTH_ETH,
   toRoundedNumber,
+  deployZoraProtocol,
 } from '../../utils';
+import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
 
 describe('AsksV1 integration', () => {
@@ -50,7 +52,7 @@ describe('AsksV1 integration', () => {
   let finder: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
-  let royaltyRegistry: CollectionRoyaltyRegistryV1;
+  let royaltyEngine: RoyaltyEngineV1;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -62,7 +64,9 @@ describe('AsksV1 integration', () => {
     finder = signers[5];
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
-    royaltyRegistry = await deployRoyaltyRegistry();
+    const zoraProtocol = await deployZoraProtocol();
+    zoraV1 = zoraProtocol.media;
+    royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
     const proposalManager = await deployZoraProposalManager(
       await deployer.getAddress()
@@ -79,7 +83,7 @@ describe('AsksV1 integration', () => {
     asks = await deployAsksV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
-      royaltyRegistry.address,
+      royaltyEngine.address,
       weth.address
     );
 
@@ -94,6 +98,10 @@ describe('AsksV1 integration', () => {
 
   describe('Zora V1 NFT', () => {
     beforeEach(async () => {
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [THOUSANDTH_ETH.mul(150)]
+      );
       await mintZoraNFT(zoraV1);
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
     });
@@ -277,6 +285,10 @@ describe('AsksV1 integration', () => {
 
   describe('ERC-2981 NFT', () => {
     beforeEach(async () => {
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [ONE_ETH.div(2)]
+      );
       await mintERC2981Token(testEIP2981ERC721, await deployer.getAddress());
       await approveNFTTransfer(
         // @ts-ignore
@@ -476,6 +488,10 @@ describe('AsksV1 integration', () => {
         testERC721,
         erc721TransferHelper.address,
         '0'
+      );
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [0]
       );
     });
 

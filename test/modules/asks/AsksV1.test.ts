@@ -7,17 +7,17 @@ import {
   ERC20TransferHelper,
   ERC721TransferHelper,
   AsksV1,
-  CollectionRoyaltyRegistryV1,
   TestEIP2981ERC721,
   TestERC721,
   WETH,
+  RoyaltyEngineV1,
 } from '../../../typechain';
 import {
   approveNFTTransfer,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployAsksV1,
-  deployRoyaltyRegistry,
+  deployRoyaltyEngine,
   deployTestEIP2981ERC721,
   deployTestERC271,
   deployWETH,
@@ -31,7 +31,9 @@ import {
   THOUSANDTH_ETH,
   toRoundedNumber,
   TWO_ETH,
+  deployZoraProtocol,
 } from '../../utils';
+import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
 
 describe('AsksV1', () => {
@@ -48,7 +50,7 @@ describe('AsksV1', () => {
   let otherUser: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
-  let royaltyRegistry: CollectionRoyaltyRegistryV1;
+  let royaltyEngine: RoyaltyEngineV1;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -58,6 +60,8 @@ describe('AsksV1', () => {
     listingFeeRecipient = signers[3];
     otherUser = signers[4];
     finder = signers[5];
+    const zoraV1Protocol = await deployZoraProtocol();
+    zoraV1 = zoraV1Protocol.media;
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     weth = await deployWETH();
@@ -73,11 +77,11 @@ describe('AsksV1', () => {
     erc721TransferHelper = await deployERC721TransferHelper(
       approvalManager.address
     );
-    royaltyRegistry = await deployRoyaltyRegistry();
+    royaltyEngine = await deployRoyaltyEngine();
     asks = await deployAsksV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
-      royaltyRegistry.address,
+      royaltyEngine.address,
       weth.address
     );
 
@@ -346,6 +350,11 @@ describe('AsksV1', () => {
     });
 
     it('should fill an ask', async () => {
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [ONE_ETH.div(2)]
+      );
+
       const buyerBeforeBalance = await buyerA.getBalance();
       const minterBeforeBalance = await deployer.getBalance();
       const sellerFundsRecipientBeforeBalance =
@@ -372,26 +381,26 @@ describe('AsksV1', () => {
         toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
         5
       );
-      // 15% creator fee + 1 ETH bid -> .15 ETH profit
+      // 0.5ETH royalty fee
       expect(toRoundedNumber(minterAfterBalance)).to.eq(
-        toRoundedNumber(minterBeforeBalance.add(THOUSANDTH_ETH.mul(150)))
+        toRoundedNumber(minterBeforeBalance.add(ONE_ETH.div(2)))
       );
-      // 15% creator fee + 1 ETH bid * 10% ask fee -> .085 ETH profit
+      // 0.5ETH creator fee + 1 ETH bid * 10% ask fee -> .05 ETH profit
       expect(toRoundedNumber(listingFeeRecipientAfterBalance)).to.eq(
         toRoundedNumber(
-          listingFeeRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(85))
+          listingFeeRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(50))
         )
       );
 
-      // 15% creator fee + 1 ETH bid * 10% finder fee -> .085 ETH profit
+      // 0.5ETH creator fee + 1 ETH bid * 10% finder fee -> .05 ETH profit
       expect(toRoundedNumber(finderAfterBalance)).to.eq(
-        toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(85)))
+        toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(50)))
       );
 
       // ask fee - creator fee - finder fee -> .68 ETH profit
       expect(toRoundedNumber(sellerFundsRecipientAfterBalance)).to.eq(
         toRoundedNumber(
-          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(680))
+          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(400))
         )
       );
 

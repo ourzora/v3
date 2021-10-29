@@ -18,6 +18,8 @@ import {
   TestERC1155,
   TestModuleV2,
   CollectionRoyaltyRegistryV1,
+  RoyaltyEngineV1,
+  RoyaltyEngineV1__factory,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -26,6 +28,7 @@ import {
   Media,
   MediaFactory,
 } from '@zoralabs/core/dist/typechain';
+import { deployMockContract } from 'ethereum-waffle';
 
 export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
@@ -131,6 +134,16 @@ export const deployRoyaltyRegistry = async () => {
   await royaltyRegistry.deployed();
 
   return royaltyRegistry as CollectionRoyaltyRegistryV1;
+};
+
+export const deployRoyaltyEngine = async () => {
+  const [deployer] = await ethers.getSigners();
+  const royaltyEngine = await deployMockContract(
+    deployer,
+    RoyaltyEngineV1__factory.abi
+  );
+
+  return royaltyEngine as unknown as RoyaltyEngineV1;
 };
 
 export const deployTestModule = async (
