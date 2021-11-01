@@ -80,12 +80,6 @@ task(
 
 task('deployOffersV1', 'Deploy Offers V1')
   .addParam(
-    'zoraV1Media',
-    'ZORA V1 Media Address (for royalties)',
-    undefined,
-    types.string
-  )
-  .addParam(
     'royaltyRegistry',
     'ZORA Collection Royalty Registry',
     undefined,
