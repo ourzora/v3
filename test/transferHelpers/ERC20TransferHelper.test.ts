@@ -3,7 +3,7 @@ import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
   TestModuleV1,
-  Weth,
+  WETH,
   ZoraModuleApprovalsManager,
   ZoraProposalManager,
 } from '../../typechain';
@@ -25,7 +25,7 @@ import {
 chai.use(asPromised);
 
 describe('ERC20TransferHelper', () => {
-  let weth: Weth;
+  let weth: WETH;
   let proposalManager: ZoraProposalManager;
   let approvalsManager: ZoraModuleApprovalsManager;
   let module: TestModuleV1;

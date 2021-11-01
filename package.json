@@ -17,6 +17,8 @@
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.6",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@typechain/hardhat": "^3.0.0",
+    "@typechain/ethers-v5": "^8.0.0",
     "@types/chai": "^4.2.19",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^8.2.2",
@@ -29,7 +31,6 @@
     "fs-extra": "^10.0.0",
     "hardhat": "^2.4.1",
     "hardhat-gas-reporter": "^1.0.4",
-    "hardhat-typechain": "^0.3.5",
     "husky": "^7.0.0",
     "lint-staged": "^11.0.0",
     "prettier": "^2.3.2",
@@ -38,17 +39,20 @@
     "solhint-plugin-prettier": "^0.0.5",
     "ts-node": "^10.0.0",
     "tsconfig-paths": "^3.9.0",
+    "typechain": "^6.0.0",
     "typescript": "^4.3.4"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.3.2",
-    "@zoralabs/core": "^1.0.5"
+    "@zoralabs/core": "^1.0.5",
+    "royalty-registry": "file:contracts/external/royalty-registry"
   },
   "lint-staged": {
     "*.{ts,js,css,md,sol}": "prettier --write",
     "*.sol": "solhint"
   },
   "scripts": {
+    "preinstall": "git submodule init && git submodule update",
     "prepare": "husky install",
     "build": "hardhat compile",
     "test": "hardhat test",

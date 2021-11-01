@@ -1,6 +1,6 @@
 import { HardhatUserConfig, task, types } from 'hardhat/config';
 import '@nomiclabs/hardhat-ethers';
-import 'hardhat-typechain';
+import '@typechain/hardhat';
 import 'tsconfig-paths/register';
 import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-etherscan';
@@ -65,12 +65,6 @@ task('proposeModule', 'Propose a new module')
 
 task('deployAsksV1', 'Deploy Asks V1')
   .addParam(
-    'zoraV1Media',
-    'ZORA V1 Media Address (for royalties)',
-    undefined,
-    types.string
-  )
-  .addParam(
     'royaltyRegistry',
     'ZORA Collection Royalty Registry',
     undefined,
@@ -122,6 +116,9 @@ const config: HardhatUserConfig = {
       accounts: env ? [`0x${env.RINKEBY_PRIVATE_KEY}`] : [],
       url: env ? env.RINKEBY_RPC_URL : '',
     },
+  },
+  typechain: {
+    outDir: 'typechain',
   },
 };
 

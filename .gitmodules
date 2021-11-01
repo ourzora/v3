@@ -1,0 +1,3 @@
+[submodule "contracts/external/royalty-registry"]
+	path = contracts/external/royalty-registry
+	url = https://github.com/manifoldxyz/royalty-registry-solidity

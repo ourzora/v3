@@ -2,16 +2,15 @@ import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
-  BadErc721,
-  Erc20TransferHelper,
-  Erc721TransferHelper,
-  LibReserveAuctionV1Factory,
+  BadERC721,
+  ERC20TransferHelper,
+  ERC721TransferHelper,
   ReserveAuctionV1,
-  ReserveAuctionV1Factory,
-  TestEip2981Erc721,
-  TestErc721,
+  ReserveAuctionV1__factory,
+  TestEIP2981ERC721,
+  TestERC721,
   CollectionRoyaltyRegistryV1,
-  Weth,
+  WETH,
 } from '../../../typechain';
 
 import {
@@ -52,10 +51,10 @@ chai.use(asPromised);
 describe('ReserveAuctionV1', () => {
   let reserveAuction: ReserveAuctionV1;
   let zoraV1: Media;
-  let badERC721: BadErc721;
-  let testERC721: TestErc721;
-  let testEIP2981ERC721: TestEip2981Erc721;
-  let weth: Weth;
+  let badERC721: BadERC721;
+  let testERC721: TestERC721;
+  let testEIP2981ERC721: TestEIP2981ERC721;
+  let weth: WETH;
   let deployer: Signer;
   let host: Signer;
   let bidderA: Signer;
@@ -63,8 +62,8 @@ describe('ReserveAuctionV1', () => {
   let fundsRecipient: Signer;
   let otherUser: Signer;
   let finder: Signer;
-  let erc20TransferHelper: Erc20TransferHelper;
-  let erc721TransferHelper: Erc721TransferHelper;
+  let erc20TransferHelper: ERC20TransferHelper;
+  let erc721TransferHelper: ERC721TransferHelper;
   let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {
@@ -338,7 +337,7 @@ describe('ReserveAuctionV1', () => {
 
       const createdAuction = await reserveAuction.auctions(1);
       const events = await reserveAuction.queryFilter(
-        new ReserveAuctionV1Factory()
+        new ReserveAuctionV1__factory()
           .attach(reserveAuction.address)
           .filters.AuctionCreated(
             null,

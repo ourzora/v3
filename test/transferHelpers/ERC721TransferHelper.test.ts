@@ -2,9 +2,9 @@ import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
-  TestErc721,
+  TestERC721,
   TestModuleV1,
-  Weth,
+  WETH,
   ZoraModuleApprovalsManager,
   ZoraProposalManager,
 } from '../../typechain';
@@ -27,7 +27,7 @@ import {
 chai.use(asPromised);
 
 describe('ERC20TransferHelper', () => {
-  let nft: TestErc721;
+  let nft: TestERC721;
   let proposalManager: ZoraProposalManager;
   let approvalsManager: ZoraModuleApprovalsManager;
   let module: TestModuleV1;

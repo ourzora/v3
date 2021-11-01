@@ -30,13 +30,13 @@ import {
 import { Media } from '@zoralabs/core/dist/typechain';
 import { Signer } from 'ethers';
 import {
-  BadErc721,
+  BadERC721,
   ReserveAuctionV1,
-  TestEip2981Erc721,
-  TestErc721,
-  Weth,
-  Erc20TransferHelper,
-  Erc721TransferHelper,
+  TestEIP2981ERC721,
+  TestERC721,
+  WETH,
+  ERC20TransferHelper,
+  ERC721TransferHelper,
   CollectionRoyaltyRegistryV1,
 } from '../../../typechain';
 
@@ -45,10 +45,10 @@ chai.use(asPromised);
 describe('ReserveAuctionV1 integration', () => {
   let reserveAuction: ReserveAuctionV1;
   let zoraV1: Media;
-  let badERC721: BadErc721;
-  let testERC721: TestErc721;
-  let testEIP2981ERC721: TestEip2981Erc721;
-  let weth: Weth;
+  let badERC721: BadERC721;
+  let testERC721: TestERC721;
+  let testEIP2981ERC721: TestEIP2981ERC721;
+  let weth: WETH;
   let deployer: Signer;
   let host: Signer;
   let bidderA: Signer;
@@ -56,8 +56,8 @@ describe('ReserveAuctionV1 integration', () => {
   let fundsRecipient: Signer;
   let otherUser: Signer;
   let finder: Signer;
-  let erc20TransferHelper: Erc20TransferHelper;
-  let erc721TransferHelper: Erc721TransferHelper;
+  let erc20TransferHelper: ERC20TransferHelper;
+  let erc721TransferHelper: ERC721TransferHelper;
   let royaltyRegistry: CollectionRoyaltyRegistryV1;
 
   beforeEach(async () => {

@@ -1,23 +1,25 @@
 import { ethers } from 'hardhat';
 import { Signer } from 'ethers';
 import {
-  BadErc721,
+  BadERC721,
   ReserveAuctionV1,
-  TestEip2981Erc721,
-  TestErc721,
+  TestEIP2981ERC721,
+  TestERC721,
   TestModuleV1,
-  Weth,
+  WETH,
   ZoraProposalManager,
   ZoraModuleApprovalsManager,
-  Erc20TransferHelper,
-  Erc721TransferHelper,
+  ERC20TransferHelper,
+  ERC721TransferHelper,
   SimpleModule,
   AsksV1,
   OffersV1,
-  Erc1155TransferHelper,
-  TestErc1155,
+  ERC1155TransferHelper,
+  TestERC1155,
   TestModuleV2,
   CollectionRoyaltyRegistryV1,
+  RoyaltyEngineV1,
+  RoyaltyEngineV1__factory,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -26,6 +28,7 @@ import {
   Media,
   MediaFactory,
 } from '@zoralabs/core/dist/typechain';
+import { deployMockContract } from 'ethereum-waffle';
 
 export const revert = (messages: TemplateStringsArray, ...rest) =>
   `VM Exception while processing transaction: reverted with reason string '${messages[0]}'`;
@@ -96,7 +99,7 @@ export const deployERC20TransferHelper = async (approvalsManager: string) => {
   );
   await transferHelper.deployed();
 
-  return transferHelper as Erc20TransferHelper;
+  return transferHelper as ERC20TransferHelper;
 };
 
 export const deployERC721TransferHelper = async (approvalsManager: string) => {
@@ -108,7 +111,7 @@ export const deployERC721TransferHelper = async (approvalsManager: string) => {
   );
   await transferHelper.deployed();
 
-  return transferHelper as Erc721TransferHelper;
+  return transferHelper as ERC721TransferHelper;
 };
 
 export const deployERC1155TransferHelper = async (approvalsManager: string) => {
@@ -120,7 +123,7 @@ export const deployERC1155TransferHelper = async (approvalsManager: string) => {
   );
   await transferHelper.deployed();
 
-  return transferHelper as Erc1155TransferHelper;
+  return transferHelper as ERC1155TransferHelper;
 };
 
 export const deployRoyaltyRegistry = async () => {
@@ -131,6 +134,16 @@ export const deployRoyaltyRegistry = async () => {
   await royaltyRegistry.deployed();
 
   return royaltyRegistry as CollectionRoyaltyRegistryV1;
+};
+
+export const deployRoyaltyEngine = async () => {
+  const [deployer] = await ethers.getSigners();
+  const royaltyEngine = await deployMockContract(
+    deployer,
+    RoyaltyEngineV1__factory.abi
+  );
+
+  return royaltyEngine as unknown as RoyaltyEngineV1;
 };
 
 export const deployTestModule = async (
@@ -171,19 +184,19 @@ export const deployZoraProtocol = async () => {
 export const deployBadERC721 = async () => {
   const BadERC721Factory = await ethers.getContractFactory('BadERC721');
   const badERC721 = await BadERC721Factory.deploy();
-  return badERC721 as BadErc721;
+  return badERC721 as BadERC721;
 };
 
 export const deployTestERC271 = async () => {
   const TestERC721Factory = await ethers.getContractFactory('TestERC721');
   const testERC721 = await TestERC721Factory.deploy();
-  return testERC721 as TestErc721;
+  return testERC721 as TestERC721;
 };
 
 export const deployTestERC1155 = async () => {
   const TestERC1155Factory = await ethers.getContractFactory('TestERC1155');
   const testERC1155 = await TestERC1155Factory.deploy();
-  return testERC1155 as TestErc1155;
+  return testERC1155 as TestERC1155;
 };
 
 export const deployTestEIP2981ERC721 = async () => {
@@ -191,13 +204,13 @@ export const deployTestEIP2981ERC721 = async () => {
     'TestEIP2981ERC721'
   );
   const testEIP2981ERC721 = await TestEIP2981ERC721Factory.deploy();
-  return testEIP2981ERC721 as TestEip2981Erc721;
+  return testEIP2981ERC721 as TestEIP2981ERC721;
 };
 
 export const deployWETH = async () => {
   const WETHFactory = await ethers.getContractFactory('WETH');
   const weth = await WETHFactory.deploy();
-  return weth as Weth;
+  return weth as WETH;
 };
 
 export const deployReserveAuctionV1 = async (
@@ -307,18 +320,17 @@ export async function settleAuction(
   await reserveAuction.settleAuction(auctionId);
 }
 
-export async function mintERC2981Token(eip2981: TestEip2981Erc721, to: string) {
+export async function mintERC2981Token(eip2981: TestEIP2981ERC721, to: string) {
   await eip2981.mint(to, 0);
 }
 
-export async function mintERC721Token(erc721: TestErc721, to: string) {
+export async function mintERC721Token(erc721: TestERC721, to: string) {
   await erc721.mint(to, 0);
 }
 
 export async function deployAsksV1(
   erc20Helper: string,
   erc721Helper: string,
-  zoraV1Media: string,
   royaltyRegistry: string,
   weth: string
 ) {
@@ -326,7 +338,6 @@ export async function deployAsksV1(
   const asks = await AsksV1Factory.deploy(
     erc20Helper,
     erc721Helper,
-    zoraV1Media,
     royaltyRegistry,
     weth
   );

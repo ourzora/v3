@@ -20,7 +20,7 @@ contract ZoraProposalManager {
         ProposalStatus status;
     }
 
-    /// @notice The registrar address that can register, cancel, or freeze modules
+    /// @notice The registrar address that can register, or cancel
     address public registrar;
     /// @notice A mapping of module addresses to proposals
     mapping(address => Proposal) public proposedModuleToProposal;
