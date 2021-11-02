@@ -15,5 +15,5 @@ contract UniversalExchangeEventV1 {
         uint256 amount;
     }
 
-    event ExchangeExecuted(address indexed userA, address indexed userB, ExchangeDetails a, ExchangeDetails b);
+    event ExchangeExecuted(address indexed userA, address indexed userB, ExchangeDetails a, ExchangeDetails b, bool indexed royaltyRegistryPayout);
 }
