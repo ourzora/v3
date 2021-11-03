@@ -39,7 +39,7 @@ contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
         bool success;
 
         // External call ensuring contract doesn't run out of gas paying royalties
-        try this._handleRoyaltyEnginePayout{gas: gas, value: msg.value}(_tokenContract, _tokenId, _amount, _payoutCurrency) returns (uint256 _remainingFunds) {
+        try this._handleRoyaltyEnginePayout{gas: gas}(_tokenContract, _tokenId, _amount, _payoutCurrency) returns (uint256 _remainingFunds) {
             remainingFunds = _remainingFunds;
             success = true;
         } catch {
