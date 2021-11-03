@@ -181,13 +181,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, bool royaltyRegistryPayout) = _handleRoyaltyPayout(
-            ask.tokenContract,
-            ask.tokenId,
-            ask.askPrice,
-            ask.askCurrency,
-            USE_ALL_GAS_FLAG
-        );
+        uint256 remainingProfit = _handleRoyaltyPayout(ask.tokenContract, ask.tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
         uint256 listingFeeRecipientProfit = remainingProfit.mul(ask.listingFeePercentage).div(100);
         uint256 finderFee = remainingProfit.mul(ask.findersFeePercentage).div(100);
 
@@ -203,10 +197,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         ask.status = AskStatus.Filled;
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ask.tokenContract, tokenID: ask.tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ask.askCurrency, tokenID: 0, amount: ask.askPrice});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ask.tokenContract, tokenId: ask.tokenId, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ask.askCurrency, tokenId: 0, amount: ask.askPrice});
 
-        emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails, royaltyRegistryPayout);
+        emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit AskFilled(_askId, msg.sender, _finder, ask);
     }
 }

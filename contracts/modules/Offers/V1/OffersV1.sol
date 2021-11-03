@@ -342,8 +342,8 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1 {
         collectionOffer.status = OfferStatus.Filled;
         userHasActiveCollectionOffer[offer.buyer][offer.tokenContract] = false;
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenID: offer.tokenID, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenID: 0, amount: offer.offerPrice});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenID, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenId: 0, amount: offer.offerPrice});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
         emit CollectionOfferFilled(_offerID, msg.sender, _finder, collectionOffer);
@@ -384,8 +384,8 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1 {
         offer.status = OfferStatus.Filled;
         userHasActiveNFTOffer[offer.buyer][offer.tokenContract][offer.tokenID] = false;
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenID: offer.tokenID, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenID: 0, amount: offer.offerPrice});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenID, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenId: 0, amount: offer.offerPrice});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
         emit NFTOfferFilled(_offerID, msg.sender, _finder, offer);
