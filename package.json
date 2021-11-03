@@ -1,6 +1,6 @@
 {
-  "name": "@zoralabs/auction-house",
-  "version": "0.1.0",
+  "name": "@zoralabs/v3",
+  "version": "0.1.1",
   "private": false,
   "homepage": "https://github.com/ourzora/v3",
   "repository": {
@@ -17,8 +17,8 @@
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.6",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@typechain/hardhat": "^3.0.0",
     "@typechain/ethers-v5": "^8.0.0",
+    "@typechain/hardhat": "^3.0.0",
     "@types/chai": "^4.2.19",
     "@types/chai-as-promised": "^7.1.4",
     "@types/mocha": "^8.2.2",
