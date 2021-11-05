@@ -26,6 +26,7 @@ import {
   deployZoraProtocol,
   mintERC2981Token,
   mintERC721Token,
+  mintMultipleERC721Tokens,
   mintZoraNFT,
   ONE_ETH,
   proposeModule,
@@ -86,7 +87,6 @@ describe('OffersV1 integration', () => {
     offers = await deployOffersV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
-      zoraV1.address,
       royaltyRegistry.address,
       weth.address
     );
@@ -99,10 +99,6 @@ describe('OffersV1 integration', () => {
       .connect(buyer)
       .setApprovalForModule(offers.address, true);
   });
-
-  /**
-   * NFT offers
-   */
 
   describe('Zora V1 NFT Offer', () => {
     beforeEach(async () => {
@@ -188,7 +184,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await finder.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -201,7 +197,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(85)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -291,7 +287,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -304,7 +300,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(85)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -408,7 +404,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await finder.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -421,7 +417,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(50)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -520,7 +516,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -533,7 +529,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(50)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -770,10 +766,6 @@ describe('OffersV1 integration', () => {
     });
   });
 
-  /**
-   * Collection offers
-   */
-
   describe('Zora V1 Collection Offer', () => {
     beforeEach(async () => {
       await mintZoraNFT(zoraV1);
@@ -856,7 +848,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await finder.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -869,7 +861,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(85)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -959,7 +951,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -972,7 +964,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(85)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -1074,7 +1066,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await finder.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -1087,7 +1079,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(50)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -1185,7 +1177,7 @@ describe('OffersV1 integration', () => {
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
           10
         );
       });
@@ -1198,7 +1190,7 @@ describe('OffersV1 integration', () => {
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(
-            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(50)))
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
           ),
           10
         );
@@ -1434,6 +1426,127 @@ describe('OffersV1 integration', () => {
       it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
         await offers.fillCollectionOffer(1, 0, await finder.getAddress());
+
+        expect(await testERC721.ownerOf(0)).to.eq(await buyer.getAddress());
+      });
+    });
+  });
+
+  describe('Vanilla NFT Group Offer', () => {
+    beforeEach(async () => {
+      await mintMultipleERC721Tokens(
+        testERC721,
+        await deployer.getAddress(),
+        3
+      );
+      await approveNFTTransfer(
+        // @ts-ignore
+        testERC721,
+        erc721TransferHelper.address,
+        0
+      );
+    });
+
+    describe('ETH offer', () => {
+      async function run() {
+        await offers
+          .connect(buyer)
+          .createNFTGroupOffer(
+            testERC721.address,
+            [1, 0, 2],
+            ONE_ETH,
+            ethers.constants.AddressZero,
+            10,
+            { value: ONE_ETH }
+          );
+      }
+
+      it('should withdraw offer from buyer', async () => {
+        const beforeBalance = await buyer.getBalance();
+        await run();
+        const afterBalance = await buyer.getBalance();
+
+        expect(
+          toRoundedNumber(beforeBalance.sub(afterBalance))
+        ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
+      });
+
+      it('should withdraw offer increase from buyer', async () => {
+        const beforeBalance = await buyer.getBalance();
+        await run();
+
+        await offers
+          .connect(buyer)
+          .setNFTGroupOfferPrice(1, TWO_ETH, { value: ONE_ETH });
+
+        const afterBalance = await buyer.getBalance();
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.sub(TWO_ETH)),
+          10
+        );
+      });
+
+      it('should refund offer decrease to buyer', async () => {
+        const beforeBalance = await buyer.getBalance();
+        await run();
+
+        await offers.connect(buyer).setNFTGroupOfferPrice(1, ONE_HALF_ETH);
+
+        const afterBalance = await buyer.getBalance();
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.sub(ONE_HALF_ETH)),
+          10
+        );
+      });
+
+      it('should refund canceled offer', async () => {
+        const beforeBalance = await buyer.getBalance();
+        await run();
+        const middleBalance = await buyer.getBalance();
+        await offers.connect(buyer).cancelNFTGroupOffer(1);
+        const afterBalance = await buyer.getBalance();
+
+        expect(toRoundedNumber(middleBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.sub(ONE_ETH)),
+          10
+        );
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(middleBalance.add(ONE_ETH)),
+          10
+        );
+      });
+
+      it('should pay the finder', async () => {
+        const beforeBalance = await finder.getBalance();
+        await run();
+        await offers.fillNFTGroupOffer(1, 0, await finder.getAddress());
+        const afterBalance = await finder.getBalance();
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
+          10
+        );
+      });
+
+      it('should transfer funds from accepted offer to seller', async () => {
+        const beforeBalance = await deployer.getBalance();
+        await run();
+        await offers.fillNFTGroupOffer(1, 0, await finder.getAddress());
+        const afterBalance = await deployer.getBalance();
+
+        expect(toRoundedNumber(afterBalance)).to.be.approximately(
+          toRoundedNumber(
+            beforeBalance.add(ONE_ETH.sub(THOUSANDTH_ETH.mul(100)))
+          ),
+          10
+        );
+      });
+
+      it('should transfer NFT to buyer after accepted offer', async () => {
+        await run();
+        await offers.fillNFTGroupOffer(1, 0, await finder.getAddress());
 
         expect(await testERC721.ownerOf(0)).to.eq(await buyer.getAddress());
       });

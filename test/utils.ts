@@ -328,6 +328,16 @@ export async function mintERC721Token(erc721: TestERC721, to: string) {
   await erc721.mint(to, 0);
 }
 
+export async function mintMultipleERC721Tokens(
+  erc721: TestERC721,
+  to: string,
+  num: number
+) {
+  for (let i = 0; i < num; i++) {
+    await erc721.mint(to, i);
+  }
+}
+
 export async function deployAsksV1(
   erc20Helper: string,
   erc721Helper: string,
@@ -348,7 +358,6 @@ export async function deployAsksV1(
 export async function deployOffersV1(
   erc20Helper: string,
   erc721Helper: string,
-  zoraV1Media: string,
   royaltyRegistry: string,
   weth: string
 ) {
@@ -356,7 +365,6 @@ export async function deployOffersV1(
   const offers = await OffersV1Factory.deploy(
     erc20Helper,
     erc721Helper,
-    zoraV1Media,
     royaltyRegistry,
     weth
   );
