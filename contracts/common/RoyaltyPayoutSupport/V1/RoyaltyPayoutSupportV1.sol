@@ -11,7 +11,7 @@ import {OutgoingTransferSupportV1} from "../../OutgoingTransferSupport/V1/Outgoi
 contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
     IRoyaltyEngineV1 royaltyEngine;
 
-    event RoyaltyPayout(address indexed _tokenContract, uint256 indexed _tokenId, bool indexed royaltiesPaid);
+    event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
 
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
     /// @param _wethAddress WETH token address
@@ -42,12 +42,12 @@ contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
         try this._handleRoyaltyEnginePayout{gas: gas}(_tokenContract, _tokenId, _amount, _payoutCurrency) returns (uint256 _remainingFunds) {
             remainingFunds = _remainingFunds;
             success = true;
+
+            emit RoyaltyPayout(_tokenContract, _tokenId);
         } catch {
             remainingFunds = _amount;
             success = false;
         }
-
-        emit RoyaltyPayout(_tokenContract, _tokenId, success);
 
         return remainingFunds;
     }
