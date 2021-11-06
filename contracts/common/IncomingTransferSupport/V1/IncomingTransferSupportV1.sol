@@ -8,7 +8,7 @@ import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.
 contract IncomingTransferSupportV1 {
     using SafeERC20 for IERC20;
 
-    ERC20TransferHelper erc20TransferHelper;
+    ERC20TransferHelper immutable erc20TransferHelper;
 
     constructor(address _erc20TransferHelper) {
         erc20TransferHelper = ERC20TransferHelper(_erc20TransferHelper);

@@ -22,7 +22,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     using SafeMath for uint8;
 
     bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
-    ERC721TransferHelper erc721TransferHelper;
+    ERC721TransferHelper immutable erc721TransferHelper;
 
     Counters.Counter askCounter;
 
