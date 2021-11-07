@@ -32,7 +32,7 @@ contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
         uint256 _amount,
         address _payoutCurrency,
         uint256 _gasLimit
-    ) internal returns (uint256) {
+    ) internal returns (uint256, bool) {
         // If no gas limit was provided or provided gas limit greater than gas left, just pass the remaining gas.
         uint256 gas = (_gasLimit == 0 || _gasLimit > gasleft()) ? gasleft() : _gasLimit;
         uint256 remainingFunds;
@@ -49,7 +49,7 @@ contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
             success = false;
         }
 
-        return remainingFunds;
+        return (remainingFunds, success);
     }
 
     /// @notice Pays out royalties for NFTs based on the information returned by the royalty engine

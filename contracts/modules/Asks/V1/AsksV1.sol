@@ -181,7 +181,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
-        uint256 remainingProfit = _handleRoyaltyPayout(ask.tokenContract, ask.tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(ask.tokenContract, ask.tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
         uint256 listingFeeRecipientProfit = remainingProfit.mul(ask.listingFeePercentage).div(100);
         uint256 finderFee = remainingProfit.mul(ask.findersFeePercentage).div(100);
 
