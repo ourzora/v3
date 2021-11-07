@@ -11,7 +11,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 contract OutgoingTransferSupportV1 {
     using SafeERC20 for IERC20;
 
-    IWETH weth;
+    IWETH immutable weth;
 
     constructor(address _wethAddress) {
         weth = IWETH(_wethAddress);

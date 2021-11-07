@@ -9,7 +9,7 @@ import {OutgoingTransferSupportV1} from "../../OutgoingTransferSupport/V1/Outgoi
 /// @author tbtstl <t@zora.co>
 /// @notice This contract extension supports paying out royalties using the Manifold Royalty Registry
 contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
-    IRoyaltyEngineV1 royaltyEngine;
+    IRoyaltyEngineV1 immutable royaltyEngine;
 
     event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
 

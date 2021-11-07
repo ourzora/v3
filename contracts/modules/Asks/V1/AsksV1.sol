@@ -3,12 +3,9 @@ pragma solidity 0.8.5;
 
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {IERC721, IERC165} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
-import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
-import {IERC2981} from "../../../interfaces/common/IERC2981.sol";
 import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 import {RoyaltyPayoutSupportV1} from "../../../common/RoyaltyPayoutSupport/V1/RoyaltyPayoutSupportV1.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
@@ -23,7 +20,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
     uint256 private constant USE_ALL_GAS_FLAG = 0;
     bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
-    ERC721TransferHelper erc721TransferHelper;
+    ERC721TransferHelper immutable erc721TransferHelper;
 
     Counters.Counter askCounter;
 
