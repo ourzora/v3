@@ -22,7 +22,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
     ERC721TransferHelper public immutable erc721TransferHelper;
 
-    Counters.Counter askCounter;
+    Counters.Counter public askCounter;
 
     /// @notice The asks created by a given user
     mapping(address => uint256[]) public asksForUser;
