@@ -104,9 +104,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
         require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
 
-        // Create a ask
+        // Create an ask
         askCounter.increment();
         uint256 askId = askCounter.current();
+
         asks[askId] = Ask({
             tokenContract: _tokenContract,
             seller: msg.sender,
@@ -188,7 +189,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        // Transfer NFT to auction winner
+        // Transfer NFT to ask buyer
         erc721TransferHelper.transferFrom(ask.tokenContract, ask.seller, msg.sender, ask.tokenId);
 
         ask.status = AskStatus.Filled;
