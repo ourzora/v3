@@ -19,7 +19,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     using SafeMath for uint8;
 
     uint256 private constant USE_ALL_GAS_FLAG = 0;
-    bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
     ERC721TransferHelper immutable erc721TransferHelper;
 
     Counters.Counter askCounter;
