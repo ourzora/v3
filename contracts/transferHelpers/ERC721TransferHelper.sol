@@ -16,17 +16,17 @@ contract ERC721TransferHelper is BaseTransferHelper {
         address _token,
         address _from,
         address _to,
-        uint256 _tokenID
+        uint256 _tokenId
     ) public onlyApprovedModule(_from) {
-        IERC721(_token).safeTransferFrom(_from, _to, _tokenID);
+        IERC721(_token).safeTransferFrom(_from, _to, _tokenId);
     }
 
     function transferFrom(
         address _token,
         address _from,
         address _to,
-        uint256 _tokenID
+        uint256 _tokenId
     ) public onlyApprovedModule(_from) {
-        IERC721(_token).transferFrom(_from, _to, _tokenID);
+        IERC721(_token).transferFrom(_from, _to, _tokenId);
     }
 }
