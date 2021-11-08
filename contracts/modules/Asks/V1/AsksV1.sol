@@ -103,7 +103,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             "createAsk must be token owner or approved operator"
         );
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
-        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk ask fee and finders fee percentage must be less than 100");
+        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
 
         // Create a ask
         askCounter.increment();
