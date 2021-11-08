@@ -53,13 +53,12 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         AskStatus status;
     }
 
-    // CREATE
     event AskCreated(uint256 indexed id, Ask ask);
-    // UPDATE
+
     event AskPriceUpdated(uint256 indexed id, Ask ask);
-    // DELETE
+
     event AskCanceled(uint256 indexed id, Ask ask);
-    // DELETE
+
     event AskFilled(uint256 indexed id, address buyer, address finder, Ask ask);
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
