@@ -27,7 +27,6 @@ import {
   ONE_ETH,
   proposeModule,
   registerModule,
-  revert,
   THOUSANDTH_ETH,
   toRoundedNumber,
   TWO_ETH,
@@ -167,9 +166,11 @@ describe('AsksV1', () => {
             10,
             10
           )
-      ).eventually.rejectedWith(
-        'createAsk must be token owner or approved operator'
-      );
+      ).eventually.rejectedWith('CreateAskOnlyTokenOwnerOrOperator()');
+
+      // .eventually.rejectedWith(
+      //   await asks.interface.functions['CreateAskOnlyTokenOwnerOrOperator']
+      // );
     });
 
     it('should revert if the funds recipient is the zero address', async () => {
@@ -184,7 +185,7 @@ describe('AsksV1', () => {
           10,
           10
         )
-      ).eventually.rejectedWith('createAsk must specify sellerFundsRecipient');
+      ).eventually.rejectedWith('CreateAskSpecifySellerFundsRecipient()');
     });
 
     it('should revert if the lising fee percentage is greater than 100', async () => {
@@ -200,7 +201,7 @@ describe('AsksV1', () => {
           10
         )
       ).eventually.rejectedWith(
-        'createAsk listing fee and finders fee percentage must be less than 100'
+        'CreateAskListingAndFindersFeeCannotExceed100()'
       );
     });
   });
@@ -248,8 +249,9 @@ describe('AsksV1', () => {
     it('should revert when the msg.sender is not the seller', async () => {
       await expect(
         asks.connect(listingFeeRecipient).setAskPrice(1, TWO_ETH, weth.address)
-      ).eventually.rejectedWith(revert`setAskPrice must be seller`);
+      ).eventually.rejectedWith('SetAskPriceOnlySeller()');
     });
+
     it('should revert if the ask has been sold', async () => {
       await asks
         .connect(buyerA)
@@ -257,14 +259,14 @@ describe('AsksV1', () => {
 
       await expect(
         asks.setAskPrice(1, TWO_ETH, weth.address)
-      ).eventually.rejectedWith(revert`setAskPrice must be active ask`);
+      ).eventually.rejectedWith('SetAskPriceOnlyActiveAsk()');
     });
     it('should revert if the ask has been canceled', async () => {
       await asks.cancelAsk(1);
 
       await expect(
         asks.setAskPrice(1, TWO_ETH, weth.address)
-      ).eventually.rejectedWith(revert`setAskPrice must be active ask`);
+      ).eventually.rejectedWith('SetAskPriceOnlyActiveAsk()');
     });
   });
 
@@ -308,9 +310,7 @@ describe('AsksV1', () => {
     it('should revert when the seller is not msg.sender', async () => {
       await expect(
         asks.connect(otherUser).cancelAsk(1)
-      ).eventually.rejectedWith(
-        revert`cancelAsk must be seller or invalid ask`
-      );
+      ).eventually.rejectedWith('CancelAskOnlySellerOrInvalidAsk()');
     });
 
     it('should cancel an ask if the ask is no longer valid', async () => {
@@ -329,9 +329,7 @@ describe('AsksV1', () => {
         .connect(buyerA)
         .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
 
-      await expect(asks.cancelAsk(1)).rejectedWith(
-        revert`cancelAsk must be active ask`
-      );
+      await expect(asks.cancelAsk(1)).rejectedWith('CancelAskOnlyActiveAsk()');
     });
   });
 

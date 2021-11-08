@@ -54,12 +54,20 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     }
 
     event AskCreated(uint256 indexed id, Ask ask);
-
     event AskPriceUpdated(uint256 indexed id, Ask ask);
-
     event AskCanceled(uint256 indexed id, Ask ask);
-
     event AskFilled(uint256 indexed id, address buyer, address indexed finder, Ask ask);
+
+    error CreateAskOnlyTokenOwnerOrOperator();
+    error CreateAskSpecifySellerFundsRecipient();
+    error CreateAskListingAndFindersFeeCannotExceed100();
+    error SetAskPriceOnlySeller();
+    error SetAskPriceOnlyActiveAsk();
+    error CancelAskOnlySellerOrInvalidAsk();
+    error CancelAskOnlyActiveAsk();
+    error FillAskOnlyExistingAsk();
+    error FillAskFinderCannotBeZeroAddress();
+    error FillAskOnlyActiveAsk();
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -95,14 +103,20 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint8 _findersFeePercentage
     ) external nonReentrant returns (uint256) {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(
-            tokenOwner == msg.sender ||
-                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) == true ||
-                IERC721(_tokenContract).getApproved(_tokenId) == msg.sender,
-            "createAsk must be token owner or approved operator"
-        );
-        require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
-        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
+
+        if (
+            (msg.sender != tokenOwner) &&
+            (IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender)) == false &&
+            (msg.sender != IERC721(_tokenContract).getApproved(_tokenId))
+        ) {
+            revert CreateAskOnlyTokenOwnerOrOperator();
+        }
+        if (_sellerFundsRecipient == address(0)) {
+            revert CreateAskSpecifySellerFundsRecipient();
+        }
+        if (_listingFeePercentage.add(_findersFeePercentage) > 100) {
+            revert CreateAskListingAndFindersFeeCannotExceed100();
+        }
 
         // Create an ask
         askCounter.increment();
@@ -141,8 +155,12 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     ) external {
         Ask storage ask = asks[_askId];
 
-        require(ask.seller == msg.sender, "setAskPrice must be seller");
-        require(ask.status == AskStatus.Active, "setAskPrice must be active ask");
+        if (ask.seller != msg.sender) {
+            revert SetAskPriceOnlySeller();
+        }
+        if (ask.status != AskStatus.Active) {
+            revert SetAskPriceOnlyActiveAsk();
+        }
 
         ask.askPrice = _askPrice;
         ask.askCurrency = _askCurrency;
@@ -155,10 +173,13 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     function cancelAsk(uint256 _askId) external {
         Ask storage ask = asks[_askId];
 
-        require(ask.seller == msg.sender || IERC721(ask.tokenContract).ownerOf(ask.tokenId) != ask.seller, "cancelAsk must be seller or invalid ask");
-        require(ask.status == AskStatus.Active, "cancelAsk must be active ask");
-
-        // Set ask status to cancelled
+        if ((ask.seller != msg.sender) && (IERC721(ask.tokenContract).ownerOf(ask.tokenId) == ask.seller)) {
+            revert CancelAskOnlySellerOrInvalidAsk();
+        }
+        if (ask.status != AskStatus.Active) {
+            revert CancelAskOnlyActiveAsk();
+        }
+        // Set ask status to canceled
         ask.status = AskStatus.Canceled;
 
         emit AskCanceled(_askId, ask);
@@ -170,9 +191,15 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     function fillAsk(uint256 _askId, address _finder) external payable nonReentrant {
         Ask storage ask = asks[_askId];
 
-        require(ask.seller != address(0), "fillAsk ask does not exist");
-        require(_finder != address(0), "fillAsk _finder must not be 0 address");
-        require(ask.status == AskStatus.Active, "fillAsk must be active ask");
+        if (ask.seller == address(0)) {
+            revert FillAskOnlyExistingAsk();
+        }
+        if (_finder == address(0)) {
+            revert FillAskFinderCannotBeZeroAddress();
+        }
+        if (ask.status != AskStatus.Active) {
+            revert FillAskOnlyActiveAsk();
+        }
 
         // Ensure payment is valid and take custody of payment
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
