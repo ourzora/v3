@@ -18,6 +18,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     using SafeMath for uint256;
     using SafeMath for uint8;
 
+    uint256 private constant USE_ALL_GAS_FLAG = 0;
     bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
     ERC721TransferHelper immutable erc721TransferHelper;
 
@@ -177,24 +178,24 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
-        uint256 remainingProfit = _handleRoyaltyPayout(ask.tokenContract, ask.tokenId, ask.askPrice, ask.askCurrency, 0);
+        (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(ask.tokenContract, ask.tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
         uint256 listingFeeRecipientProfit = remainingProfit.mul(ask.listingFeePercentage).div(100);
         uint256 finderFee = remainingProfit.mul(ask.findersFeePercentage).div(100);
 
-        _handleOutgoingTransfer(ask.listingFeeRecipient, listingFeeRecipientProfit, ask.askCurrency, 0);
-        _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, 0);
+        _handleOutgoingTransfer(ask.listingFeeRecipient, listingFeeRecipientProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         remainingProfit = remainingProfit.sub(listingFeeRecipientProfit).sub(finderFee);
 
-        _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, 0);
+        _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to auction winner
         erc721TransferHelper.transferFrom(ask.tokenContract, ask.seller, msg.sender, ask.tokenId);
 
         ask.status = AskStatus.Filled;
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ask.tokenContract, tokenID: ask.tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ask.askCurrency, tokenID: 0, amount: ask.askPrice});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ask.tokenContract, tokenId: ask.tokenId, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ask.askCurrency, tokenId: 0, amount: ask.askPrice});
 
         emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit AskFilled(_askId, msg.sender, _finder, ask);

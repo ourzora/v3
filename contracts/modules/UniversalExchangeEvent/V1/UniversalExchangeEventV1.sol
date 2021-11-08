@@ -7,11 +7,11 @@ pragma solidity 0.8.5;
 contract UniversalExchangeEventV1 {
     /// @notice A ExchangeDetails object that tracks a token exchange
     /// @member tokenContract The address of the token contract
-    /// @member tokenID The ID of the token
+    /// @member tokenId The id of the token
     /// @member amount The amount of tokens being exchanged
     struct ExchangeDetails {
         address tokenContract;
-        uint256 tokenID;
+        uint256 tokenId;
         uint256 amount;
     }
 
