@@ -200,7 +200,7 @@ describe('AsksV1', () => {
           10
         )
       ).eventually.rejectedWith(
-        'createAsk ask fee and finders fee percentage must be less than 100'
+        'createAsk listing fee and finders fee percentage must be less than 100'
       );
     });
   });

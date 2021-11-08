@@ -19,10 +19,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     using SafeMath for uint8;
 
     uint256 private constant USE_ALL_GAS_FLAG = 0;
-    bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
-    ERC721TransferHelper immutable erc721TransferHelper;
 
-    Counters.Counter askCounter;
+    ERC721TransferHelper public immutable erc721TransferHelper;
+
+    Counters.Counter public askCounter;
 
     /// @notice The asks created by a given user
     mapping(address => uint256[]) public asksForUser;
@@ -53,14 +53,13 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         AskStatus status;
     }
 
-    // CREATE
     event AskCreated(uint256 indexed id, Ask ask);
-    // UPDATE
+
     event AskPriceUpdated(uint256 indexed id, Ask ask);
-    // DELETE
+
     event AskCanceled(uint256 indexed id, Ask ask);
-    // DELETE
-    event AskFilled(uint256 indexed id, address buyer, address finder, Ask ask);
+
+    event AskFilled(uint256 indexed id, address buyer, address indexed finder, Ask ask);
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -103,11 +102,12 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             "createAsk must be token owner or approved operator"
         );
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
-        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk ask fee and finders fee percentage must be less than 100");
+        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
 
-        // Create a ask
+        // Create an ask
         askCounter.increment();
         uint256 askId = askCounter.current();
+
         asks[askId] = Ask({
             tokenContract: _tokenContract,
             seller: msg.sender,
@@ -189,7 +189,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        // Transfer NFT to auction winner
+        // Transfer NFT to ask buyer
         erc721TransferHelper.transferFrom(ask.tokenContract, ask.seller, msg.sender, ask.tokenId);
 
         ask.status = AskStatus.Filled;

@@ -26,7 +26,7 @@ import {
 
 chai.use(asPromised);
 
-describe('ERC20TransferHelper', () => {
+describe('ERC721TransferHelper', () => {
   let nft: TestERC721;
   let proposalManager: ZoraProposalManager;
   let approvalsManager: ZoraModuleApprovalsManager;
