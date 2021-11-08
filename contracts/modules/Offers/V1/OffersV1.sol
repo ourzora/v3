@@ -14,16 +14,15 @@ import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport
 
 /// @title Offers V1
 /// @author kulkarohan <rohan@zora.co>
-/// @notice This module allows buyers to make an offer on any ERC-721
+/// @notice This module allows buyers to make offers on any ERC-721 token and token collection
 contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1 {
     using Counters for Counters.Counter;
 
-    bytes4 constant ERC2981_INTERFACE_ID = 0x2a55205a;
-    ERC721TransferHelper erc721TransferHelper;
+    ERC721TransferHelper public immutable erc721TransferHelper;
 
-    Counters.Counter collectionOfferCounter;
-    Counters.Counter nftOfferCounter;
-    Counters.Counter nftGroupOfferCounter;
+    Counters.Counter public collectionOfferCounter;
+    Counters.Counter public nftOfferCounter;
+    Counters.Counter public nftGroupOfferCounter;
 
     /// ============ NFT Offers Storage ============
 
@@ -425,7 +424,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenId), "fillNFTOffer must own token associated with offer");
 
         // Payout respective parties, ensuring royalties are honored
-        uint256 remainingProfit = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.offerPrice, offer.offerCurrency, 0);
+        (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.offerPrice, offer.offerCurrency, 0);
 
         uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
         _handleOutgoingTransfer(_finder, finderFee, offer.offerCurrency, 0);
@@ -439,7 +438,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         offer.status = OfferStatus.Filled;
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenID, amount: 1});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenId: 0, amount: offer.offerPrice});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
@@ -480,7 +479,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
             status: OfferStatus.Filled
         });
 
-        uint256 remainingProfit = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.offerPrice, offer.offerCurrency, 0);
+        (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.offerPrice, offer.offerCurrency, 0);
         uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
 
         _handleOutgoingTransfer(_finder, finderFee, offer.offerCurrency, 0);
@@ -492,7 +491,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         nftGroupOffer.status = OfferStatus.Filled;
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenID, amount: 1});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenId: 0, amount: offer.offerPrice});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
@@ -535,7 +534,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
             status: OfferStatus.Filled
         });
 
-        uint256 remainingProfit = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.offerPrice, offer.offerCurrency, 0);
+        (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.offerPrice, offer.offerCurrency, 0);
         uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
 
         _handleOutgoingTransfer(_finder, finderFee, offer.offerCurrency, 0);
