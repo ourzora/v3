@@ -362,13 +362,13 @@ library LibReserveAuctionV1 {
 
         UniversalExchangeEventV1.ExchangeDetails memory userAExchangeDetails = UniversalExchangeEventV1.ExchangeDetails({
             tokenContract: auction.tokenContract,
-            tokenID: auction.tokenId,
+            tokenId: auction.tokenId,
             amount: 1
         });
 
         UniversalExchangeEventV1.ExchangeDetails memory userBExchangeDetails = UniversalExchangeEventV1.ExchangeDetails({
             tokenContract: auction.auctionCurrency,
-            tokenID: 0,
+            tokenId: 0,
             amount: auction.amount
         });
 

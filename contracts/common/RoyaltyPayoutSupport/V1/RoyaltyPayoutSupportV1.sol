@@ -11,6 +11,8 @@ import {OutgoingTransferSupportV1} from "../../OutgoingTransferSupport/V1/Outgoi
 contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
     IRoyaltyEngineV1 immutable royaltyEngine;
 
+    event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
+
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
     /// @param _wethAddress WETH token address
     constructor(address _royaltyEngine, address _wethAddress) OutgoingTransferSupportV1(_wethAddress) {
@@ -30,18 +32,24 @@ contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
         uint256 _amount,
         address _payoutCurrency,
         uint256 _gasLimit
-    ) internal returns (uint256) {
+    ) internal returns (uint256, bool) {
         // If no gas limit was provided or provided gas limit greater than gas left, just pass the remaining gas.
         uint256 gas = (_gasLimit == 0 || _gasLimit > gasleft()) ? gasleft() : _gasLimit;
-        uint256 remainingFunds = _amount;
+        uint256 remainingFunds;
+        bool success;
 
-        try this._handleRoyaltyEnginePayout{gas: gas, value: msg.value}(_tokenContract, _tokenId, _amount, _payoutCurrency) returns (uint256 _remainingFunds) {
+        // External call ensuring contract doesn't run out of gas paying royalties
+        try this._handleRoyaltyEnginePayout{gas: gas}(_tokenContract, _tokenId, _amount, _payoutCurrency) returns (uint256 _remainingFunds) {
             remainingFunds = _remainingFunds;
+            success = true;
+
+            emit RoyaltyPayout(_tokenContract, _tokenId);
         } catch {
             remainingFunds = _amount;
+            success = false;
         }
 
-        return remainingFunds;
+        return (remainingFunds, success);
     }
 
     /// @notice Pays out royalties for NFTs based on the information returned by the royalty engine

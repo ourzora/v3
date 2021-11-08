@@ -26,17 +26,17 @@ contract TestModuleV1 {
     function safeDepositERC721(
         address _tokenContract,
         address _from,
-        uint256 _tokenID
+        uint256 _tokenId
     ) public {
-        ERC721TransferHelper(erc721TransferHelper).safeTransferFrom(_tokenContract, _from, address(this), _tokenID);
+        ERC721TransferHelper(erc721TransferHelper).safeTransferFrom(_tokenContract, _from, address(this), _tokenId);
     }
 
     function depositERC721(
         address _tokenContract,
         address _from,
-        uint256 _tokenID
+        uint256 _tokenId
     ) public {
-        ERC721TransferHelper(erc721TransferHelper).transferFrom(_tokenContract, _from, address(this), _tokenID);
+        ERC721TransferHelper(erc721TransferHelper).transferFrom(_tokenContract, _from, address(this), _tokenId);
     }
 
     function withdrawERC20(

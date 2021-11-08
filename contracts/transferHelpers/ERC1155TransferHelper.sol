@@ -15,21 +15,21 @@ contract ERC1155TransferHelper is BaseTransferHelper {
         address _token,
         address _from,
         address _to,
-        uint256 _tokenID,
+        uint256 _tokenId,
         uint256 _amount,
         bytes memory _data
     ) public onlyApprovedModule(_from) {
-        IERC1155(_token).safeTransferFrom(_from, _to, _tokenID, _amount, _data);
+        IERC1155(_token).safeTransferFrom(_from, _to, _tokenId, _amount, _data);
     }
 
     function safeBatchTransferFrom(
         address _token,
         address _from,
         address _to,
-        uint256[] memory _tokenIDs,
+        uint256[] memory _tokenIds,
         uint256[] memory _amounts,
         bytes memory _data
     ) public onlyApprovedModule(_from) {
-        IERC1155(_token).safeBatchTransferFrom(_from, _to, _tokenIDs, _amounts, _data);
+        IERC1155(_token).safeBatchTransferFrom(_from, _to, _tokenIds, _amounts, _data);
     }
 }
