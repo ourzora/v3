@@ -10,6 +10,9 @@ contract IncomingTransferSupportV1 {
 
     ERC20TransferHelper immutable erc20TransferHelper;
 
+    error MsgValueLessThanExpectedAmount();
+    error TransferCallDidNotTransferExpectedAmount();
+
     constructor(address _erc20TransferHelper) {
         erc20TransferHelper = ERC20TransferHelper(_erc20TransferHelper);
     }
@@ -19,7 +22,9 @@ contract IncomingTransferSupportV1 {
     /// @param _currency The currency to receive funds in, or address(0) for ETH
     function _handleIncomingTransfer(uint256 _amount, address _currency) internal {
         if (_currency == address(0)) {
-            require(msg.value >= _amount, "_handleIncomingTransfer msg value less than expected amount");
+            if (msg.value < _amount) {
+                revert MsgValueLessThanExpectedAmount();
+            }
         } else {
             // We must check the balance that was actually transferred to this contract,
             // as some tokens impose a transfer fee and would not actually transfer the
@@ -28,7 +33,9 @@ contract IncomingTransferSupportV1 {
             uint256 beforeBalance = token.balanceOf(address(this));
             erc20TransferHelper.safeTransferFrom(_currency, msg.sender, address(this), _amount);
             uint256 afterBalance = token.balanceOf(address(this));
-            require(beforeBalance + _amount == afterBalance, "_handleIncomingTransfer token transfer call did not transfer expected amount");
+            if ((beforeBalance + _amount) != afterBalance) {
+                revert TransferCallDidNotTransferExpectedAmount();
+            }
         }
     }
 }

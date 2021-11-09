@@ -13,6 +13,8 @@ contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
 
     event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
 
+    error OnlySelfCallable();
+
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
     /// @param _wethAddress WETH token address
     constructor(address _royaltyEngine, address _wethAddress) OutgoingTransferSupportV1(_wethAddress) {
@@ -65,14 +67,18 @@ contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
         uint256 _amount,
         address _payoutCurrency
     ) external payable returns (uint256) {
-        require(msg.sender == address(this), "_handleRoyaltyEnginePayout only self callable");
+        if (msg.sender != address(this)) {
+            revert OnlySelfCallable();
+        }
         uint256 remainingAmount = _amount;
 
         (address payable[] memory recipients, uint256[] memory amounts) = royaltyEngine.getRoyalty(_tokenContract, _tokenId, _amount);
 
         for (uint256 i = 0; i < recipients.length; i++) {
             // Ensure that we aren't somehow paying out more than we have
-            require(remainingAmount >= amounts[i], "insolvent");
+            if (remainingAmount < amounts[i]) {
+                revert Insolvent();
+            }
             _handleOutgoingTransfer(recipients[i], amounts[i], _payoutCurrency, 0);
 
             remainingAmount -= amounts[i];

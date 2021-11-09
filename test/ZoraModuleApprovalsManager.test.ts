@@ -14,7 +14,6 @@ import {
   deployZoraProposalManager,
   proposeModule,
   registerModule,
-  revert,
 } from './utils';
 
 chai.use(asPromised);
@@ -78,7 +77,7 @@ describe('ZoraModuleApprovalsManager', () => {
 
       await expect(
         manager.setApprovalForModule(m.address, true)
-      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
+      ).eventually.rejectedWith('ModuleMustBeApproved');
     });
 
     it('should not allow a user to approve a module that has a pending proposal', async () => {
@@ -87,7 +86,7 @@ describe('ZoraModuleApprovalsManager', () => {
 
       await expect(
         manager.setApprovalForModule(m.address, true)
-      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
+      ).eventually.rejectedWith('ModuleMustBeApproved');
     });
 
     it('should not allow a user to approve a module that has failed', async () => {
@@ -97,7 +96,7 @@ describe('ZoraModuleApprovalsManager', () => {
 
       await expect(
         manager.setApprovalForModule(m.address, true)
-      ).eventually.rejectedWith(revert`ZMAM::module must be approved`);
+      ).eventually.rejectedWith('ModuleMustBeApproved');
     });
   });
 

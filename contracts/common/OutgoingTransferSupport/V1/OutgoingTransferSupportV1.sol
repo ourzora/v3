@@ -13,6 +13,8 @@ contract OutgoingTransferSupportV1 {
 
     IWETH immutable weth;
 
+    error Insolvent();
+
     constructor(address _wethAddress) {
         weth = IWETH(_wethAddress);
     }
@@ -37,7 +39,9 @@ contract OutgoingTransferSupportV1 {
 
         // Handle ETH payment
         if (_currency == address(0)) {
-            require(address(this).balance >= _amount, "_handleOutgoingTransfer insolvent");
+            if (address(this).balance < _amount) {
+                revert Insolvent();
+            }
 
             uint256 gas = (_gasLimit == 0 || _gasLimit > gasleft()) ? gasleft() : _gasLimit;
             (bool success, ) = _dest.call{value: _amount, gas: gas}(new bytes(0));

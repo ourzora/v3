@@ -17,6 +17,8 @@ contract ZoraModuleApprovalsManager {
     event ModuleApprovalSet(address indexed user, address indexed module, bool approved);
     event AllModulesApprovalSet(address indexed user, bool approved);
 
+    error ModuleMustBeApproved();
+
     /// @param _proposalManager The address of the ZORA proposal manager
     constructor(address _proposalManager) {
         proposalManager = ZoraProposalManager(_proposalManager);
@@ -34,7 +36,9 @@ contract ZoraModuleApprovalsManager {
     /// @param _moduleAddress The module to approve
     /// @param _approved A boolean, whether or not to approve a module
     function setApprovalForModule(address _moduleAddress, bool _approved) public {
-        require(proposalManager.isPassedProposal(_moduleAddress), "ZMAM::module must be approved");
+        if (!proposalManager.isPassedProposal(_moduleAddress)) {
+            revert ModuleMustBeApproved();
+        }
 
         userApprovals[msg.sender][_moduleAddress] = _approved;
 

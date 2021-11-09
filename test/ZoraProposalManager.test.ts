@@ -9,7 +9,6 @@ import {
   deployZoraProposalManager,
   proposeModule,
   registerModule,
-  revert,
 } from './utils';
 
 chai.use(asPromised);
@@ -95,17 +94,13 @@ describe('ZoraProposalManager', () => {
 
       await expect(
         proposeModule(manager, module.address)
-      ).eventually.rejectedWith(
-        revert`ZPM::proposeModule proposal already exists`
-      );
+      ).eventually.rejectedWith('ProposalAlreadyExists');
     });
 
     it('should revert if the implementation address is 0x0', async () => {
       await expect(
         proposeModule(manager, ethers.constants.AddressZero)
-      ).eventually.rejectedWith(
-        revert`ZPM::proposeModule proposed contract cannot be zero address`
-      );
+      ).eventually.rejectedWith('ProposedContractCannotBeZeroAddress');
     });
   });
 
@@ -137,15 +132,13 @@ describe('ZoraProposalManager', () => {
     it('should revert if not called by the registrar', async () => {
       await expect(
         registerModule(manager, module.address)
-      ).eventually.rejectedWith(revert`ZPM::onlyRegistrar must be registrar`);
+      ).eventually.rejectedWith('OnlyRegistrar');
     });
 
     it('should revert if the proposal does not exist', async () => {
       await expect(
         registerModule(manager.connect(registrar), ethers.constants.AddressZero)
-      ).eventually.rejectedWith(
-        revert`ZPM::registerModule can only register pending proposals`
-      );
+      ).eventually.rejectedWith('CanOnlyRegisterPendingProposals');
     });
 
     it('should revert if the proposal has already passed', async () => {
@@ -153,9 +146,7 @@ describe('ZoraProposalManager', () => {
 
       await expect(
         registerModule(manager.connect(registrar), module.address)
-      ).eventually.rejectedWith(
-        revert`ZPM::registerModule can only register pending proposals`
-      );
+      ).eventually.rejectedWith('CanOnlyRegisterPendingProposals');
     });
 
     it('should revert if the proposal has already failed', async () => {
@@ -163,9 +154,7 @@ describe('ZoraProposalManager', () => {
 
       await expect(
         registerModule(manager.connect(registrar), module.address)
-      ).eventually.rejectedWith(
-        revert`ZPM::registerModule can only register pending proposals`
-      );
+      ).eventually.rejectedWith('CanOnlyRegisterPendingProposals');
     });
   });
 
@@ -197,24 +186,20 @@ describe('ZoraProposalManager', () => {
     it('should revert if not called by the registrar', async () => {
       await expect(
         cancelModule(manager.connect(otherUser), module.address)
-      ).eventually.rejectedWith(revert`ZPM::onlyRegistrar must be registrar`);
+      ).eventually.rejectedWith('OnlyRegistrar');
     });
 
     it('should revert if the proposal does not exist', async () => {
       await expect(
         cancelModule(manager.connect(registrar), ethers.constants.AddressZero)
-      ).eventually.rejectedWith(
-        revert`ZPM::cancelProposal can only cancel pending proposals`
-      );
+      ).eventually.rejectedWith('CanOnlyCancelPendingProposals');
     });
     it('should revert if the proposal has already been approved', async () => {
       await registerModule(manager.connect(registrar), module.address);
 
       await expect(
         cancelModule(manager.connect(registrar), module.address)
-      ).eventually.rejectedWith(
-        'ZPM::cancelProposal can only cancel pending proposals'
-      );
+      ).eventually.rejectedWith('CanOnlyCancelPendingProposals');
     });
 
     it('should revert if the proposal has already been cancelled', async () => {
@@ -222,9 +207,7 @@ describe('ZoraProposalManager', () => {
 
       await expect(
         cancelModule(manager.connect(registrar), module.address)
-      ).eventually.rejectedWith(
-        'ZPM::cancelProposal can only cancel pending proposals'
-      );
+      ).eventually.rejectedWith('CanOnlyCancelPendingProposals');
     });
   });
 
@@ -256,15 +239,13 @@ describe('ZoraProposalManager', () => {
     it('should revert if not called by the registrar', async () => {
       await expect(
         manager.setRegistrar(await otherUser.getAddress())
-      ).eventually.rejectedWith(revert`ZPM::onlyRegistrar must be registrar`);
+      ).eventually.rejectedWith('OnlyRegistrar');
     });
 
     it('should revert if attempting to set the registrar to the zero address', async () => {
       await expect(
         manager.connect(registrar).setRegistrar(ethers.constants.AddressZero)
-      ).eventually.rejectedWith(
-        revert`ZPM::setRegistrar must set registrar to non-zero address`
-      );
+      ).eventually.rejectedWith('SetRegistrarToNonZeroAddress');
     });
   });
 });

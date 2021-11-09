@@ -30,14 +30,25 @@ contract ZoraProposalManager {
     event ModuleCanceled(address indexed contractAddress);
     event RegistrarChanged(address indexed newRegistrar);
 
+    error OnlyRegistrar();
+    error SetRegistrarToNonZeroAddress();
+    error ProposalAlreadyExists();
+    error ProposedContractCannotBeZeroAddress();
+    error CanOnlyRegisterPendingProposals();
+    error CanOnlyCancelPendingProposals();
+
     modifier onlyRegistrar() {
-        require(msg.sender == registrar, "ZPM::onlyRegistrar must be registrar");
+        if (msg.sender != registrar) {
+            revert OnlyRegistrar();
+        }
         _;
     }
 
     /// @param _registrarAddress The initial registrar for the manager
     constructor(address _registrarAddress) {
-        require(_registrarAddress != address(0), "ZPM::must set registrar to non-zero address");
+        if (_registrarAddress == address(0)) {
+            revert SetRegistrarToNonZeroAddress();
+        }
 
         registrar = _registrarAddress;
     }
@@ -52,8 +63,12 @@ contract ZoraProposalManager {
     /// @notice Creates a new proposal for a module
     /// @param _impl The address of the deployed module being proposed
     function proposeModule(address _impl) public {
-        require(proposedModuleToProposal[_impl].proposer == address(0), "ZPM::proposeModule proposal already exists");
-        require(_impl != address(0), "ZPM::proposeModule proposed contract cannot be zero address");
+        if (proposedModuleToProposal[_impl].proposer != address(0)) {
+            revert ProposalAlreadyExists();
+        }
+        if (_impl == address(0)) {
+            revert ProposedContractCannotBeZeroAddress();
+        }
 
         Proposal memory proposal = Proposal({proposer: msg.sender, status: ProposalStatus.Pending});
         proposedModuleToProposal[_impl] = proposal;
@@ -66,7 +81,9 @@ contract ZoraProposalManager {
     function registerModule(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
-        require(proposal.status == ProposalStatus.Pending, "ZPM::registerModule can only register pending proposals");
+        if (proposal.status != ProposalStatus.Pending) {
+            revert CanOnlyRegisterPendingProposals();
+        }
 
         proposal.status = ProposalStatus.Passed;
 
@@ -78,7 +95,9 @@ contract ZoraProposalManager {
     function cancelProposal(address _proposalAddress) public onlyRegistrar {
         Proposal storage proposal = proposedModuleToProposal[_proposalAddress];
 
-        require(proposal.status == ProposalStatus.Pending, "ZPM::cancelProposal can only cancel pending proposals");
+        if (proposal.status != ProposalStatus.Pending) {
+            revert CanOnlyCancelPendingProposals();
+        }
 
         proposal.status = ProposalStatus.Failed;
 
@@ -88,7 +107,9 @@ contract ZoraProposalManager {
     /// @notice Sets the registrar for this manager
     /// @param _registrarAddress the address of the new registrar
     function setRegistrar(address _registrarAddress) public onlyRegistrar {
-        require(_registrarAddress != address(0), "ZPM::setRegistrar must set registrar to non-zero address");
+        if (_registrarAddress == address(0)) {
+            revert SetRegistrarToNonZeroAddress();
+        }
         registrar = _registrarAddress;
 
         emit RegistrarChanged(_registrarAddress);
