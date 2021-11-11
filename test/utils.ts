@@ -348,7 +348,6 @@ export async function deployAsksV1(
 export async function deployOffersV1(
   erc20Helper: string,
   erc721Helper: string,
-  zoraV1Media: string,
   royaltyRegistry: string,
   weth: string
 ) {
@@ -356,7 +355,6 @@ export async function deployOffersV1(
   const offers = await OffersV1Factory.deploy(
     erc20Helper,
     erc721Helper,
-    zoraV1Media,
     royaltyRegistry,
     weth
   );

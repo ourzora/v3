@@ -9,7 +9,7 @@ export interface Args {
 }
 
 export async function deployOffersV1(
-  { zoraV1Media, royaltyRegistry, weth }: Args,
+  { royaltyRegistry, weth }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
   const [deployer] = await hre.ethers.getSigners();
@@ -33,7 +33,6 @@ export async function deployOffersV1(
   const offers = await OffersFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
-    zoraV1Media,
     royaltyRegistry,
     weth
   );
