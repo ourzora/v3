@@ -4,6 +4,7 @@ import '@typechain/hardhat';
 import 'tsconfig-paths/register';
 import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-etherscan';
+import 'hardhat-dependency-compiler';
 import dotenv from 'dotenv';
 import { deployZPM } from './scripts/deployZPM';
 import { deployZMAM } from './scripts/deployZMAM';
@@ -110,6 +111,11 @@ const config: HardhatUserConfig = {
       accounts: env ? [`0x${env.RINKEBY_PRIVATE_KEY}`] : [],
       url: env ? env.RINKEBY_RPC_URL : '',
     },
+  },
+  dependencyCompiler: {
+    paths: [
+      '@manifoldxyz/royalty-registry-solidity/contracts/RoyaltyEngineV1.sol',
+    ],
   },
   typechain: {
     outDir: 'typechain',

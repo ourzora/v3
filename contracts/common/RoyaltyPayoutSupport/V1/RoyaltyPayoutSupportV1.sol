@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.5;
 
-import {IRoyaltyEngineV1} from "../../../external/royalty-registry/contracts/IRoyaltyEngineV1.sol";
+import {IRoyaltyEngineV1} from "@manifoldxyz/royalty-registry-solidity/contracts/IRoyaltyEngineV1.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OutgoingTransferSupportV1} from "../../OutgoingTransferSupport/V1/OutgoingTransferSupportV1.sol";
 
