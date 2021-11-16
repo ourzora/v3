@@ -14,6 +14,7 @@ import {
   SimpleModule,
   AsksV1,
   OffersV1,
+  CollectionOffersV1,
   ERC1155TransferHelper,
   TestERC1155,
   TestModuleV2,
@@ -38,6 +39,8 @@ export const ONE_HALF_ETH = ethers.utils.parseEther('0.5');
 export const ONE_ETH = ethers.utils.parseEther('1');
 export const TWO_ETH = ethers.utils.parseEther('2');
 export const THREE_ETH = ethers.utils.parseEther('3');
+export const FIVE_ETH = ethers.utils.parseEther('5');
+export const NINE_ETH = ethers.utils.parseEther('9');
 export const TEN_ETH = ethers.utils.parseEther('10');
 export const TENTH_ETH = ethers.utils.parseEther('0.1');
 export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
@@ -328,6 +331,16 @@ export async function mintERC721Token(erc721: TestERC721, to: string) {
   await erc721.mint(to, 0);
 }
 
+export async function mintMultipleERC721Tokens(
+  erc721: TestERC721,
+  to: string,
+  num: number
+) {
+  for (let i = 0; i < num; i++) {
+    await erc721.mint(to, i);
+  }
+}
+
 export async function deployAsksV1(
   erc20Helper: string,
   erc721Helper: string,
@@ -360,4 +373,23 @@ export async function deployOffersV1(
   );
   await offers.deployed();
   return offers as OffersV1;
+}
+
+export async function deployCollectionOffersV1(
+  erc20Helper: string,
+  erc721Helper: string,
+  royaltyRegistry: string,
+  weth: string
+) {
+  const CollectionOffersV1Factory = await ethers.getContractFactory(
+    'CollectionOffersV1'
+  );
+  const collectionOffers = await CollectionOffersV1Factory.deploy(
+    erc20Helper,
+    erc721Helper,
+    royaltyRegistry,
+    weth
+  );
+  await collectionOffers.deployed();
+  return collectionOffers as CollectionOffersV1;
 }
