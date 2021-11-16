@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.5;
 
+/// ------------ IMPORTS ------------
+
 import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 
 /// @title Collection Offer Book V1
@@ -106,8 +108,8 @@ contract CollectionOfferBookV1 {
     /// @param _newAmount The new offer amount
     /// @param _increase Whether the update is an amount increase or decrease
     function _updateOffer(
-        uint256 _offerId,
         address _collection,
+        uint256 _offerId,
         uint256 _newAmount,
         bool _increase
     ) internal {
