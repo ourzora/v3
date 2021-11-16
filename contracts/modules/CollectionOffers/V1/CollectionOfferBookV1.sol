@@ -325,8 +325,8 @@ contract CollectionOfferBookV1 {
         } else if (_offerId == ceilingOfferId[_collection]) {
             offers[_collection][_prevId].nextId = 0;
 
-            floorOfferId[_collection] = _prevId;
-            floorOfferAmount[_collection] = offers[_collection][_prevId].offerAmount;
+            ceilingOfferId[_collection] = _prevId;
+            ceilingOfferAmount[_collection] = offers[_collection][_prevId].offerAmount;
         } else {
             offers[_collection][_nextId].prevId = _prevId;
             offers[_collection][_prevId].nextId = _nextId;
