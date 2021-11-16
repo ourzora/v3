@@ -12,18 +12,25 @@ import {CollectionOfferBookV1} from "./CollectionOfferBookV1.sol";
 
 /// @title Collection Offers V1
 /// @author kulkarohan <rohan@zora.co>
-/// @notice This module allows buyers to place offers for any NFT from a specified ERC-721 collection; and allows NFT holders to fill an offer if an active offer at their desired price exists
+/// @notice This module allows buyers to place offers for any NFT from an ERC-721 collection, and allows sellers to fill an offer
 contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1, CollectionOfferBookV1 {
     address private constant ETH = address(0);
-    uint256 private constant FINDERS_FEE_PERCENTAGE = 1;
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
+    /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
+    /// ------------ EVENTS ------------
+
     event CollectionOfferCreated(uint256 indexed id, Offer offer);
+
     event CollectionOfferPriceUpdated(uint256 indexed id, Offer offer);
+
     event CollectionOfferCanceled(uint256 indexed id, Offer offer);
+
     event CollectionOfferFilled(uint256 indexed id, address indexed seller, address indexed finder, Offer offer);
+
+    /// ------------ CONSTRUCTOR ------------
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -38,7 +45,9 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// @notice Places an offer for any NFT in a specified collection
+    /// ------------ BUYER FUNCTIONS ------------
+
+    /// @notice Places an offer for any NFT in a collection
     /// @param _tokenContract The ERC-721 collection address
     /// @return The ID of the created offer
     function createCollectionOffer(address _tokenContract) external payable nonReentrant returns (uint256) {
@@ -98,7 +107,9 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         _removeOffer(_tokenContract, _offerId);
     }
 
-    /// @notice Fills the highest collection offer available, above the seller's minimum
+    /// ------------ SELLER FUNCTIONS ------------
+
+    /// @notice Fills the highest collection offer available, above a specified minimum
     /// @param _tokenContract The ERC-721 collection address
     /// @param _tokenId The ID of the seller's collection NFT
     /// @param _minAmount The minimum offer price the seller is willing to accept
@@ -118,7 +129,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         Offer memory offer = offers[_tokenContract][offerId];
 
         (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.offerAmount, ETH, USE_ALL_GAS_FLAG);
-        uint256 finderFee = (remainingProfit * FINDERS_FEE_PERCENTAGE) / 100;
+        uint256 finderFee = remainingProfit / 100; // 1% finder's fee
 
         _handleOutgoingTransfer(_finder, finderFee, ETH, USE_ALL_GAS_FLAG);
 
