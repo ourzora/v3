@@ -9,6 +9,7 @@ import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 contract CollectionOfferBookV1 {
     using Counters for Counters.Counter;
 
+    /// @notice The number of created offers
     Counters.Counter public offerCounter;
 
     struct Offer {
@@ -38,6 +39,10 @@ contract CollectionOfferBookV1 {
 
     /// ------------ INTERNAL FUNCTIONS ------------
 
+    /// @notice Creates a new offer at the appropriate location in the collection's offer book
+    /// @param _offerAmount The amount of ETH offered
+    /// @param _buyer The address of the buyer
+    /// @return The ID of the created collection offer
     function _addOffer(
         address _collection,
         uint256 _offerAmount,
@@ -95,31 +100,45 @@ contract CollectionOfferBookV1 {
         return _id;
     }
 
+    /// @notice Updates an offer and (if needed) its location relative to other offers in the collection
+    /// @param _collection The ERC-721 collection
+    /// @param _offerId The ID of the offer
+    /// @param _newAmount The new offer amount
+    /// @param _increase Whether the update is an amount increase or decrease
     function _updateOffer(
-        address _collection,
         uint256 _offerId,
+        address _collection,
         uint256 _newAmount,
         bool _increase
     ) internal {
+        // If the offer to update is the only offer in the collection, update the floor and ceiling amounts as well
         if (_isOnlyOffer(_collection, _offerId)) {
             offers[_collection][_offerId].offerAmount = _newAmount;
             floorOfferAmount[_collection] = _newAmount;
             ceilingOfferAmount[_collection] = _newAmount;
+
+            // Else if the offer is the ceiling and is an amount increase, just update the ceiling
         } else if (_isCeilingIncrease(_collection, _offerId, _increase)) {
             offers[_collection][_offerId].offerAmount = _newAmount;
             ceilingOfferAmount[_collection] = _newAmount;
+
+            // Else if the offer is the floor and is an amount decrease, just update the floor
         } else if (_isFloorDecrease(_collection, _offerId, _increase)) {
             offers[_collection][_offerId].offerAmount = _newAmount;
             floorOfferAmount[_collection] = _newAmount;
+
+            // Else if the offer (with its updated amount) is still at the correct location, just update its amount
         } else if (_isUpdateInPlace(_collection, _offerId, _newAmount, _increase)) {
             offers[_collection][_offerId].offerAmount = _newAmount;
+
+            // Else the offer requires relocation
         } else {
             Offer memory offer = offers[_collection][_offerId];
 
-            // Update original neighbors before updating offer location
+            // First connect its neighbors before moving
             _updateOriginalNeighbors(_collection, _offerId, offer.prevId, offer.nextId);
 
-            // If update is an increase, traverse forward until apt location is found
+            // If the update is an amount increase, traverse forward until the apt location is found
             if (_increase == true) {
                 offer = offers[_collection][offer.nextId];
 
@@ -135,7 +154,7 @@ contract CollectionOfferBookV1 {
 
                 offers[_collection][_offerId].offerAmount = _newAmount;
 
-                // Else offer is a decrease, therefore traverse backwards until apt location is found
+                // Else the update is a decrease, therefore traverse backwards until the apt location is found
             } else {
                 offer = offers[_collection][offer.prevId];
 
@@ -153,6 +172,9 @@ contract CollectionOfferBookV1 {
         }
     }
 
+    /// @notice Removes an offer from its collection's offer book
+    /// @param _collection The ERC-721 collection
+    /// @param _offerId The ID of the offer
     function _removeOffer(address _collection, uint256 _offerId) internal {
         // If the offer to remove is the only one for its collection, remove it and reset associated collection data stored
         if (_isOnlyOffer(_collection, _offerId)) {
@@ -197,8 +219,11 @@ contract CollectionOfferBookV1 {
         }
     }
 
+    /// @notice Finds a collection offer to fill
+    /// @param _collection The ERC-721 collection
+    /// @param _minAmount The minimum offer amount valid to match
     function _getMatchingOffer(address _collection, uint256 _minAmount) internal view returns (bool, uint256) {
-        // If the current ceiling offer fits the seller's minimum, return its id to fill
+        // If the current ceiling offer is greater than or equal to the seller's minimum, return its id to fill
         if (ceilingOfferAmount[_collection] >= _minAmount) {
             return (true, ceilingOfferId[_collection]);
 
@@ -210,7 +235,7 @@ contract CollectionOfferBookV1 {
             while ((offer.offerAmount >= _minAmount) && (offer.prevId != 0)) {
                 offer = offers[_collection][offer.prevId];
 
-                // If a valid offer to fill exists, return its id
+                // If the offer is valid to fill, return its id
                 if (offer.offerAmount >= _minAmount) {
                     matchFound = true;
                     break;
@@ -224,14 +249,23 @@ contract CollectionOfferBookV1 {
 
     /// ------------ PRIVATE FUNCTIONS ------------
 
+    /// @notice Checks whether any offers exist for a collection
+    /// @param _collection The ERC-721 collection
     function _isFirstOffer(address _collection) private view returns (bool) {
         return (ceilingOfferId[_collection] == 0) && (floorOfferId[_collection] == 0);
     }
 
+    /// @notice Checks whether a given offer is the only one for a collection
+    /// @param _collection The ERC-721 collection
+    /// @param _offerId The ID of the offer
     function _isOnlyOffer(address _collection, uint256 _offerId) private view returns (bool) {
         return (_offerId == floorOfferId[_collection]) && (_offerId == ceilingOfferId[_collection]);
     }
 
+    /// @notice Checks whether an offer to update is an increase of the collection's ceiling offer
+    /// @param _collection The ERC-721 collection
+    /// @param _offerId The ID of the offer
+    /// @param _increase Whether the update is an amount increase or decrease
     function _isCeilingIncrease(
         address _collection,
         uint256 _offerId,
@@ -240,6 +274,10 @@ contract CollectionOfferBookV1 {
         return (_offerId == ceilingOfferId[_collection]) && (_increase == true);
     }
 
+    /// @notice Checks whether an offer to update is a decrease of the collection's floor offer
+    /// @param _collection The ERC-721 collection
+    /// @param _offerId The ID of the offer
+    /// @param _increase Whether the update is an amount increase or decrease
     function _isFloorDecrease(
         address _collection,
         uint256 _offerId,
@@ -248,6 +286,11 @@ contract CollectionOfferBookV1 {
         return (_offerId == floorOfferId[_collection]) && (_increase == false);
     }
 
+    /// @notice Checks whether an offer can be updated without relocation
+    /// @param _collection The ERC-721 collection
+    /// @param _offerId The ID of the offer
+    /// @param _newAmount The new offer amount
+    /// @param _increase Whether the update is an amount increase or decrease
     function _isUpdateInPlace(
         address _collection,
         uint256 _offerId,
@@ -261,6 +304,11 @@ contract CollectionOfferBookV1 {
             ((_increase == false) && (_newAmount > offers[_collection][prevOffer].offerAmount));
     }
 
+    /// @notice Connects the pointers of an offer's neighbors
+    /// @param _collection The ERC-721 collection
+    /// @param _offerId The ID of the offer
+    /// @param _prevId The ID of the offer's previous pointer
+    /// @param _nextId The ID of the offer's next pointer
     function _updateOriginalNeighbors(
         address _collection,
         uint256 _offerId,
