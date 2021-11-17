@@ -99,6 +99,7 @@ contract CollectionOfferBookV1 {
             offers[_collection][offer.id].prevId = _id;
             offers[_collection][offer.prevId].nextId = _id;
         }
+
         return _id;
     }
 
@@ -148,12 +149,15 @@ contract CollectionOfferBookV1 {
                     offer = offers[_collection][offer.nextId];
                 }
 
+                // Update offer pointers
                 offers[_collection][_offerId].nextId = offer.id;
                 offers[_collection][_offerId].prevId = offer.prevId;
 
+                // Update neighbor pointers
                 offers[_collection][offer.id].prevId = _offerId;
                 offers[_collection][offer.prevId].nextId = _offerId;
 
+                // Update offer amount
                 offers[_collection][_offerId].offerAmount = _newAmount;
 
                 // Else the update is a decrease, therefore traverse backwards until the apt location is found
@@ -163,12 +167,16 @@ contract CollectionOfferBookV1 {
                 while (offer.offerAmount >= _newAmount) {
                     offer = offers[_collection][offer.prevId];
                 }
+
+                // Update offer pointers
                 offers[_collection][_offerId].prevId = offer.id;
                 offers[_collection][_offerId].nextId = offer.nextId;
 
+                // Update neighbor pointers
                 offers[_collection][offer.id].nextId = _offerId;
                 offers[_collection][offer.nextId].prevId = _offerId;
 
+                // Update offer amount
                 offers[_collection][_offerId].offerAmount = _newAmount;
             }
         }

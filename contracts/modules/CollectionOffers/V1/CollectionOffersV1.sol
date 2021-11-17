@@ -92,6 +92,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
             _handleOutgoingTransfer(msg.sender, decreaseAmount, ETH, USE_ALL_GAS_FLAG);
             _updateOffer(_tokenContract, _offerId, _newOfferAmount, false);
         }
+
         emit CollectionOfferPriceUpdated(_offerId, offers[_tokenContract][_offerId]);
     }
 
@@ -130,7 +131,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
 
         Offer memory offer = offers[_tokenContract][offerId];
 
-        (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.offerAmount, ETH, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.offerAmount, ETH, USE_ALL_GAS_FLAG);
         uint256 finderFee = remainingProfit / 100; // 1% finder's fee
 
         _handleOutgoingTransfer(_finder, finderFee, ETH, USE_ALL_GAS_FLAG);
