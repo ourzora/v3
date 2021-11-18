@@ -745,38 +745,6 @@ describe('CollectionOffersV1', () => {
       expect(collectionCeilingId.toString()).to.eq('4');
       expect(collectionCeilingAmount.toString()).to.eq(THREE_ETH.toString());
     });
-
-    it('should emit a CollectionOfferFilled event', async () => {
-      await collectionOffers
-        .connect(buyer)
-        .createCollectionOffer(zoraV1.address, {
-          value: ONE_ETH,
-        });
-
-      const block = await ethers.provider.getBlockNumber();
-
-      await collectionOffers.fillCollectionOffer(
-        zoraV1.address,
-        0,
-        ONE_ETH,
-        await finder.getAddress()
-      );
-
-      const events = await collectionOffers.queryFilter(
-        collectionOffers.filters.CollectionOfferFilled(null, null, null, null),
-        block
-      );
-      expect(events.length).to.eq(1);
-      const logDescription = collectionOffers.interface.parseLog(events[0]);
-      expect(logDescription.name).to.eq('CollectionOfferFilled');
-      expect(logDescription.args.id.toNumber()).to.eq(1);
-      expect(logDescription.args.offer.buyer).to.eq(await buyer.getAddress());
-      expect(logDescription.args.offer.amount.toString()).to.eq(
-        ONE_ETH.toString()
-      );
-      expect(logDescription.args.finder).to.eq(await finder.getAddress());
-      expect(logDescription.args.seller).to.eq(await deployer.getAddress());
-    });
   });
 
   describe('#_addOffer', () => {
