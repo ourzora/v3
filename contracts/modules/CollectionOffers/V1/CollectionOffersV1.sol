@@ -75,7 +75,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
     ) external payable nonReentrant {
         require(offers[_tokenContract][_offerId].active, "setCollectionOfferAmount must be active offer");
         require(msg.sender == offers[_tokenContract][_offerId].buyer, "setCollectionOfferAmount msg sender must be buyer");
-        uint256 prevOfferAmount = offers[_tokenContract][_offerId].offerAmount;
+        uint256 prevOfferAmount = offers[_tokenContract][_offerId].amount;
         require(
             (_newOfferAmount > 0) && (_newOfferAmount != prevOfferAmount),
             "setCollectionOfferAmount _newOfferAmount must be greater than 0 and not equal to previous offer"
@@ -83,6 +83,8 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
 
         if (_newOfferAmount > prevOfferAmount) {
             uint256 increaseAmount = _newOfferAmount - prevOfferAmount;
+
+            require(msg.value == increaseAmount, "setCollectionOfferAmount must send exact increase amount");
 
             _handleIncomingTransfer(increaseAmount, ETH);
             _updateOffer(_tokenContract, _offerId, _newOfferAmount, true);
@@ -103,7 +105,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         require(offers[_tokenContract][_offerId].active, "cancelCollectionOffer must be active offer");
         require(msg.sender == offers[_tokenContract][_offerId].buyer, "cancelCollectionOffer msg sender must be buyer");
 
-        _handleOutgoingTransfer(msg.sender, offers[_tokenContract][_offerId].offerAmount, ETH, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(msg.sender, offers[_tokenContract][_offerId].amount, ETH, USE_ALL_GAS_FLAG);
 
         emit CollectionOfferCanceled(_offerId, offers[_tokenContract][_offerId]);
 
@@ -131,7 +133,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
 
         Offer memory offer = offers[_tokenContract][offerId];
 
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.offerAmount, ETH, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, ETH, USE_ALL_GAS_FLAG);
         uint256 finderFee = remainingProfit / 100; // 1% finder's fee
 
         _handleOutgoingTransfer(_finder, finderFee, ETH, USE_ALL_GAS_FLAG);
@@ -143,7 +145,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.buyer, _tokenId);
 
         ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ETH, tokenId: 0, amount: offer.offerAmount});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ETH, tokenId: 0, amount: offer.amount});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
         emit CollectionOfferFilled(offerId, msg.sender, _finder, offer);
