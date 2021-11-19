@@ -12,8 +12,8 @@ import { deployTransferHelper } from './scripts/deployTransferHelper';
 import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
 import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
-import { deployRoyaltyRegistryV1 } from './scripts/deployRoyaltyRegistryV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
+import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
 
 const env = dotenv.config().parsed;
 
@@ -67,27 +67,32 @@ task('proposeModule', 'Propose a new module')
 task('deployAsksV1', 'Deploy Asks V1')
   .addParam(
     'royaltyRegistry',
-    'ZORA Collection Royalty Registry',
+    'Manifold Royalty Registry',
     undefined,
     types.string
   )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployAsksV1);
 
-task(
-  'deployCollectionRoyaltyRegistryV1',
-  'Deploy Collection Royalty Registry V1'
-).setAction(deployRoyaltyRegistryV1);
-
 task('deployOffersV1', 'Deploy Offers V1')
   .addParam(
     'royaltyRegistry',
-    'ZORA Collection Royalty Registry',
+    'Manifold Royalty Registry',
     undefined,
     types.string
   )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployOffersV1);
+
+task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
+  .addParam(
+    'royaltyRegistry',
+    'Manifold Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam('weth', 'WETH address', undefined, types.string)
+  .setAction(deployCollectionOffersV1);
 
 const config: HardhatUserConfig = {
   solidity: {
