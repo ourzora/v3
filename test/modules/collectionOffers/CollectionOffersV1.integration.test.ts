@@ -109,6 +109,10 @@ describe('CollectionOffersV1 integration', () => {
 
   describe('ZORA V1 Collection Offer', () => {
     beforeEach(async () => {
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [THOUSANDTH_ETH.mul(150)]
+      );
       await mintZoraNFT(zoraV1);
       await approveNFTTransfer(zoraV1, erc721TransferHelper.address);
     });
@@ -233,6 +237,10 @@ describe('CollectionOffersV1 integration', () => {
 
   describe('ERC-2981 Collection Offer', () => {
     beforeEach(async () => {
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [ONE_ETH.div(2)]
+      );
       await mintERC2981Token(testEIP2981ERC721, await deployer.getAddress());
       await approveNFTTransfer(
         // @ts-ignore
@@ -368,6 +376,10 @@ describe('CollectionOffersV1 integration', () => {
         testERC721,
         erc721TransferHelper.address,
         0
+      );
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [0]
       );
     });
 

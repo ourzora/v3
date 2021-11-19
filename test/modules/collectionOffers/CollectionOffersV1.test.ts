@@ -37,6 +37,8 @@ import {
   FIVE_ETH,
   NINE_ETH,
   TEN_ETH,
+  TEN_POINT_FIVE_ETH,
+  TWENTY_ETH,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -138,7 +140,7 @@ describe('CollectionOffersV1', () => {
       expect(ceilingOfferAmount.toString()).to.eq(ONE_ETH.toString());
     });
 
-    it('should create a second, ceiling offer for a NFT collection', async () => {
+    it('should create a ceiling offer for a NFT collection', async () => {
       await collectionOffers
         .connect(buyer)
         .createCollectionOffer(zoraV1.address, {
@@ -180,7 +182,7 @@ describe('CollectionOffersV1', () => {
       expect(ceilingOfferAmount.toString()).to.eq(TWO_ETH.toString());
     });
 
-    it('should create a third, floor offer for a NFT collection', async () => {
+    it('should create a floor offer for a NFT collection', async () => {
       await collectionOffers
         .connect(buyer)
         .createCollectionOffer(zoraV1.address, {
@@ -229,7 +231,7 @@ describe('CollectionOffersV1', () => {
       expect(offer3.nextId.toNumber()).to.eq(1);
     });
 
-    it('should create a fourth, middle offer for a NFT collection', async () => {
+    it('should create a middle offer for a NFT collection', async () => {
       await collectionOffers
         .connect(buyer)
         .createCollectionOffer(zoraV1.address, {
@@ -287,7 +289,7 @@ describe('CollectionOffersV1', () => {
       expect(offer4.nextId.toNumber()).to.eq(2);
     });
 
-    it('should create a fifth, equal middle offer for an NFT collection', async () => {
+    it('should create an equal middle offer for an NFT collection', async () => {
       await collectionOffers
         .connect(buyer)
         .createCollectionOffer(zoraV1.address, {
@@ -368,7 +370,6 @@ describe('CollectionOffersV1', () => {
   });
 
   describe('#setCollectionOfferAmount', () => {
-    // 3 -- 1 -- 5 -- 4 -- 2
     beforeEach(async () => {
       await collectionOffers
         .connect(buyer)
@@ -401,7 +402,7 @@ describe('CollectionOffersV1', () => {
         });
     });
 
-    it('should increase a collection floor offer', async () => {
+    it('should increase a floor offer to the middle', async () => {
       await collectionOffers
         .connect(buyer3)
         .setCollectionOfferAmount(zoraV1.address, 3, ONE_ETH, {
@@ -435,7 +436,188 @@ describe('CollectionOffersV1', () => {
       expect(offer5.nextId.toNumber()).to.eq(4);
     });
 
-    it('should increase a middle collection offer', async () => {
+    it('should increase a floor offer to the new ceiling', async () => {
+      const beforeCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const beforeCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const beforeCeiling = await collectionOffers.offers(zoraV1.address, 2);
+
+      expect(beforeCeilingId.toNumber()).to.eq(2);
+      expect(beforeCeilingAmount.toString()).to.eq(TEN_ETH.toString());
+      expect(beforeCeiling.prevId.toNumber()).to.eq(4);
+      expect(beforeCeiling.nextId.toNumber()).to.eq(0);
+
+      const beforeFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      const beforeFloorAmount = await collectionOffers.floorOfferAmount(
+        zoraV1.address
+      );
+      const beforeFloor = await collectionOffers.offers(zoraV1.address, 3);
+
+      expect(beforeFloorId.toNumber()).to.eq(3);
+      expect(beforeFloorAmount.toString()).to.eq(ONE_HALF_ETH.toString());
+      expect(beforeFloor.prevId.toNumber()).to.eq(0);
+      expect(beforeFloor.nextId.toNumber()).to.eq(1);
+
+      await collectionOffers
+        .connect(buyer3)
+        .setCollectionOfferAmount(zoraV1.address, 3, TEN_POINT_FIVE_ETH, {
+          value: TEN_ETH,
+        });
+
+      const afterCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const afterCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const afterCeiling = await collectionOffers.offers(zoraV1.address, 3);
+
+      expect(afterCeilingId.toNumber()).to.eq(3);
+      expect(afterCeilingAmount.toString()).to.eq(
+        TEN_POINT_FIVE_ETH.toString()
+      );
+      expect(afterCeiling.prevId.toNumber()).to.eq(2);
+      expect(afterCeiling.nextId.toNumber()).to.eq(0);
+
+      const afterFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      const afterFloorAmount = await collectionOffers.floorOfferAmount(
+        zoraV1.address
+      );
+      const afterFloor = await collectionOffers.offers(zoraV1.address, 1);
+
+      expect(afterFloorId.toNumber()).to.eq(1);
+      expect(afterFloorAmount.toString()).to.eq(ONE_ETH.toString());
+      expect(afterFloor.prevId.toNumber()).to.eq(0);
+      expect(afterFloor.nextId.toNumber()).to.eq(5);
+    });
+
+    it('should increase a ceiling offer', async () => {
+      const beforeCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const beforeCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const beforeCeiling = await collectionOffers.offers(zoraV1.address, 2);
+
+      expect(beforeCeilingId.toNumber()).to.eq(2);
+      expect(beforeCeilingAmount.toString()).to.eq(TEN_ETH.toString());
+      expect(beforeCeiling.prevId.toNumber()).to.eq(4);
+      expect(beforeCeiling.nextId.toNumber()).to.eq(0);
+
+      await collectionOffers
+        .connect(buyer2)
+        .setCollectionOfferAmount(zoraV1.address, 2, TEN_POINT_FIVE_ETH, {
+          value: ONE_HALF_ETH,
+        });
+
+      const afterCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const afterCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const afterCeiling = await collectionOffers.offers(zoraV1.address, 2);
+
+      expect(afterCeilingId.toNumber()).to.eq(2);
+      expect(afterCeilingAmount.toString()).to.eq(
+        TEN_POINT_FIVE_ETH.toString()
+      );
+      expect(afterCeiling.prevId.toNumber()).to.eq(4);
+      expect(afterCeiling.nextId.toNumber()).to.eq(0);
+    });
+
+    it('should decrease a ceiling offer to the new floor', async () => {
+      const beforeCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const beforeCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const beforeCeiling = await collectionOffers.offers(zoraV1.address, 2);
+
+      expect(beforeCeilingId.toNumber()).to.eq(2);
+      expect(beforeCeilingAmount.toString()).to.eq(TEN_ETH.toString());
+      expect(beforeCeiling.prevId.toNumber()).to.eq(4);
+      expect(beforeCeiling.nextId.toNumber()).to.eq(0);
+
+      const beforeFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      const beforeFloorAmount = await collectionOffers.floorOfferAmount(
+        zoraV1.address
+      );
+      const beforeFloor = await collectionOffers.offers(zoraV1.address, 3);
+
+      expect(beforeFloorId.toNumber()).to.eq(3);
+      expect(beforeFloorAmount.toString()).to.eq(ONE_HALF_ETH.toString());
+      expect(beforeFloor.prevId.toNumber()).to.eq(0);
+      expect(beforeFloor.nextId.toNumber()).to.eq(1);
+
+      await collectionOffers
+        .connect(buyer2)
+        .setCollectionOfferAmount(zoraV1.address, 2, TENTH_ETH);
+
+      const afterCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const afterCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const afterCeiling = await collectionOffers.offers(zoraV1.address, 4);
+
+      expect(afterCeilingId.toNumber()).to.eq(4);
+      expect(afterCeilingAmount.toString()).to.eq(THREE_ETH.toString());
+      expect(afterCeiling.prevId.toNumber()).to.eq(5);
+      expect(afterCeiling.nextId.toNumber()).to.eq(0);
+
+      const afterFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      const afterFloorAmount = await collectionOffers.floorOfferAmount(
+        zoraV1.address
+      );
+      const afterFloor = await collectionOffers.offers(zoraV1.address, 2);
+
+      expect(afterFloorId.toNumber()).to.eq(2);
+      expect(afterFloorAmount.toString()).to.eq(TENTH_ETH.toString());
+      expect(afterFloor.prevId.toNumber()).to.eq(0);
+      expect(afterFloor.nextId.toNumber()).to.eq(3);
+    });
+
+    it('should decrease a ceiling offer to the middle', async () => {
+      // 3 -- 1 -- 5 -- 4 -- 2
+      await collectionOffers
+        .connect(buyer2)
+        .setCollectionOfferAmount(zoraV1.address, 2, TWO_ETH);
+      // 3 -- 1 -- 2 -- 5 -- 4
+      const offer1 = await collectionOffers.offers(zoraV1.address, 1);
+      const offer2 = await collectionOffers.offers(zoraV1.address, 2);
+      const offer3 = await collectionOffers.offers(zoraV1.address, 3);
+      const offer4 = await collectionOffers.offers(zoraV1.address, 4);
+      const offer5 = await collectionOffers.offers(zoraV1.address, 5);
+
+      expect(offer3.amount.toString()).to.eq(ONE_HALF_ETH.toString());
+      expect(offer3.prevId.toNumber()).to.eq(0);
+      expect(offer3.nextId.toNumber()).to.eq(1);
+
+      expect(offer1.amount.toString()).to.eq(ONE_ETH.toString());
+      expect(offer1.prevId.toNumber()).to.eq(3);
+      expect(offer1.nextId.toNumber()).to.eq(2);
+
+      expect(offer2.amount.toString()).to.eq(TWO_ETH.toString());
+      expect(offer2.prevId.toNumber()).to.eq(1);
+      expect(offer2.nextId.toNumber()).to.eq(5);
+
+      expect(offer5.amount.toString()).to.eq(THREE_ETH.toString());
+      expect(offer5.prevId.toNumber()).to.eq(2);
+      expect(offer5.nextId.toNumber()).to.eq(4);
+
+      expect(offer4.amount.toString()).to.eq(THREE_ETH.toString());
+      expect(offer4.prevId.toNumber()).to.eq(5);
+      expect(offer4.nextId.toNumber()).to.eq(0);
+    });
+
+    it('should increase a middle offer to the new ceiling', async () => {
       await collectionOffers
         .connect(buyer5)
         .setCollectionOfferAmount(zoraV1.address, 5, FIVE_ETH, {
@@ -469,7 +651,63 @@ describe('CollectionOffersV1', () => {
       expect(offer5.nextId.toNumber()).to.eq(2);
     });
 
-    it('should increase a collection offer and move it behind any equal offers', async () => {
+    it('should decrease a middle offer to the new floor', async () => {
+      const beforeCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const beforeCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const beforeCeiling = await collectionOffers.offers(zoraV1.address, 2);
+
+      expect(beforeCeilingId.toNumber()).to.eq(2);
+      expect(beforeCeilingAmount.toString()).to.eq(TEN_ETH.toString());
+      expect(beforeCeiling.prevId.toNumber()).to.eq(4);
+      expect(beforeCeiling.nextId.toNumber()).to.eq(0);
+
+      // const beforeFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      // const beforeFloorAmount = await collectionOffers.floorOfferAmount(
+      //   zoraV1.address
+      // );
+      // const beforeFloor = await collectionOffers.offers(zoraV1.address, 3);
+
+      // expect(beforeFloorId.toNumber()).to.eq(3);
+      // expect(beforeFloorAmount.toString()).to.eq(ONE_HALF_ETH.toString());
+      // expect(beforeFloor.prevId.toNumber()).to.eq(0);
+      // expect(beforeFloor.nextId.toNumber()).to.eq(1);
+
+      // 3 1 5 4 2
+
+      await collectionOffers
+        .connect(buyer5)
+        .setCollectionOfferAmount(zoraV1.address, 5, TENTH_ETH);
+
+      const afterCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const afterCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+      const afterCeiling = await collectionOffers.offers(zoraV1.address, 2);
+
+      expect(afterCeilingId.toNumber()).to.eq(2);
+      expect(afterCeilingAmount.toString()).to.eq(TEN_ETH.toString());
+      expect(afterCeiling.prevId.toNumber()).to.eq(4);
+      expect(afterCeiling.nextId.toNumber()).to.eq(0);
+
+      // const afterFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      // const afterFloorAmount = await collectionOffers.floorOfferAmount(
+      //   zoraV1.address
+      // );
+      // const afterFloor = await collectionOffers.offers(zoraV1.address, 5);
+
+      // expect(afterFloorId.toNumber()).to.eq(5);
+      // expect(afterFloorAmount.toString()).to.eq(TENTH_ETH.toString());
+      // expect(afterFloor.prevId.toNumber()).to.eq(0);
+      // expect(afterFloor.nextId.toNumber()).to.eq(3);
+    });
+
+    it('should move an increased offer behind any equal offers', async () => {
       // 3 -- 1 -- 5 -- 4 -- 2
       await collectionOffers
         .connect(buyer)
@@ -505,7 +743,7 @@ describe('CollectionOffersV1', () => {
       expect(offer2.nextId.toNumber()).to.eq(0);
     });
 
-    it('should decrease a collection offer and move it behind any equal offers', async () => {
+    it('should move a decreased offer behind any equal offers', async () => {
       // 3 -- 1 -- 5 -- 4 -- 2
       await collectionOffers
         .connect(buyer2)
@@ -539,37 +777,40 @@ describe('CollectionOffersV1', () => {
       expect(offer4.nextId.toNumber()).to.eq(0);
     });
 
-    it('should decrease a collection offer', async () => {
-      // 3 -- 1 -- 5 -- 4 -- 2
+    it('should update an offer in place', async () => {
+      const beforeOffer = await collectionOffers.offers(zoraV1.address, 4);
+      expect(beforeOffer.nextId.toNumber()).to.eq(2);
+      expect(beforeOffer.prevId.toNumber()).to.eq(5);
+
       await collectionOffers
-        .connect(buyer2)
-        .setCollectionOfferAmount(zoraV1.address, 2, TWO_ETH);
-      // 3 -- 1 -- 2 -- 5 -- 4
-      const offer1 = await collectionOffers.offers(zoraV1.address, 1);
-      const offer2 = await collectionOffers.offers(zoraV1.address, 2);
-      const offer3 = await collectionOffers.offers(zoraV1.address, 3);
-      const offer4 = await collectionOffers.offers(zoraV1.address, 4);
-      const offer5 = await collectionOffers.offers(zoraV1.address, 5);
+        .connect(buyer4)
+        .setCollectionOfferAmount(zoraV1.address, 4, FIVE_ETH, {
+          value: TWO_ETH,
+        });
 
-      expect(offer3.amount.toString()).to.eq(ONE_HALF_ETH.toString());
-      expect(offer3.prevId.toNumber()).to.eq(0);
-      expect(offer3.nextId.toNumber()).to.eq(1);
+      const afterOffer = await collectionOffers.offers(zoraV1.address, 4);
+      expect(afterOffer.nextId.toNumber()).to.eq(2);
+      expect(afterOffer.prevId.toNumber()).to.eq(5);
+    });
 
-      expect(offer1.amount.toString()).to.eq(ONE_ETH.toString());
-      expect(offer1.prevId.toNumber()).to.eq(3);
-      expect(offer1.nextId.toNumber()).to.eq(2);
+    it('should revert when msg sender is not buyer', async () => {
+      await expect(
+        collectionOffers
+          .connect(buyer2)
+          .setCollectionOfferAmount(zoraV1.address, 1, ONE_HALF_ETH)
+      ).rejectedWith('setCollectionOfferAmount msg sender must be buyer');
+    });
 
-      expect(offer2.amount.toString()).to.eq(TWO_ETH.toString());
-      expect(offer2.prevId.toNumber()).to.eq(1);
-      expect(offer2.nextId.toNumber()).to.eq(5);
+    it('should revert an inactive offer', async () => {
+      await collectionOffers
+        .connect(buyer3)
+        .cancelCollectionOffer(zoraV1.address, 3);
 
-      expect(offer5.amount.toString()).to.eq(THREE_ETH.toString());
-      expect(offer5.prevId.toNumber()).to.eq(2);
-      expect(offer5.nextId.toNumber()).to.eq(4);
-
-      expect(offer4.amount.toString()).to.eq(THREE_ETH.toString());
-      expect(offer4.prevId.toNumber()).to.eq(5);
-      expect(offer4.nextId.toNumber()).to.eq(0);
+      await expect(
+        collectionOffers
+          .connect(buyer2)
+          .setCollectionOfferAmount(zoraV1.address, 3, ONE_HALF_ETH)
+      ).rejectedWith('setCollectionOfferAmount must be active offer');
     });
 
     it('should emit a CollectionOfferPriceUpdated event', async () => {
@@ -664,6 +905,14 @@ describe('CollectionOffersV1', () => {
       );
     });
 
+    it('should revert canceling when buyer is not msg sender', async () => {
+      await expect(
+        collectionOffers
+          .connect(buyer2)
+          .cancelCollectionOffer(zoraV1.address, 1)
+      ).rejectedWith('cancelCollectionOffer msg sender must be buyer');
+    });
+
     it('should emit a CollectionOfferCanceled event', async () => {
       await collectionOffers
         .connect(buyer)
@@ -693,57 +942,212 @@ describe('CollectionOffersV1', () => {
   });
 
   describe('#fillCollectionOffer', () => {
-    beforeEach(async () => {
+    it('should fill a ceiling offer', async () => {
+      await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
+        [await deployer.getAddress()],
+        [ONE_ETH.div(2)]
+      );
+
+      const buyerBeforeBalance = await buyer.getBalance();
+      const sellerBeforeBalance = await deployer.getBalance();
+      const finderBeforeBalance = await finder.getBalance();
+
       await collectionOffers
         .connect(buyer)
         .createCollectionOffer(zoraV1.address, {
           value: ONE_ETH,
         });
 
+      await collectionOffers.fillCollectionOffer(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        await finder.getAddress()
+      );
+
+      const buyerAfterBalance = await buyer.getBalance();
+      const sellerAfterBalance = await deployer.getBalance();
+      const finderAfterBalance = await finder.getBalance();
+
+      expect(toRoundedNumber(buyerAfterBalance)).to.approximately(
+        toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
+        5
+      );
+
+      // 0.5ETH creator fee + 0.495ETH (offer - 1% finders fee)
+      expect(toRoundedNumber(sellerAfterBalance)).to.approximately(
+        toRoundedNumber(
+          sellerBeforeBalance.add(ethers.utils.parseEther('0.995'))
+        ),
+        5
+      );
+
+      // 0.5ETH creator fee + 1 ETH bid * 1% finder fee -> .005 ETH profit
+      expect(toRoundedNumber(finderAfterBalance)).to.eq(
+        toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(5)))
+      );
+
+      expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
+    });
+
+    it('should revert a sellers minimum too high', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
       await collectionOffers
         .connect(buyer2)
         .createCollectionOffer(zoraV1.address, {
           value: TEN_ETH,
         });
-
       await collectionOffers
         .connect(buyer3)
         .createCollectionOffer(zoraV1.address, {
           value: ONE_HALF_ETH,
         });
-
       await collectionOffers
         .connect(buyer4)
         .createCollectionOffer(zoraV1.address, {
           value: THREE_ETH,
         });
-
       await collectionOffers
         .connect(buyer5)
         .createCollectionOffer(zoraV1.address, {
           value: THREE_ETH,
         });
+      await expect(
+        collectionOffers.fillCollectionOffer(
+          zoraV1.address,
+          0,
+          TWENTY_ETH,
+          await finder.getAddress()
+        )
+      ).rejectedWith(
+        'fillCollectionOffer offer satisfying specified _minAmount not found'
+      );
     });
-    it('should fill a collection ceiling offer', async () => {
+
+    it('should revert if seller is not token holder', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
+
+      await expect(
+        collectionOffers
+          .connect(buyer5)
+          .fillCollectionOffer(
+            zoraV1.address,
+            0,
+            ONE_ETH,
+            await finder.getAddress()
+          )
+      ).rejectedWith('fillCollectionOffer msg sender must own specified token');
+    });
+
+    it('should emit a CollectionOfferFilled event', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
+      await collectionOffers
+        .connect(buyer2)
+        .createCollectionOffer(zoraV1.address, {
+          value: TEN_ETH,
+        });
+      await collectionOffers
+        .connect(buyer3)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_HALF_ETH,
+        });
+      await collectionOffers
+        .connect(buyer4)
+        .createCollectionOffer(zoraV1.address, {
+          value: THREE_ETH,
+        });
+      await collectionOffers
+        .connect(buyer5)
+        .createCollectionOffer(zoraV1.address, {
+          value: THREE_ETH,
+        });
+      const block = await ethers.provider.getBlockNumber();
+
       await collectionOffers.fillCollectionOffer(
         zoraV1.address,
         0,
-        THREE_ETH, // seller specifies 3 ETH minimum amount willing to accept
+        ONE_ETH,
         await finder.getAddress()
       );
 
-      // Offer book fills 10 ETH offer
-      expect(await zoraV1.ownerOf(0)).to.eq(await buyer2.getAddress());
-
-      const collectionCeilingId = await collectionOffers.ceilingOfferId(
-        zoraV1.address
+      const events = await collectionOffers.queryFilter(
+        collectionOffers.filters.CollectionOfferFilled(null, null, null, null),
+        block
       );
-      const collectionCeilingAmount = await collectionOffers.ceilingOfferAmount(
-        zoraV1.address
+      expect(events.length).to.eq(1);
+      const logDescription = collectionOffers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('CollectionOfferFilled');
+
+      expect(logDescription.args.id.toNumber()).to.eq(2);
+
+      expect(logDescription.args.offer.buyer).to.eq(await buyer2.getAddress());
+      expect(logDescription.args.offer.amount.toString()).to.eq(
+        TEN_ETH.toString()
+      );
+    });
+
+    it('should emit an ExchangeExecuted event', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
+      await collectionOffers
+        .connect(buyer2)
+        .createCollectionOffer(zoraV1.address, {
+          value: TEN_ETH,
+        });
+      await collectionOffers
+        .connect(buyer3)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_HALF_ETH,
+        });
+      await collectionOffers
+        .connect(buyer4)
+        .createCollectionOffer(zoraV1.address, {
+          value: THREE_ETH,
+        });
+      await collectionOffers
+        .connect(buyer5)
+        .createCollectionOffer(zoraV1.address, {
+          value: THREE_ETH,
+        });
+      const block = await ethers.provider.getBlockNumber();
+
+      await collectionOffers.fillCollectionOffer(
+        zoraV1.address,
+        0,
+        ONE_ETH,
+        await finder.getAddress()
       );
 
-      expect(collectionCeilingId.toString()).to.eq('4');
-      expect(collectionCeilingAmount.toString()).to.eq(THREE_ETH.toString());
+      const events = await collectionOffers.queryFilter(
+        collectionOffers.filters.ExchangeExecuted(null, null, null, null),
+        block
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = collectionOffers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('ExchangeExecuted');
+      expect(logDescription.args.userA).to.eq(await deployer.getAddress());
+      expect(logDescription.args.userB).to.eq(await buyer2.getAddress());
+
+      expect(logDescription.args.a.tokenContract).to.eq(zoraV1.address);
+      expect(logDescription.args.a.tokenId.toNumber()).to.eq(0);
+      expect(logDescription.args.b.tokenContract.toString()).to.eq(
+        ethers.constants.AddressZero.toString()
+      );
     });
   });
 
@@ -1366,6 +1770,31 @@ describe('CollectionOffersV1', () => {
 
       expect(afterCeilingId.toNumber()).to.eq(3);
       expect(afterCeilingAmount.toString()).to.eq(THREE_ETH.toString());
+    });
+
+    it('should remove a filled collection offer', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: THREE_ETH,
+        });
+
+      await collectionOffers.fillCollectionOffer(
+        zoraV1.address,
+        0,
+        THREE_ETH,
+        await finder.getAddress()
+      );
+
+      const updatedCeilingId = await collectionOffers.ceilingOfferId(
+        zoraV1.address
+      );
+      const updatedCeilingAmount = await collectionOffers.ceilingOfferAmount(
+        zoraV1.address
+      );
+
+      expect(updatedCeilingId.toString()).to.eq('0');
+      expect(updatedCeilingAmount.toString()).to.eq('0');
     });
   });
 });

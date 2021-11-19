@@ -42,6 +42,8 @@ export const THREE_ETH = ethers.utils.parseEther('3');
 export const FIVE_ETH = ethers.utils.parseEther('5');
 export const NINE_ETH = ethers.utils.parseEther('9');
 export const TEN_ETH = ethers.utils.parseEther('10');
+export const TEN_POINT_FIVE_ETH = ethers.utils.parseEther('10.5');
+export const TWENTY_ETH = ethers.utils.parseEther('20');
 export const TENTH_ETH = ethers.utils.parseEther('0.1');
 export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 
