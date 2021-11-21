@@ -164,13 +164,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenId), "fillNFTOffer must own token associated with offer");
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, bool success) = _handleRoyaltyPayout(
-            offer.tokenContract,
-            offer.tokenId,
-            offer.offerAmount,
-            offer.offerCurrency,
-            USE_ALL_GAS_FLAG
-        );
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.offerAmount, offer.offerCurrency, USE_ALL_GAS_FLAG);
         uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
 
         _handleOutgoingTransfer(_finder, finderFee, offer.offerCurrency, USE_ALL_GAS_FLAG);
