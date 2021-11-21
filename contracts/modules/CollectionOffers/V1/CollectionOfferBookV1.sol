@@ -184,7 +184,7 @@ contract CollectionOfferBookV1 {
             // Update previous neighbors
             _connectPreviousNeighbors(_collection, _offerId, offer.prevId, offer.nextId);
 
-            if (_increase == true) {
+            if (_increase) {
                 // Traverse forward until the apt location is found
                 _insertIncreasedOffer(offer, _collection, _offerId, _newAmount);
             } else {
