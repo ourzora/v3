@@ -249,23 +249,9 @@ contract CollectionOfferBookV1 {
         if (ceilingOfferAmount[_collection] >= _minAmount) {
             return (true, ceilingOfferId[_collection]);
 
-            // Else traverse backwards from ceiling to floor
+            // Else notify the seller there is no matching offer fitting their specified minimum
         } else {
-            Offer memory offer = offers[_collection][ceilingOfferId[_collection]];
-
-            bool matchFound;
-            while ((offer.amount >= _minAmount) && (offer.prevId != 0)) {
-                offer = offers[_collection][offer.prevId];
-
-                // If the offer is valid to fill, return its id
-                if (offer.amount >= _minAmount) {
-                    matchFound = true;
-                    break;
-                }
-                // If not, notify the seller there is no matching offer fitting their specified minimum
-            }
-
-            return (matchFound, offer.id);
+            return (false, 0);
         }
     }
 
