@@ -244,14 +244,13 @@ contract CollectionOfferBookV1 {
     /// @notice Finds a collection offer to fill
     /// @param _collection The ERC-721 collection
     /// @param _minAmount The minimum offer amount valid to match
-    function _getMatchingOffer(address _collection, uint256 _minAmount) internal view returns (bool, uint256) {
-        // If the current ceiling offer is greater than or equal to the seller's minimum, return its id to fill
+    function _getMatchingOffer(address _collection, uint256 _minAmount) internal view returns (uint256) {
+        // If current ceiling offer is greater than or equal to seller's minimum, return its id to fill
         if (ceilingOfferAmount[_collection] >= _minAmount) {
-            return (true, ceilingOfferId[_collection]);
-
-            // Else notify the seller there is no matching offer fitting their specified minimum
+            return ceilingOfferId[_collection];
+            // Else notify seller that no offer fitting their specified minimum exists
         } else {
-            return (false, 0);
+            return 0;
         }
     }
 
