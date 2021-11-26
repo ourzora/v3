@@ -4,14 +4,16 @@ import assert from 'assert';
 
 export interface Args {
   zoraV1Media: string;
+  zoraV1Market: string;
   royaltyRegistry: string;
   weth: string;
 }
 
 export async function deployReserveAuctionV1(
-  { zoraV1Media, royaltyRegistry, weth }: Args,
+  { zoraV1Media, zoraV1Market, royaltyRegistry, weth }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
+  // @ts-ignore
   const [deployer] = await hre.ethers.getSigners();
   const { chainId } = await deployer.provider.getNetwork();
 
@@ -30,6 +32,7 @@ export async function deployReserveAuctionV1(
   console.log(
     `Deploying ReserveAuctionV1 from address ${await deployer.getAddress()}`
   );
+  // @ts-ignore
   const ReserveAuctionFactory = await hre.ethers.getContractFactory(
     'ReserveAuctionV1'
   );
@@ -37,6 +40,7 @@ export async function deployReserveAuctionV1(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
     zoraV1Media,
+    zoraV1Market,
     royaltyRegistry,
     weth
   );
