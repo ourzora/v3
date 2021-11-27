@@ -254,11 +254,12 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param _auctionId The ID of  the auction
     function settleAuction(uint256 _auctionId) external nonReentrant {
         Auction storage auction = auctions[_auctionId];
-        Fees storage auctionFees = fees[_auctionId];
 
         require(auctionExists[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
         require(auction.firstBidTime != 0, "settleAuction auction hasn't begun");
         require(block.timestamp >= auction.firstBidTime.add(auction.duration), "settleAuction auction hasn't completed");
+
+        Fees storage auctionFees = fees[_auctionId];
 
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(auction.tokenContract, auction.tokenId, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
         uint256 listingFeeRecipientProfit = remainingProfit.mul(auctionFees.listingFeePercentage).div(100);
@@ -272,7 +273,6 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         _handleOutgoingTransfer(auction.fundsRecipient, remainingProfit, auction.auctionCurrency, USE_ALL_GAS_FLAG);
 
         IERC721(auction.tokenContract).transferFrom(address(this), auction.bidder, auction.tokenId);
-        // erc721TransferHelper.transferFrom(auction.tokenContract, auction.tokenOwner, auction.bidder, auction.tokenId);
 
         UniversalExchangeEventV1.ExchangeDetails memory userAExchangeDetails = UniversalExchangeEventV1.ExchangeDetails({
             tokenContract: auction.tokenContract,
@@ -305,7 +305,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         // If the auction creator has already transferred the token elsewhere, let anyone cancel the auction, since it is no longer valid.
         // Otherwise, only allow the token owner to cancel the auction
         require(
-            msg.sender == auction.tokenOwner || auction.tokenOwner != IERC721(auction.tokenContract).ownerOf(auction.tokenId),
+            (msg.sender == auction.tokenOwner) || (auction.tokenOwner != IERC721(auction.tokenContract).ownerOf(auction.tokenId)),
             "cancelAuction must be auction creator or invalid auction"
         );
 
