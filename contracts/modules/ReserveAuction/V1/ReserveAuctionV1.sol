@@ -34,24 +34,28 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint256 constant timeBuffer = 15 * 60; // 15 minutes
 
-    /// @notice A mapping of NFTs to their respective auction ID
-    /// @dev NFT address => NFT ID => auction ID
-    mapping(address => mapping(uint256 => uint256)) public nftToAuctionId;
-    /// @notice A mapping of NFTs to whether an auction exists
-    /// @dev NFT address => NFT ID => auction exists
-    mapping(address => mapping(uint256 => bool)) public auctionExists;
-
     /// @notice A mapping of IDs to their respective auction
     mapping(uint256 => Auction) public auctions;
     /// @notice A mapping of IDs to their respective auction fees
     mapping(uint256 => Fees) public fees;
 
+    /// @notice A mapping of NFTs to their respective auction ID
+    /// @dev NFT address => NFT ID => auction ID
+    mapping(address => mapping(uint256 => uint256)) public auctionForNFT;
+
     /// @notice The number of total auctions
-    Counters.Counter public auctionIdTracker;
+    Counters.Counter public auctionCounter;
+
+    enum Access {
+        Invalid,
+        Owner,
+        OperatorAll,
+        OperatorToken
+    }
 
     struct Auction {
         address tokenContract; // Address for the ERC721 contract
-        address tokenOwner; // The address that should receive the funds once the NFT is sold.
+        address seller; // The address that should receive the funds once the NFT is sold.
         address auctionCurrency; // The address of the ERC-20 currency (0x0 for ETH) to run the auction with.
         address payable fundsRecipient; // The address of the recipient of the auction's highest bid
         address payable bidder; // The address of the current highest bid
@@ -60,6 +64,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         uint256 duration; // The length of time to run the auction for, after the first bid was made
         uint256 firstBidTime; // The time of the first bid
         uint256 reservePrice; // The minimum price of the first bid
+        Access access;
     }
 
     struct Fees {
@@ -122,19 +127,18 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         uint8 _findersFeePercentage,
         address _auctionCurrency
     ) public nonReentrant returns (uint256) {
-        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
+        Access _access = _getUserAccess(msg.sender, _tokenContract, _tokenId);
+        require(_access != Access.Invalid, "createAuction must be token owner or approved operator");
+
+        if (auctionForNFT[_tokenContract][_tokenId] != 0) {
+            cancelAuction(auctionForNFT[_tokenContract][_tokenId]);
+        }
+
         require((_listingFeePercentage + _findersFeePercentage) < 100, "createAuction listingFeePercentage plus findersFeePercentage must be less than 100");
         require(_fundsRecipient != ADDRESS_ZERO, "createAuction fundsRecipient cannot be 0 address");
-        require(
-            tokenOwner == msg.sender ||
-                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
-                IERC721(_tokenContract).getApproved(_tokenId) == msg.sender,
-            "createAuction caller must be approved or owner for token id"
-        );
-        require(auctionExists[_tokenContract][_tokenId] == false, "createAuction auction exists; use cancelAuction to cancel");
 
-        auctionIdTracker.increment();
-        uint256 auctionId = auctionIdTracker.current();
+        auctionCounter.increment();
+        uint256 auctionId = auctionCounter.current();
 
         auctions[auctionId] = Auction({
             tokenId: _tokenId,
@@ -143,10 +147,11 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             duration: _duration,
             firstBidTime: 0,
             reservePrice: _reservePrice,
-            tokenOwner: tokenOwner,
+            seller: msg.sender,
             bidder: payable(ADDRESS_ZERO),
             fundsRecipient: _fundsRecipient,
-            auctionCurrency: _auctionCurrency
+            auctionCurrency: _auctionCurrency,
+            access: _access
         });
 
         fees[auctionId] = Fees({
@@ -156,8 +161,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             findersFeePercentage: _findersFeePercentage
         });
 
-        nftToAuctionId[_tokenContract][_tokenId] = auctionId;
-        auctionExists[_tokenContract][_tokenId] = true;
+        auctionForNFT[_tokenContract][_tokenId] = auctionId;
 
         emit AuctionCreated(auctionId, auctions[auctionId], fees[auctionId]);
 
@@ -170,8 +174,8 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     function setAuctionReservePrice(uint256 _auctionId, uint256 _reservePrice) external {
         Auction storage auction = auctions[_auctionId];
 
-        require(auctionExists[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
-        require(msg.sender == auction.tokenOwner, "setAuctionReservePrice must be token owner");
+        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
+        require(msg.sender == auction.seller, "setAuctionReservePrice must be token owner");
         require(auction.firstBidTime == 0, "setAuctionReservePrice auction has already started");
 
         auction.reservePrice = _reservePrice;
@@ -191,7 +195,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         Auction storage auction = auctions[_auctionId];
         address payable lastBidder = auction.bidder;
 
-        require(auctionExists[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
+        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
         require(auction.firstBidTime == 0 || block.timestamp < (auction.firstBidTime + auction.duration), "createBid auction expired");
         require(_amount >= auction.reservePrice, "createBid must send at least reservePrice");
         require(
@@ -210,7 +214,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         if (auction.firstBidTime == 0) {
             auction.firstBidTime = block.timestamp;
 
-            erc721TransferHelper.transferFrom(auction.tokenContract, auction.tokenOwner, address(this), auction.tokenId);
+            erc721TransferHelper.transferFrom(auction.tokenContract, auction.seller, address(this), auction.tokenId);
         } else if (lastBidder != ADDRESS_ZERO) {
             _handleOutgoingTransfer(lastBidder, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
         }
@@ -255,7 +259,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     function settleAuction(uint256 _auctionId) external nonReentrant {
         Auction storage auction = auctions[_auctionId];
 
-        require(auctionExists[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
+        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
         require(auction.firstBidTime != 0, "settleAuction auction hasn't begun");
         require(block.timestamp >= auction.firstBidTime.add(auction.duration), "settleAuction auction hasn't completed");
 
@@ -286,10 +290,10 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             amount: auction.amount
         });
 
-        emit ExchangeExecuted(auction.tokenOwner, auction.bidder, userAExchangeDetails, userBExchangeDetails);
+        emit ExchangeExecuted(auction.seller, auction.bidder, userAExchangeDetails, userBExchangeDetails);
         emit AuctionEnded(_auctionId, auction.bidder, auctionFees.finder, auction, auctionFees);
 
-        delete auctionExists[auction.tokenContract][auction.tokenId];
+        delete auctionForNFT[auction.tokenContract][auction.tokenId];
         delete auctions[_auctionId];
         delete fees[_auctionId];
     }
@@ -299,20 +303,66 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     function cancelAuction(uint256 _auctionId) public nonReentrant {
         Auction storage auction = auctions[_auctionId];
 
-        require(auctionExists[auction.tokenContract][auction.tokenId], "cancelAuction auction doesn't exist");
+        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "cancelAuction auction doesn't exist");
         require(auction.firstBidTime == 0, "cancelAuction auction already started");
 
         // If the auction creator has already transferred the token elsewhere, let anyone cancel the auction, since it is no longer valid.
         // Otherwise, only allow the token owner to cancel the auction
         require(
-            (msg.sender == auction.tokenOwner) || (auction.tokenOwner != IERC721(auction.tokenContract).ownerOf(auction.tokenId)),
+            msg.sender == auction.seller || _isInvalidAuction(auction.seller, auction.access, auction.tokenContract, auction.tokenId),
             "cancelAuction must be auction creator or invalid auction"
         );
 
         emit AuctionCanceled(_auctionId, auction, fees[_auctionId]);
 
-        delete auctionExists[auction.tokenContract][auction.tokenId];
+        delete auctionForNFT[auction.tokenContract][auction.tokenId];
         delete auctions[_auctionId];
         delete fees[_auctionId];
+    }
+
+    /// @notice Gets a user's access control on an NFT
+    /// @param _user The address of the user
+    /// @param _tokenContract The address of the ERC-721 token contract for the token to be sold
+    /// @param _tokenId The ERC-721 token ID for the token to be sold
+    function _getUserAccess(
+        address _user,
+        address _tokenContract,
+        uint256 _tokenId
+    ) private view returns (Access) {
+        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
+
+        if (_user == tokenOwner) {
+            return Access.Owner;
+        } else if (IERC721(_tokenContract).isApprovedForAll(tokenOwner, _user)) {
+            return Access.OperatorAll;
+        } else if (_user == IERC721(_tokenContract).getApproved(_tokenId)) {
+            return Access.OperatorToken;
+        } else {
+            return Access.Invalid;
+        }
+    }
+
+    /// @notice Checks whether a previously valid auction is now invalid
+    /// @param _prevSeller The address of the seller on the active auction
+    /// @param _prevAccess The access control of the seller on the active auction
+    /// @param _tokenContract The address of the ERC-721 token contract for the token to be auctioned
+    /// @param _tokenId The ERC-721 token ID for the token to be auctioned
+    function _isInvalidAuction(
+        address _prevSeller,
+        Access _prevAccess,
+        address _tokenContract,
+        uint256 _tokenId
+    ) private view returns (bool) {
+        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
+
+        if (
+            ((_prevAccess == Access.Owner) && (_prevSeller != tokenOwner)) ||
+            ((_prevAccess == Access.OperatorAll) && (!IERC721(_tokenContract).isApprovedForAll(tokenOwner, _prevSeller))) ||
+            ((_prevAccess == Access.OperatorToken) && (_prevSeller != IERC721(_tokenContract).getApproved(_tokenId)))
+        ) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
