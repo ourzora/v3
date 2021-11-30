@@ -128,8 +128,8 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         require(_finder != address(0), "fillCollectionOffer _finder must not be 0 address");
         require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "fillCollectionOffer msg sender must own specified token");
 
-        (bool matchFound, uint256 offerId) = _getMatchingOffer(_tokenContract, _minAmount);
-        require(matchFound, "fillCollectionOffer offer satisfying specified _minAmount not found");
+        uint256 offerId = _getMatchingOffer(_tokenContract, _minAmount);
+        require(offerId > 0, "fillCollectionOffer offer satisfying specified _minAmount not found");
 
         Offer memory offer = offers[_tokenContract][offerId];
 
