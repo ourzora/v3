@@ -41,14 +41,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 askPrice;
         uint8 listingFeePercentage;
         uint8 findersFeePercentage;
-        Access access;
-    }
-
-    enum Access {
-        Invalid,
-        Owner,
-        OperatorAll,
-        OperatorToken
     }
 
     event AskCreated(uint256 indexed id, Ask ask);
@@ -92,12 +84,16 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint8 _listingFeePercentage,
         uint8 _findersFeePercentage
     ) external nonReentrant returns (uint256) {
-        Access _access = _getUserAccess(msg.sender, _tokenContract, _tokenId);
+        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
+        bool isOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
+        bool isApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == msg.sender;
 
-        require(_access != Access.Invalid, "createAsk must be token owner or approved operator");
+        require((msg.sender == tokenOwner) || isOperatorForTokenOwner || isApprovedForToken, "createAsk must be token owner or approved operator");
+
         if (askForNFT[_tokenContract][_tokenId] != 0) {
             cancelAsk(askForNFT[_tokenContract][_tokenId]);
         }
+
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
         require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
 
@@ -114,8 +110,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             tokenId: _tokenId,
             askPrice: _askPrice,
             listingFeePercentage: _listingFeePercentage,
-            findersFeePercentage: _findersFeePercentage,
-            access: _access
+            findersFeePercentage: _findersFeePercentage
         });
 
         askForNFT[_tokenContract][_tokenId] = askId;
@@ -151,7 +146,13 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         Ask storage ask = asks[_askId];
 
         require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "cancelAsk must be active ask");
-        require(msg.sender == ask.seller || _isInvalidAsk(ask.seller, ask.access, ask.tokenContract, ask.tokenId), "cancelAsk must be seller or invalid ask");
+
+        address tokenOwner = IERC721(ask.tokenContract).ownerOf(ask.tokenId);
+        bool isTokenOwner = tokenOwner == msg.sender;
+        bool isOperatorForTokenOwner = IERC721(ask.tokenContract).isApprovedForAll(tokenOwner, msg.sender);
+        bool isApprovedForToken = IERC721(ask.tokenContract).getApproved(ask.tokenId) == msg.sender;
+
+        require((msg.sender == ask.seller) || isTokenOwner || isOperatorForTokenOwner || isApprovedForToken, "cancelAsk must be seller or invalid ask");
 
         emit AskCanceled(_askId, ask);
 
@@ -193,51 +194,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         emit AskFilled(_askId, msg.sender, _finder, ask);
 
         delete askForNFT[ask.tokenContract][ask.tokenId];
-    }
-
-    /// @notice Gets a user's access control on an NFT
-    /// @param _user The address of the user
-    /// @param _tokenContract The address of the ERC-721 token contract for the token to be sold
-    /// @param _tokenId The ERC-721 token ID for the token to be sold
-    function _getUserAccess(
-        address _user,
-        address _tokenContract,
-        uint256 _tokenId
-    ) private view returns (Access) {
-        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-
-        if (_user == tokenOwner) {
-            return Access.Owner;
-        } else if (IERC721(_tokenContract).isApprovedForAll(tokenOwner, _user)) {
-            return Access.OperatorAll;
-        } else if (_user == IERC721(_tokenContract).getApproved(_tokenId)) {
-            return Access.OperatorToken;
-        } else {
-            return Access.Invalid;
-        }
-    }
-
-    /// @notice Checks whether an ask that was previously valid is now invalid
-    /// @param _prevSeller The address of the seller on the active ask
-    /// @param _prevAccess The access control of the seller on the active ask
-    /// @param _tokenContract The address of the ERC-721 token contract for the token to be sold
-    /// @param _tokenId The ERC-721 token ID for the token to be sold
-    function _isInvalidAsk(
-        address _prevSeller,
-        Access _prevAccess,
-        address _tokenContract,
-        uint256 _tokenId
-    ) private view returns (bool) {
-        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-
-        if (
-            ((_prevAccess == Access.Owner) && (_prevSeller != tokenOwner)) ||
-            ((_prevAccess == Access.OperatorAll) && (!IERC721(_tokenContract).isApprovedForAll(tokenOwner, _prevSeller))) ||
-            ((_prevAccess == Access.OperatorToken) && (_prevSeller != IERC721(_tokenContract).getApproved(_tokenId)))
-        ) {
-            return true;
-        } else {
-            return false;
-        }
+        delete asks[_askId];
     }
 }

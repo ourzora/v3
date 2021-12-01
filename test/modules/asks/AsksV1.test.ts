@@ -120,7 +120,7 @@ describe('AsksV1', () => {
       expect((await asks.askForNFT(zoraV1.address, 0)).toNumber()).to.eq(1);
     });
 
-    it('should cancel an ask that is now invalid', async () => {
+    it('should cancel an ask created by previous owner', async () => {
       await asks.createAsk(
         zoraV1.address,
         0,
@@ -359,7 +359,7 @@ describe('AsksV1', () => {
         await buyerA.getAddress(),
         0
       );
-      await asks.connect(otherUser).cancelAsk(1);
+      await asks.connect(buyerA).cancelAsk(1);
       const ask = await asks.asks(1);
       expect(ask.seller.toString()).to.eq(
         ethers.constants.AddressZero.toString()
@@ -416,7 +416,7 @@ describe('AsksV1', () => {
       const finderAfterBalance = await finder.getBalance();
 
       const ask = await asks.asks(1);
-      expect(ask.seller.toString()).to.eq(await deployer.getAddress());
+      expect(ask.seller.toString()).to.eq(ethers.constants.AddressZero);
 
       expect(toRoundedNumber(buyerAfterBalance)).to.approximately(
         toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
