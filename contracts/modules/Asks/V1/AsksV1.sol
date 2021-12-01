@@ -91,7 +91,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         require((msg.sender == tokenOwner) || isOperatorForTokenOwner || isApprovedForToken, "createAsk must be token owner or approved operator");
 
         if (askForNFT[_tokenContract][_tokenId] != 0) {
-            cancelAsk(askForNFT[_tokenContract][_tokenId]);
+            _cancelAsk(askForNFT[_tokenContract][_tokenId]);
         }
 
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
@@ -142,7 +142,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
     /// @notice Cancels a ask
     /// @param _askId the ID of the ask to cancel
-    function cancelAsk(uint256 _askId) public {
+    function cancelAsk(uint256 _askId) external {
         Ask storage ask = asks[_askId];
 
         require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "cancelAsk must be active ask");
@@ -154,10 +154,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         require((msg.sender == ask.seller) || isTokenOwner || isOperatorForTokenOwner || isApprovedForToken, "cancelAsk must be seller or invalid ask");
 
-        emit AskCanceled(_askId, ask);
-
-        delete askForNFT[ask.tokenContract][ask.tokenId];
-        delete asks[_askId];
+        _cancelAsk(_askId);
     }
 
     /// @notice Purchase an NFT from a ask, transferring the NFT to the buyer and funds to the recipients
@@ -192,6 +189,17 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit AskFilled(_askId, msg.sender, _finder, ask);
+
+        delete askForNFT[ask.tokenContract][ask.tokenId];
+        delete asks[_askId];
+    }
+
+    /// @notice Removes an ask
+    /// @param _askId The ID of the ask
+    function _cancelAsk(uint256 _askId) private {
+        Ask storage ask = asks[_askId];
+
+        emit AskCanceled(_askId, ask);
 
         delete askForNFT[ask.tokenContract][ask.tokenId];
         delete asks[_askId];
