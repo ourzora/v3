@@ -24,21 +24,12 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
     Counters.Counter public askCounter;
 
-    /// @notice The asks created by a given user
-    mapping(address => uint256[]) public asksForUser;
-
     /// @notice The ask for a given NFT, if one exists
     /// @dev NFT address => NFT ID => ask ID
     mapping(address => mapping(uint256 => uint256)) public askForNFT;
 
     /// @notice A mapping of IDs to their respective ask
     mapping(uint256 => Ask) public asks;
-
-    enum AskStatus {
-        Active,
-        Canceled,
-        Filled
-    }
 
     struct Ask {
         address tokenContract;
@@ -50,7 +41,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 askPrice;
         uint8 listingFeePercentage;
         uint8 findersFeePercentage;
-        AskStatus status;
     }
 
     event AskCreated(uint256 indexed id, Ask ask);
@@ -95,12 +85,15 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint8 _findersFeePercentage
     ) external nonReentrant returns (uint256) {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(
-            tokenOwner == msg.sender ||
-                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) == true ||
-                IERC721(_tokenContract).getApproved(_tokenId) == msg.sender,
-            "createAsk must be token owner or approved operator"
-        );
+        bool isOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
+        bool isApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == msg.sender;
+
+        require((msg.sender == tokenOwner) || isOperatorForTokenOwner || isApprovedForToken, "createAsk must be token owner or approved operator");
+
+        if (askForNFT[_tokenContract][_tokenId] != 0) {
+            _cancelAsk(askForNFT[_tokenContract][_tokenId]);
+        }
+
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
         require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
 
@@ -117,12 +110,9 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             tokenId: _tokenId,
             askPrice: _askPrice,
             listingFeePercentage: _listingFeePercentage,
-            findersFeePercentage: _findersFeePercentage,
-            status: AskStatus.Active
+            findersFeePercentage: _findersFeePercentage
         });
 
-        // Register ask lookup helpers
-        asksForUser[msg.sender].push(askId);
         askForNFT[_tokenContract][_tokenId] = askId;
 
         emit AskCreated(askId, asks[askId]);
@@ -141,8 +131,8 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     ) external {
         Ask storage ask = asks[_askId];
 
+        require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "setAskPrice must be active ask");
         require(ask.seller == msg.sender, "setAskPrice must be seller");
-        require(ask.status == AskStatus.Active, "setAskPrice must be active ask");
 
         ask.askPrice = _askPrice;
         ask.askCurrency = _askCurrency;
@@ -155,13 +145,16 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     function cancelAsk(uint256 _askId) external {
         Ask storage ask = asks[_askId];
 
-        require(ask.seller == msg.sender || IERC721(ask.tokenContract).ownerOf(ask.tokenId) != ask.seller, "cancelAsk must be seller or invalid ask");
-        require(ask.status == AskStatus.Active, "cancelAsk must be active ask");
+        require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "cancelAsk must be active ask");
 
-        // Set ask status to cancelled
-        ask.status = AskStatus.Canceled;
+        address tokenOwner = IERC721(ask.tokenContract).ownerOf(ask.tokenId);
+        bool isTokenOwner = tokenOwner == msg.sender;
+        bool isOperatorForTokenOwner = IERC721(ask.tokenContract).isApprovedForAll(tokenOwner, msg.sender);
+        bool isApprovedForToken = IERC721(ask.tokenContract).getApproved(ask.tokenId) == msg.sender;
 
-        emit AskCanceled(_askId, ask);
+        require((msg.sender == ask.seller) || isTokenOwner || isOperatorForTokenOwner || isApprovedForToken, "cancelAsk must be seller or invalid ask");
+
+        _cancelAsk(_askId);
     }
 
     /// @notice Purchase an NFT from a ask, transferring the NFT to the buyer and funds to the recipients
@@ -170,9 +163,8 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     function fillAsk(uint256 _askId, address _finder) external payable nonReentrant {
         Ask storage ask = asks[_askId];
 
-        require(ask.seller != address(0), "fillAsk ask does not exist");
+        require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "fillAsk must be active ask");
         require(_finder != address(0), "fillAsk _finder must not be 0 address");
-        require(ask.status == AskStatus.Active, "fillAsk must be active ask");
 
         // Ensure payment is valid and take custody of payment
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
@@ -189,15 +181,27 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        // Transfer NFT to ask buyer
+        // Transfer NFT to buyer
         erc721TransferHelper.transferFrom(ask.tokenContract, ask.seller, msg.sender, ask.tokenId);
-
-        ask.status = AskStatus.Filled;
 
         ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ask.tokenContract, tokenId: ask.tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ask.askCurrency, tokenId: 0, amount: ask.askPrice});
 
         emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit AskFilled(_askId, msg.sender, _finder, ask);
+
+        delete askForNFT[ask.tokenContract][ask.tokenId];
+        delete asks[_askId];
+    }
+
+    /// @notice Removes an ask
+    /// @param _askId The ID of the ask
+    function _cancelAsk(uint256 _askId) private {
+        Ask storage ask = asks[_askId];
+
+        emit AskCanceled(_askId, ask);
+
+        delete askForNFT[ask.tokenContract][ask.tokenId];
+        delete asks[_askId];
     }
 }
