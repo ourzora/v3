@@ -143,7 +143,7 @@ describe('ReserveAuctionV1', () => {
             auctionCurrency
           )
       ).eventually.rejectedWith(
-        revert`createAuction caller must be approved or owner for token id`
+        revert`createAuction must be token owner or approved operator`
       );
     });
 
@@ -247,7 +247,7 @@ describe('ReserveAuctionV1', () => {
       const createdAuction = await reserveAuction.auctions(1);
       const createdFees = await reserveAuction.fees(1);
       const auctionId = (
-        await reserveAuction.nftToAuctionId(zoraV1.address, 0)
+        await reserveAuction.auctionForNFT(zoraV1.address, 0)
       ).toNumber();
       expect(createdAuction.duration.toNumber()).to.eq(duration);
       expect(createdAuction.reservePrice.toString()).to.eq(
@@ -258,7 +258,7 @@ describe('ReserveAuctionV1', () => {
         await listingFeeRecipient.getAddress()
       );
       expect(createdAuction.fundsRecipient).to.eq(fundsRecipientAddress);
-      expect(createdAuction.tokenOwner).to.eq(await deployer.getAddress());
+      expect(createdAuction.seller).to.eq(await deployer.getAddress());
       expect(createdFees.findersFeePercentage).to.eq(findersFeePercentage);
       expect(auctionId).to.eq(1);
     });
@@ -271,9 +271,9 @@ describe('ReserveAuctionV1', () => {
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
-      expect(await reserveAuction.auctionExists(zoraV1.address, 0)).to.eq(
-        false
-      );
+      expect(
+        (await reserveAuction.auctionForNFT(zoraV1.address, 0)).toString()
+      ).to.eq('0');
 
       await reserveAuction.createAuction(
         0,
@@ -287,7 +287,9 @@ describe('ReserveAuctionV1', () => {
         auctionCurrency
       );
 
-      expect(await reserveAuction.auctionExists(zoraV1.address, 0)).to.eq(true);
+      expect(
+        (await reserveAuction.auctionForNFT(zoraV1.address, 0)).toString()
+      ).to.eq('1');
 
       await zoraV1.transferFrom(
         await deployer.getAddress(),
@@ -297,9 +299,9 @@ describe('ReserveAuctionV1', () => {
 
       await reserveAuction.connect(otherUser).cancelAuction(1);
 
-      expect(await reserveAuction.auctionExists(zoraV1.address, 0)).to.eq(
-        false
-      );
+      expect(
+        (await reserveAuction.auctionForNFT(zoraV1.address, 0)).toString()
+      ).to.eq('0');
 
       await reserveAuction
         .connect(otherUser)
@@ -318,12 +320,12 @@ describe('ReserveAuctionV1', () => {
       const oldAuction = await reserveAuction.auctions(1);
       const newAuction = await reserveAuction.auctions(2);
       const auctionId = (
-        await reserveAuction.nftToAuctionId(zoraV1.address, 0)
+        await reserveAuction.auctionForNFT(zoraV1.address, 0)
       ).toNumber();
       expect(auctionId).to.eq(2);
       expect(oldAuction.tokenContract).to.eq(ethers.constants.AddressZero);
       expect(newAuction.tokenContract).to.eq(zoraV1.address);
-      expect(newAuction.tokenOwner).to.eq(await otherUser.getAddress());
+      expect(newAuction.seller).to.eq(await otherUser.getAddress());
     });
 
     it('should emit an AuctionCreated event', async () => {
@@ -918,20 +920,7 @@ describe('ReserveAuctionV1', () => {
 
       expect(await zoraV1.ownerOf(0)).to.eq(await deployer.getAddress());
       expect(deletedAuction.tokenContract).to.eq(ethers.constants.AddressZero);
-      expect(deletedAuction.tokenOwner).to.eq(ethers.constants.AddressZero);
-    });
-
-    it('should allow anyone to cancel an auction if the token is no longer owned by the creator', async () => {
-      await zoraV1.transferFrom(
-        await deployer.getAddress(),
-        await bidderA.getAddress(),
-        0
-      );
-      await reserveAuction.connect(otherUser).cancelAuction(1);
-
-      const deletedAuction = await reserveAuction.auctions(1);
-      expect(deletedAuction.tokenContract).to.eq(ethers.constants.AddressZero);
-      expect(deletedAuction.tokenOwner).to.eq(ethers.constants.AddressZero);
+      expect(deletedAuction.seller).to.eq(ethers.constants.AddressZero);
     });
 
     it('should emit an AuctionCanceled event', async () => {
