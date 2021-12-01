@@ -39,8 +39,6 @@ chai.use(asPromised);
 describe('AsksV1', () => {
   let asks: AsksV1;
   let zoraV1: Media;
-  let testERC721: TestERC721;
-  let testEIP2981ERC721: TestEIP2981ERC721;
   let weth: WETH;
   let deployer: Signer;
   let buyerA: Signer;
@@ -62,8 +60,6 @@ describe('AsksV1', () => {
     finder = signers[5];
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
-    testERC721 = await deployTestERC271();
-    testEIP2981ERC721 = await deployTestEIP2981ERC721();
     weth = await deployWETH();
     const proposalManager = await deployZoraProposalManager(
       await deployer.getAddress()
@@ -120,12 +116,51 @@ describe('AsksV1', () => {
       expect(ask.askCurrency).to.eq(ethers.constants.AddressZero);
       expect(ask.tokenId.toNumber()).to.eq(0);
       expect(ask.askPrice.toString()).to.eq(ONE_ETH.toString());
-      expect(ask.status).to.eq(0);
 
-      expect(
-        (await asks.asksForUser(await deployer.getAddress(), 0)).toNumber()
-      ).to.eq(1);
       expect((await asks.askForNFT(zoraV1.address, 0)).toNumber()).to.eq(1);
+    });
+
+    it('should cancel an ask created by previous owner', async () => {
+      await asks.createAsk(
+        zoraV1.address,
+        0,
+        ONE_ETH,
+        ethers.constants.AddressZero,
+        await sellerFundsRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
+        10,
+        10
+      );
+
+      const beforeAskForNFT = await asks.askForNFT(zoraV1.address, 0);
+      expect(beforeAskForNFT.toNumber()).to.eq(1);
+
+      await zoraV1.transferFrom(
+        await deployer.getAddress(),
+        await buyerA.getAddress(),
+        0
+      );
+
+      await asks
+        .connect(buyerA)
+        .createAsk(
+          zoraV1.address,
+          0,
+          TWO_ETH,
+          ethers.constants.AddressZero,
+          await sellerFundsRecipient.getAddress(),
+          await listingFeeRecipient.getAddress(),
+          10,
+          10
+        );
+
+      const afterAskForNFT = await asks.askForNFT(zoraV1.address, 0);
+      expect(afterAskForNFT.toNumber()).to.eq(2);
+
+      const invalidAsk = await asks.asks(1);
+      expect(invalidAsk.tokenContract.toString()).to.eq(
+        ethers.constants.AddressZero.toString()
+      );
     });
 
     it('should emit an AskCreated event', async () => {
@@ -285,7 +320,12 @@ describe('AsksV1', () => {
     it('should cancel an ask', async () => {
       await asks.cancelAsk(1);
       const ask = await asks.asks(1);
-      expect(ask.status).to.eq(1);
+      expect(ask.seller.toString()).to.eq(
+        ethers.constants.AddressZero.toString()
+      );
+
+      const askForNFT = await asks.askForNFT(zoraV1.address, 0);
+      expect(askForNFT.toString()).to.eq('0');
     });
 
     it('should emit an AskCanceled event', async () => {
@@ -319,9 +359,11 @@ describe('AsksV1', () => {
         await buyerA.getAddress(),
         0
       );
-      await asks.connect(otherUser).cancelAsk(1);
+      await asks.connect(buyerA).cancelAsk(1);
       const ask = await asks.asks(1);
-      expect(ask.status).to.eq(1);
+      expect(ask.seller.toString()).to.eq(
+        ethers.constants.AddressZero.toString()
+      );
     });
 
     it('should revert if the ask has been filled already', async () => {
@@ -374,8 +416,7 @@ describe('AsksV1', () => {
       const finderAfterBalance = await finder.getBalance();
 
       const ask = await asks.asks(1);
-
-      expect(ask.status).to.eq(2);
+      expect(ask.seller.toString()).to.eq(ethers.constants.AddressZero);
 
       expect(toRoundedNumber(buyerAfterBalance)).to.approximately(
         toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
@@ -426,11 +467,7 @@ describe('AsksV1', () => {
       expect(logDescription.args.userA).to.eq(await deployer.getAddress());
       expect(logDescription.args.userB).to.eq(await buyerA.getAddress());
 
-      expect(logDescription.args.a.tokenContract).to.eq(
-        await (
-          await asks.asks(1)
-        ).tokenContract
-      );
+      expect(logDescription.args.a.tokenContract).to.eq(zoraV1.address);
       expect(logDescription.args.b.tokenContract).to.eq(
         ethers.constants.AddressZero
       );
