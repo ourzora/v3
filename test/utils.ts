@@ -289,7 +289,8 @@ export async function createReserveAuction(
     sellerFundsRecipient,
     5,
     findersFeePercentage,
-    currency
+    currency,
+    0
   );
 }
 
