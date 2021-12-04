@@ -47,7 +47,6 @@ describe('ReserveAuctionV1 integration', () => {
   let reserveAuction: ReserveAuctionV1;
   let zoraV1: Media;
   let zoraV1Market: Market;
-  let badERC721: BadERC721;
   let testERC721: TestERC721;
   let testEIP2981ERC721: TestEIP2981ERC721;
   let weth: WETH;
@@ -75,7 +74,6 @@ describe('ReserveAuctionV1 integration', () => {
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
     zoraV1Market = zoraProtocol.market;
-    badERC721 = await deployBadERC721();
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     royaltyEngine = await deployRoyaltyEngine();
@@ -141,7 +139,8 @@ describe('ReserveAuctionV1 integration', () => {
             await sellerFundsRecipient.getAddress(),
             10,
             10,
-            ethers.constants.AddressZero
+            ethers.constants.AddressZero,
+            0
           );
 
         await reserveAuction
@@ -242,7 +241,8 @@ describe('ReserveAuctionV1 integration', () => {
             await sellerFundsRecipient.getAddress(),
             10,
             10,
-            weth.address
+            weth.address,
+            0
           );
 
         await reserveAuction
@@ -362,7 +362,8 @@ describe('ReserveAuctionV1 integration', () => {
             await sellerFundsRecipient.getAddress(),
             10,
             10,
-            ethers.constants.AddressZero
+            ethers.constants.AddressZero,
+            0
           );
 
         await reserveAuction
@@ -477,7 +478,8 @@ describe('ReserveAuctionV1 integration', () => {
             await sellerFundsRecipient.getAddress(),
             10,
             10,
-            weth.address
+            weth.address,
+            0
           );
 
         await reserveAuction
@@ -600,7 +602,8 @@ describe('ReserveAuctionV1 integration', () => {
             await sellerFundsRecipient.getAddress(),
             10,
             10,
-            ethers.constants.AddressZero
+            ethers.constants.AddressZero,
+            0
           );
 
         await reserveAuction
@@ -701,7 +704,8 @@ describe('ReserveAuctionV1 integration', () => {
             await sellerFundsRecipient.getAddress(),
             10,
             10,
-            weth.address
+            weth.address,
+            0
           );
 
         await reserveAuction

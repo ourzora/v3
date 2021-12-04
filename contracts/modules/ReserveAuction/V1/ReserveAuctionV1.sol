@@ -55,6 +55,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         uint256 tokenId; // ID for the ERC721 token
         uint256 amount; // The current highest bid amount
         uint256 duration; // The length of time to run the auction for, after the first bid was made
+        uint256 startTime; // The time of the auction start
         uint256 firstBidTime; // The time of the first bid
         uint256 reservePrice; // The minimum price of the first bid
     }
@@ -107,6 +108,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param _listingFeePercentage The percentage of the sale amount to be sent to the listingFeeRecipient
     /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
     /// @param _auctionCurrency The address of the ERC-20 token to accept bids in, or address(0) for ETH
+    /// @param _timeDelay The time delay until the start of the auction
     /// @return The ID of the created auction
     function createAuction(
         uint256 _tokenId,
@@ -117,7 +119,8 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         address payable _fundsRecipient,
         uint8 _listingFeePercentage,
         uint8 _findersFeePercentage,
-        address _auctionCurrency
+        address _auctionCurrency,
+        uint256 _timeDelay
     ) public nonReentrant returns (uint256) {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
@@ -129,8 +132,8 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         if (auctionForNFT[_tokenContract][_tokenId] != 0) {
             _cancelAuction(auctionForNFT[_tokenContract][_tokenId]);
         }
-        require((_listingFeePercentage + _findersFeePercentage) < 100, "createAuction listingFeePercentage plus findersFeePercentage must be less than 100");
-        require(_fundsRecipient != ADDRESS_ZERO, "createAuction fundsRecipient cannot be 0 address");
+        require((_listingFeePercentage + _findersFeePercentage) < 100, "createAuction _listingFeePercentage plus _findersFeePercentage must be less than 100");
+        require(_fundsRecipient != ADDRESS_ZERO, "createAuction _fundsRecipient cannot be 0 address");
 
         auctionCounter.increment();
         uint256 auctionId = auctionCounter.current();
@@ -140,6 +143,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             tokenContract: _tokenContract,
             amount: 0,
             duration: _duration,
+            startTime: (block.timestamp + _timeDelay),
             firstBidTime: 0,
             reservePrice: _reservePrice,
             seller: msg.sender,
@@ -189,7 +193,8 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         Auction storage auction = auctions[_auctionId];
         address payable lastBidder = auction.bidder;
 
-        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
+        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "createBid auction doesn't exist");
+        require(block.timestamp >= auction.startTime, "createBid auction hasn't started");
         require(auction.firstBidTime == 0 || block.timestamp < (auction.firstBidTime + auction.duration), "createBid auction expired");
         require(_amount >= auction.reservePrice, "createBid must send at least reservePrice");
         require(
@@ -253,7 +258,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     function settleAuction(uint256 _auctionId) external nonReentrant {
         Auction storage auction = auctions[_auctionId];
 
-        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "setAuctionReservePrice auction doesn't exist");
+        require(_auctionId == auctionForNFT[auction.tokenContract][auction.tokenId], "settleAuction auction doesn't exist");
         require(auction.firstBidTime != 0, "settleAuction auction hasn't begun");
         require(block.timestamp >= auction.firstBidTime.add(auction.duration), "settleAuction auction hasn't completed");
 
