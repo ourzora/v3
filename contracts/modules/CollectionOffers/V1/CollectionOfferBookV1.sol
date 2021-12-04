@@ -27,8 +27,11 @@ contract CollectionOfferBookV1 {
     /// ------------ PUBLIC STORAGE ------------
 
     /// @notice The offer for a given collection + offer ID
-    /// @dev NFT address => offer ID
+    /// @dev NFT address => offer ID => offer
     mapping(address => mapping(uint256 => Offer)) public offers;
+    /// @notice The updated finder's fee for a given collection offer
+    /// @notice NFT address => offer ID => finders fee percentage
+    mapping(address => mapping(uint256 => uint256)) public findersFeeOverrides;
 
     /// @notice The floor offer ID for a given collection
     mapping(address => uint256) public floorOfferId;

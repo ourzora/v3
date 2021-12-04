@@ -205,6 +205,26 @@ describe('CollectionOffersV1 integration', () => {
       );
     });
 
+    it('should pay the finder an updated finders fee', async () => {
+      const beforeBalance = await finder.getBalance();
+      await run();
+      await collectionOffers
+        .connect(buyer)
+        .setCollectionOfferFindersFee(zoraV1.address, 1, 10);
+      await collectionOffers.fillCollectionOffer(
+        zoraV1.address,
+        0,
+        ONE_ETH,
+        await finder.getAddress()
+      );
+      const afterBalance = await finder.getBalance();
+
+      expect(toRoundedNumber(afterBalance)).to.be.approximately(
+        toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
+        100
+      );
+    });
+
     it('should transfer funds from accepted offer to seller', async () => {
       const beforeBalance = await deployer.getBalance();
       await run();
@@ -333,6 +353,26 @@ describe('CollectionOffersV1 integration', () => {
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(10))),
         10
+      );
+    });
+
+    it('should pay the finder an updated finders fee', async () => {
+      const beforeBalance = await finder.getBalance();
+      await run();
+      await collectionOffers
+        .connect(buyer)
+        .setCollectionOfferFindersFee(testEIP2981ERC721.address, 1, 10);
+      await collectionOffers.fillCollectionOffer(
+        testEIP2981ERC721.address,
+        0,
+        ONE_ETH,
+        await finder.getAddress()
+      );
+      const afterBalance = await finder.getBalance();
+
+      expect(toRoundedNumber(afterBalance)).to.be.approximately(
+        toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
+        100
       );
     });
 
@@ -466,6 +506,26 @@ describe('CollectionOffersV1 integration', () => {
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(10))),
         10
+      );
+    });
+
+    it('should pay the finder an updated finders fee', async () => {
+      const beforeBalance = await finder.getBalance();
+      await run();
+      await collectionOffers
+        .connect(buyer)
+        .setCollectionOfferFindersFee(testERC721.address, 1, 10);
+      await collectionOffers.fillCollectionOffer(
+        testERC721.address,
+        0,
+        ONE_ETH,
+        await finder.getAddress()
+      );
+      const afterBalance = await finder.getBalance();
+
+      expect(toRoundedNumber(afterBalance)).to.be.approximately(
+        toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(100))),
+        100
       );
     });
 

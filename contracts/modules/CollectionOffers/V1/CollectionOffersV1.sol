@@ -28,6 +28,8 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
 
     event CollectionOfferPriceUpdated(uint256 indexed id, Offer offer);
 
+    event CollectionOfferFindersFeeUpdated(uint256 indexed id, uint256 indexed findersFeePercentage, Offer offer);
+
     event CollectionOfferCanceled(uint256 indexed id, Offer offer);
 
     event CollectionOfferFilled(uint256 indexed id, address indexed seller, address indexed finder, Offer offer);
@@ -98,6 +100,24 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         emit CollectionOfferPriceUpdated(_offerId, offers[_tokenContract][_offerId]);
     }
 
+    /// @notice Updates the finder's fee percentage for a collection offer
+    /// @param _tokenContract The ERC-721 collection address
+    /// @param _offerId The ID of the created offer
+    /// @param _findersFeePercentage The new finders fee percentage
+    function setCollectionOfferFindersFee(
+        address _tokenContract,
+        uint256 _offerId,
+        uint256 _findersFeePercentage
+    ) external nonReentrant {
+        require(offers[_tokenContract][_offerId].active, "setCollectionOfferFindersFee must be active offer");
+        require(msg.sender == offers[_tokenContract][_offerId].buyer, "setCollectionOfferFindersFee msg sender must be buyer");
+        require((_findersFeePercentage > 1) && (_findersFeePercentage <= 100), "setCollectionOfferFindersFee _findersFeePercentage must be less than 100");
+
+        findersFeeOverrides[_tokenContract][_offerId] = _findersFeePercentage;
+
+        emit CollectionOfferFindersFeeUpdated(_offerId, _findersFeePercentage, offers[_tokenContract][_offerId]);
+    }
+
     /// @notice Cancels a collection offer
     /// @param _tokenContract The ERC-721 collection address
     /// @param _offerId The ID of the created offer
@@ -134,7 +154,13 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         Offer memory offer = offers[_tokenContract][offerId];
 
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, ETH, USE_ALL_GAS_FLAG);
-        uint256 finderFee = remainingProfit / 100; // 1% finder's fee
+
+        uint256 finderFee;
+        if (findersFeeOverrides[_tokenContract][offerId] == 0) {
+            finderFee = remainingProfit / 100; // 1% finder's fee
+        } else {
+            finderFee = (remainingProfit * findersFeeOverrides[_tokenContract][offerId]) / 100;
+        }
 
         _handleOutgoingTransfer(_finder, finderFee, ETH, USE_ALL_GAS_FLAG);
 
