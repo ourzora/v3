@@ -265,7 +265,7 @@ describe('ReserveAuctionV1', () => {
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
-      const startTime = 3600; // in 1 hr
+      const startTime = 2238366608; // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
 
       await reserveAuction.createAuction(
         0,
@@ -539,7 +539,7 @@ describe('ReserveAuctionV1', () => {
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
-      const startTime = 3600; // in 1 hr
+      const startTime = 2238366608; // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
 
       await reserveAuction.createAuction(
         0,
@@ -726,7 +726,7 @@ describe('ReserveAuctionV1', () => {
       const fundsRecipientAddress = await fundsRecipient.getAddress();
       const auctionCurrency = ethers.constants.AddressZero;
 
-      const startTime = 3600; // in 1 hr
+      const startTime = 2238366608; // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
 
       await reserveAuction.createAuction(
         0,
@@ -741,7 +741,8 @@ describe('ReserveAuctionV1', () => {
         startTime
       );
 
-      await ethers.provider.send('evm_increaseTime', [startTime]);
+      // await ethers.provider.send('evm_increaseTime', [startTime]);
+      await ethers.provider.send('evm_setNextBlockTimestamp', [2238366608]);
 
       await reserveAuction
         .connect(bidderB)

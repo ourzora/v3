@@ -108,7 +108,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param _listingFeePercentage The percentage of the sale amount to be sent to the listingFeeRecipient
     /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
     /// @param _auctionCurrency The address of the ERC-20 token to accept bids in, or address(0) for ETH
-    /// @param _timeDelay The time delay until the start of the auction
+    /// @param _startTime The time to start the auction
     /// @return The ID of the created auction
     function createAuction(
         uint256 _tokenId,
@@ -120,7 +120,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         uint8 _listingFeePercentage,
         uint8 _findersFeePercentage,
         address _auctionCurrency,
-        uint256 _timeDelay
+        uint256 _startTime
     ) public nonReentrant returns (uint256) {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
@@ -134,6 +134,11 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         }
         require((_listingFeePercentage + _findersFeePercentage) < 100, "createAuction _listingFeePercentage plus _findersFeePercentage must be less than 100");
         require(_fundsRecipient != ADDRESS_ZERO, "createAuction _fundsRecipient cannot be 0 address");
+        require((_startTime == 0) || (_startTime > block.timestamp), "createAuction _startTime must be 0 or a future block time");
+
+        if (_startTime == 0) {
+            _startTime = block.timestamp;
+        }
 
         auctionCounter.increment();
         uint256 auctionId = auctionCounter.current();
@@ -143,7 +148,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             tokenContract: _tokenContract,
             amount: 0,
             duration: _duration,
-            startTime: (block.timestamp + _timeDelay),
+            startTime: _startTime,
             firstBidTime: 0,
             reservePrice: _reservePrice,
             seller: msg.sender,
