@@ -18,44 +18,47 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
+    /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
-    Counters.Counter public nftOfferCounter;
-
-    /// @notice The NFT offers created by a given user
-    /// @dev User address => NFT offer ID
-    mapping(address => uint256[]) public nftOffersPerUser;
-
-    /// @notice The offers for a given NFT
-    /// @dev NFT address => NFT ID => offer IDs
-    mapping(address => mapping(uint256 => uint256[])) public offersForNFT;
-
-    /// @notice A mapping of IDs to their respective NFT offer
-    mapping(uint256 => NFTOffer) public nftOffers;
-
-    enum OfferStatus {
-        Active,
-        Canceled,
-        Filled
-    }
-
-    struct NFTOffer {
+    /// @notice An individual offer
+    struct Offer {
+        bool active;
         address buyer;
         address offerCurrency;
         address tokenContract;
         uint256 tokenId;
         uint256 offerAmount;
         uint8 findersFeePercentage;
-        OfferStatus status;
     }
 
-    event NFTOfferCreated(uint256 indexed id, NFTOffer offer);
+    /// @notice The total number of offers
+    Counters.Counter public offerCounter;
 
-    event NFTOfferAmountUpdated(uint256 indexed id, NFTOffer offer);
+    /// ------------ STORAGE ------------
 
-    event NFTOfferCanceled(uint256 indexed id, NFTOffer offer);
+    /// @notice The offers for a given NFT
+    /// @dev NFT address => NFT ID => offer IDs
+    mapping(address => mapping(uint256 => uint256[])) public offersForNFT;
 
-    event NFTOfferFilled(uint256 indexed id, address indexed buyer, address indexed finder, NFTOffer offer);
+    /// @notice The index a given offer is stored in offersForNFT
+    /// @dev NFT Address => NFT ID => offer ID => index
+    mapping(address => mapping(uint256 => mapping(uint256 => uint256))) private offerToIndex;
+
+    /// @notice A mapping of IDs to their respective offer
+    mapping(uint256 => Offer) public offers;
+
+    /// ------------ EVENTS ------------
+
+    event NFTOfferCreated(uint256 indexed id, Offer offer);
+
+    event NFTOfferAmountUpdated(uint256 indexed id, Offer offer);
+
+    event NFTOfferCanceled(uint256 indexed id, Offer offer);
+
+    event NFTOfferFilled(uint256 indexed id, address indexed buyer, address indexed finder, Offer offer);
+
+    /// ------------ CONSTRUCTOR ------------
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -69,6 +72,8 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     ) IncomingTransferSupportV1(_erc20TransferHelper) RoyaltyPayoutSupportV1(_royaltyEngine, _wethAddress) {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
+
+    /// ------------ BUYER FUNCTIONS ------------
 
     /// @notice Places an offer on a NFT
     /// @param _tokenContract The address of the ERC-721 token contract to place the offer
@@ -84,29 +89,31 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         address _offerCurrency,
         uint8 _findersFeePercentage
     ) external payable nonReentrant returns (uint256) {
-        require(IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender, "createNFTOffer cannot make offer on NFT you own");
+        require(IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender, "createNFTOffer cannot make offer on owned NFT");
         require(_findersFeePercentage <= 100, "createNFTOffer finders fee percentage must be less than 100");
 
         // Ensure offered payment is valid and take custody of payment
         _handleIncomingTransfer(_offerAmount, _offerCurrency);
 
-        nftOfferCounter.increment();
-        uint256 offerId = nftOfferCounter.current();
+        offerCounter.increment();
+        uint256 offerId = offerCounter.current();
 
-        nftOffers[offerId] = NFTOffer({
+        offers[offerId] = Offer({
+            active: true,
             buyer: msg.sender,
             offerCurrency: _offerCurrency,
             tokenContract: _tokenContract,
             tokenId: _tokenId,
             offerAmount: _offerAmount,
-            findersFeePercentage: _findersFeePercentage,
-            status: OfferStatus.Active
+            findersFeePercentage: _findersFeePercentage
         });
 
-        nftOffersPerUser[msg.sender].push(offerId);
-        offersForNFT[_tokenContract][_tokenId].push(offerId);
+        uint256 _index = offersForNFT[_tokenContract][_tokenId].length;
 
-        emit NFTOfferCreated(offerId, nftOffers[offerId]);
+        offersForNFT[_tokenContract][_tokenId].push(offerId);
+        offerToIndex[_tokenContract][_tokenId][offerId] = _index;
+
+        emit NFTOfferCreated(offerId, offers[offerId]);
 
         return offerId;
     }
@@ -115,51 +122,60 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _offerId The ID of the NFT offer
     /// @param _newOffer The new offer price
     function setNFTOfferAmount(uint256 _offerId, uint256 _newOffer) external payable nonReentrant {
-        NFTOffer storage offer = nftOffers[_offerId];
+        Offer storage offer = offers[_offerId];
 
+        require(offer.active, "setNFTOfferAmount must be active offer");
         require(offer.buyer == msg.sender, "setNFTOfferAmount must be buyer from original offer");
-        require(offer.status == OfferStatus.Active, "setNFTOfferAmount must be active offer");
 
-        if (_newOffer > offer.offerAmount) {
-            uint256 increaseAmount = _newOffer - offer.offerAmount;
-            // Ensure increased offer payment is valid and take custody of payment
+        uint256 prevOffer = offer.offerAmount;
+
+        require((_newOffer > 0) && (_newOffer != prevOffer), "setNFTOfferAmount _newOffer must be greater than 0 and not equal to previous offer");
+
+        if (_newOffer > prevOffer) {
+            uint256 increaseAmount = _newOffer - prevOffer;
+
             _handleIncomingTransfer(increaseAmount, offer.offerCurrency);
 
             offer.offerAmount += increaseAmount;
-
-            emit NFTOfferAmountUpdated(_offerId, offer);
-        } else if (_newOffer < offer.offerAmount) {
-            uint256 decreaseAmount = offer.offerAmount - _newOffer;
+        } else if (_newOffer < prevOffer) {
+            uint256 decreaseAmount = prevOffer - _newOffer;
 
             _handleOutgoingTransfer(offer.buyer, decreaseAmount, offer.offerCurrency, USE_ALL_GAS_FLAG);
-            offer.offerAmount -= decreaseAmount;
 
-            emit NFTOfferAmountUpdated(_offerId, offer);
+            offer.offerAmount -= decreaseAmount;
         }
+
+        emit NFTOfferAmountUpdated(_offerId, offer);
     }
 
     /// @notice Cancels a NFT offer
     /// @param _offerId The ID of the NFT offer
     function cancelNFTOffer(uint256 _offerId) external nonReentrant {
-        NFTOffer storage offer = nftOffers[_offerId];
+        Offer storage offer = offers[_offerId];
 
+        require(offer.active, "cancelNFTOffer must be active offer");
         require(offer.buyer == msg.sender, "cancelNFTOffer must be buyer from original offer");
-        require(offer.status == OfferStatus.Active, "cancelNFTOffer must be active offer");
 
         _handleOutgoingTransfer(offer.buyer, offer.offerAmount, offer.offerCurrency, USE_ALL_GAS_FLAG);
 
-        offer.status = OfferStatus.Canceled;
-
         emit NFTOfferCanceled(_offerId, offer);
+
+        uint256 _index = offerToIndex[offer.tokenContract][offer.tokenId][_offerId];
+
+        delete offersForNFT[offer.tokenContract][offer.tokenId][_index];
+        delete offerToIndex[offer.tokenContract][offer.tokenId][_offerId];
+        delete offers[_offerId];
     }
+
+    /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Fills a NFT offer
     /// @param _offerId The ID of the NFT offer
     /// @param _finder The address of the referrer for this offer
     function fillNFTOffer(uint256 _offerId, address _finder) external nonReentrant {
-        NFTOffer storage offer = nftOffers[_offerId];
+        Offer storage offer = offers[_offerId];
 
-        require(offer.status == OfferStatus.Active, "fillNFTOffer must be active offer");
+        require(offer.active, "fillNFTOffer must be active offer");
         require(_finder != address(0), "fillNFTOffer _finder must not be 0 address");
         require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenId), "fillNFTOffer must own token associated with offer");
 
@@ -177,12 +193,16 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         // Transfer NFT to buyer
         erc721TransferHelper.transferFrom(offer.tokenContract, msg.sender, offer.buyer, offer.tokenId);
 
-        offer.status = OfferStatus.Filled;
-
         ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.offerCurrency, tokenId: 0, amount: offer.offerAmount});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
         emit NFTOfferFilled(_offerId, offer.buyer, _finder, offer);
+
+        uint256 _index = offerToIndex[offer.tokenContract][offer.tokenId][_offerId];
+
+        delete offersForNFT[offer.tokenContract][offer.tokenId][_index];
+        delete offerToIndex[offer.tokenContract][offer.tokenId][_offerId];
+        delete offers[_offerId];
     }
 }
