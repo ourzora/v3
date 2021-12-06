@@ -42,6 +42,7 @@ export async function deployReserveAuctionV1(
     zoraV1Media,
     zoraV1Market,
     royaltyRegistry,
+    // @ts-ignore
     weth
   );
   console.log(
