@@ -7,7 +7,6 @@ import {
   ERC20TransferHelper,
   ERC721TransferHelper,
   OffersV1,
-  TestERC721,
   WETH,
   RoyaltyEngineV1,
 } from '../../../typechain';
@@ -18,13 +17,11 @@ import {
   deployERC721TransferHelper,
   deployOffersV1,
   deployRoyaltyEngine,
-  deployTestERC271,
   deployWETH,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
   deployZoraProtocol,
   mintZoraNFT,
-  mintERC721Token,
   ONE_ETH,
   ONE_HALF_ETH,
   proposeModule,
@@ -32,7 +29,6 @@ import {
   revert,
   TENTH_ETH,
   THOUSANDTH_ETH,
-  THREE_ETH,
   toRoundedNumber,
   TWO_ETH,
 } from '../../utils';
@@ -42,7 +38,6 @@ chai.use(asPromised);
 describe('OffersV1', () => {
   let offers: OffersV1;
   let zoraV1: Media;
-  let testERC721: TestERC721;
   let weth: WETH;
   let deployer: Signer;
   let buyer: Signer;
@@ -62,7 +57,6 @@ describe('OffersV1', () => {
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
 
-    testERC721 = await deployTestERC271();
     weth = await deployWETH();
 
     const proposalManager = await deployZoraProposalManager(
@@ -113,18 +107,13 @@ describe('OffersV1', () => {
             value: ONE_ETH,
           }
         );
-      const offer = await offers.nftOffers(1);
+      const offer = await offers.offers(1);
 
       expect(offer.buyer).to.eq(await buyer.getAddress());
       expect(offer.tokenContract).to.eq(zoraV1.address);
       expect(offer.tokenId.toNumber()).to.eq(0);
       expect(offer.offerAmount.toString()).to.eq(ONE_ETH.toString());
       expect(offer.offerCurrency).to.eq(ethers.constants.AddressZero);
-      expect(offer.status).to.eq(0);
-
-      expect(
-        (await offers.nftOffersPerUser(await buyer.getAddress(), 0)).toNumber()
-      ).to.eq(1);
 
       expect(
         (await offers.offersForNFT(zoraV1.address, 0, 0)).toNumber()
@@ -147,7 +136,7 @@ describe('OffersV1', () => {
             }
           )
       ).eventually.rejectedWith(
-        revert`createNFTOffer cannot make offer on NFT you own`
+        revert`createNFTOffer cannot make offer on owned NFT`
       );
     });
 
@@ -215,7 +204,7 @@ describe('OffersV1', () => {
       await offers
         .connect(buyer)
         .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
-      expect((await (await offers.nftOffers(1)).offerAmount).toString()).to.eq(
+      expect((await (await offers.offers(1)).offerAmount).toString()).to.eq(
         TWO_ETH.toString()
       );
     });
@@ -235,7 +224,7 @@ describe('OffersV1', () => {
         );
 
       await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
-      expect((await (await offers.nftOffers(1)).offerAmount).toString()).to.eq(
+      expect((await (await offers.offers(1)).offerAmount).toString()).to.eq(
         ONE_HALF_ETH.toString()
       );
     });
@@ -369,7 +358,9 @@ describe('OffersV1', () => {
           }
         );
       await offers.connect(buyer).cancelNFTOffer(1);
-      expect(await (await offers.nftOffers(1)).status).to.eq(1);
+      expect((await (await offers.offers(1)).tokenContract).toString()).to.eq(
+        ethers.constants.AddressZero.toString()
+      );
     });
 
     it('should revert canceling an inactive offer', async () => {
@@ -438,7 +429,7 @@ describe('OffersV1', () => {
             value: TENTH_ETH,
           }
         );
-      expect((await (await offers.nftOffers(2)).offerAmount).toString()).to.eq(
+      expect((await (await offers.offers(2)).offerAmount).toString()).to.eq(
         TENTH_ETH.toString()
       );
     });
@@ -466,7 +457,6 @@ describe('OffersV1', () => {
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('NFTOfferCanceled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
-      expect(logDescription.args.offer.status).to.eq(1);
     });
   });
 
@@ -582,7 +572,6 @@ describe('OffersV1', () => {
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('NFTOfferFilled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
-      expect(logDescription.args.offer.status).to.eq(2);
     });
 
     it('should emit an ExchangeExecuted event', async () => {
@@ -611,11 +600,7 @@ describe('OffersV1', () => {
       expect(logDescription.args.userA).to.eq(await deployer.getAddress());
       expect(logDescription.args.userB).to.eq(await buyer.getAddress());
 
-      expect(logDescription.args.a.tokenContract).to.eq(
-        await (
-          await offers.nftOffers(1)
-        ).tokenContract
-      );
+      expect(logDescription.args.a.tokenContract).to.eq(zoraV1.address);
       expect(logDescription.args.b.tokenContract).to.eq(
         ethers.constants.AddressZero
       );
