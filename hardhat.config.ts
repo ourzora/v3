@@ -47,6 +47,12 @@ task('deployReserveAuctionV1', 'Deploy Reserve Auction V1')
     types.string
   )
   .addParam(
+    'zoraV1Market',
+    'ZORA V1 Market Address (for royalties)',
+    undefined,
+    types.string
+  )
+  .addParam(
     'royaltyRegistry',
     'ZORA Collection Royalty Registry',
     undefined,

@@ -222,6 +222,7 @@ export const deployReserveAuctionV1 = async (
   erc20TransferHelper: string,
   erc721TransferHelper: string,
   zoraV1Media: string,
+  zoraV1Market: string,
   royaltyRegistry: string,
   weth: string
 ) => {
@@ -232,6 +233,7 @@ export const deployReserveAuctionV1 = async (
     erc20TransferHelper,
     erc721TransferHelper,
     zoraV1Media,
+    zoraV1Market,
     royaltyRegistry,
     weth
   );
@@ -269,8 +271,8 @@ export const approveNFTTransfer = async (
 export async function createReserveAuction(
   tokenContract: Contract,
   reserveAuction: ReserveAuctionV1,
-  fundsRecipient: string,
-  host: string,
+  sellerFundsRecipient: string,
+  listingFeeRecipient: string,
   findersFeePercentage: number,
   currency = ethers.constants.AddressZero,
   tokenId = 0
@@ -283,11 +285,12 @@ export async function createReserveAuction(
     tokenContract.address,
     duration,
     reservePrice,
-    host,
-    fundsRecipient,
+    listingFeeRecipient,
+    sellerFundsRecipient,
     5,
     findersFeePercentage,
-    currency
+    currency,
+    0
   );
 }
 
