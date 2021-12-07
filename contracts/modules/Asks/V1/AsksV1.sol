@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 import {RoyaltyPayoutSupportV1} from "../../../common/RoyaltyPayoutSupport/V1/RoyaltyPayoutSupportV1.sol";
@@ -14,15 +12,13 @@ import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those asks
 contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1 {
-    using Counters for Counters.Counter;
-    using SafeMath for uint256;
-    using SafeMath for uint8;
-
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
+    /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
-    Counters.Counter public askCounter;
+    /// @notice The total number of asks
+    uint256 public askCounter;
 
     /// @notice The ask for a given NFT, if one exists
     /// @dev NFT address => NFT ID => ask ID
@@ -95,11 +91,11 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         }
 
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
-        require(_listingFeePercentage.add(_findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
+        require((_listingFeePercentage + _findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
 
         // Create an ask
-        askCounter.increment();
-        uint256 askId = askCounter.current();
+        askCounter++;
+        uint256 askId = askCounter;
 
         asks[askId] = Ask({
             tokenContract: _tokenContract,
@@ -171,13 +167,13 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         // Payout respective parties, ensuring royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(ask.tokenContract, ask.tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
-        uint256 listingFeeRecipientProfit = remainingProfit.mul(ask.listingFeePercentage).div(100);
-        uint256 finderFee = remainingProfit.mul(ask.findersFeePercentage).div(100);
+        uint256 listingFeeRecipientProfit = (remainingProfit * ask.listingFeePercentage) / 100;
+        uint256 finderFee = (remainingProfit * ask.findersFeePercentage) / 100;
 
         _handleOutgoingTransfer(ask.listingFeeRecipient, listingFeeRecipientProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
         _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        remainingProfit = remainingProfit.sub(listingFeeRecipientProfit).sub(finderFee);
+        remainingProfit = remainingProfit - listingFeeRecipientProfit - finderFee;
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
