@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.5;
+pragma solidity 0.8.10;
 
 import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
