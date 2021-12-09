@@ -122,6 +122,10 @@ const config: HardhatUserConfig = {
       accounts: env ? [`0x${env.RINKEBY_PRIVATE_KEY}`] : [],
       url: env ? env.RINKEBY_RPC_URL : '',
     },
+    ropsten: {
+      accounts: env ? [`0x${env.ROPSTEN_PRIVATE_KEY}`] : [],
+      url: env ? env.ROPSTEN_RPC_URL : '',
+    },
   },
   dependencyCompiler: {
     paths: [
