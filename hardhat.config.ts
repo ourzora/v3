@@ -112,6 +112,7 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     currency: 'USD',
+    gasPrice: 72,
     coinmarketcap: env ? (env.CMC_API_KEY as string) : '',
   },
   etherscan: {

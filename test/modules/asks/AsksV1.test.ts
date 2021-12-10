@@ -7,8 +7,6 @@ import {
   ERC20TransferHelper,
   ERC721TransferHelper,
   AsksV1,
-  TestEIP2981ERC721,
-  TestERC721,
   WETH,
   RoyaltyEngineV1,
 } from '../../../typechain';
@@ -18,8 +16,6 @@ import {
   deployERC721TransferHelper,
   deployAsksV1,
   deployRoyaltyEngine,
-  deployTestEIP2981ERC721,
-  deployTestERC271,
   deployWETH,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
@@ -106,18 +102,14 @@ describe('AsksV1', () => {
         10
       );
 
-      const ask = await asks.asks(1);
+      const ask = await asks.askForNFT(zoraV1.address, 0);
 
-      expect(ask.tokenContract).to.eq(zoraV1.address);
       expect(ask.seller).to.eq(await deployer.getAddress());
       expect(ask.sellerFundsRecipient).to.eq(
         await sellerFundsRecipient.getAddress()
       );
       expect(ask.askCurrency).to.eq(ethers.constants.AddressZero);
-      expect(ask.tokenId.toNumber()).to.eq(0);
       expect(ask.askPrice.toString()).to.eq(ONE_ETH.toString());
-
-      expect((await asks.askForNFT(zoraV1.address, 0)).toNumber()).to.eq(1);
     });
 
     it('should cancel an ask created by previous owner', async () => {
@@ -132,8 +124,8 @@ describe('AsksV1', () => {
         10
       );
 
-      const beforeAskForNFT = await asks.askForNFT(zoraV1.address, 0);
-      expect(beforeAskForNFT.toNumber()).to.eq(1);
+      const beforeAskSeller = (await asks.askForNFT(zoraV1.address, 0)).seller;
+      expect(beforeAskSeller).to.eq(await deployer.getAddress());
 
       await zoraV1.transferFrom(
         await deployer.getAddress(),
@@ -154,13 +146,8 @@ describe('AsksV1', () => {
           10
         );
 
-      const afterAskForNFT = await asks.askForNFT(zoraV1.address, 0);
-      expect(afterAskForNFT.toNumber()).to.eq(2);
-
-      const invalidAsk = await asks.asks(1);
-      expect(invalidAsk.tokenContract.toString()).to.eq(
-        ethers.constants.AddressZero.toString()
-      );
+      const afterAskSeller = (await asks.askForNFT(zoraV1.address, 0)).seller;
+      expect(afterAskSeller).to.eq(await buyerA.getAddress());
     });
 
     it('should emit an AskCreated event', async () => {
@@ -177,14 +164,15 @@ describe('AsksV1', () => {
       );
 
       const events = await asks.queryFilter(
-        asks.filters.AskCreated(null, null),
+        asks.filters.AskCreated(null, null, null),
         block
       );
 
       expect(events.length).to.eq(1);
       const logDescription = asks.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('AskCreated');
-      expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.tokenId.toNumber()).to.eq(0);
+      expect(logDescription.args.tokenContract).to.eq(zoraV1.address);
       expect(logDescription.args.ask.seller).to.eq(await deployer.getAddress());
     });
 
@@ -255,9 +243,9 @@ describe('AsksV1', () => {
     });
 
     it('should update the ask price', async () => {
-      await asks.setAskPrice(1, TWO_ETH, weth.address);
+      await asks.setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address);
 
-      const ask = await asks.asks(1);
+      const ask = await asks.askForNFT(zoraV1.address, 0);
 
       expect(ask.askPrice.toString()).to.eq(TWO_ETH.toString());
       expect(ask.askCurrency).to.eq(weth.address);
@@ -266,10 +254,10 @@ describe('AsksV1', () => {
     it('should emit an AskPriceUpdated event', async () => {
       const block = await ethers.provider.getBlockNumber();
 
-      await asks.setAskPrice(1, TWO_ETH, weth.address);
+      await asks.setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address);
 
       const events = await asks.queryFilter(
-        asks.filters.AskPriceUpdated(null, null),
+        asks.filters.AskPriceUpdated(null, null, null),
         block
       );
 
@@ -282,24 +270,28 @@ describe('AsksV1', () => {
 
     it('should revert when the msg.sender is not the seller', async () => {
       await expect(
-        asks.connect(listingFeeRecipient).setAskPrice(1, TWO_ETH, weth.address)
+        asks
+          .connect(listingFeeRecipient)
+          .setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address)
       ).eventually.rejectedWith(revert`setAskPrice must be seller`);
     });
     it('should revert if the ask has been sold', async () => {
       await asks
         .connect(buyerA)
-        .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
+        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
+          value: ONE_ETH,
+        });
 
       await expect(
-        asks.setAskPrice(1, TWO_ETH, weth.address)
-      ).eventually.rejectedWith(revert`setAskPrice must be active ask`);
+        asks.setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address)
+      ).eventually.rejectedWith(revert`setAskPrice must be seller`);
     });
     it('should revert if the ask has been canceled', async () => {
-      await asks.cancelAsk(1);
+      await asks.cancelAsk(zoraV1.address, 0);
 
       await expect(
-        asks.setAskPrice(1, TWO_ETH, weth.address)
-      ).eventually.rejectedWith(revert`setAskPrice must be active ask`);
+        asks.setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address)
+      ).eventually.rejectedWith(revert`setAskPrice must be seller`);
     });
   });
 
@@ -318,23 +310,23 @@ describe('AsksV1', () => {
     });
 
     it('should cancel an ask', async () => {
-      await asks.cancelAsk(1);
-      const ask = await asks.asks(1);
+      await asks.cancelAsk(zoraV1.address, 0);
+      const ask = await asks.askForNFT(zoraV1.address, 0);
       expect(ask.seller.toString()).to.eq(
         ethers.constants.AddressZero.toString()
       );
 
       const askForNFT = await asks.askForNFT(zoraV1.address, 0);
-      expect(askForNFT.toString()).to.eq('0');
+      expect(askForNFT.seller.toString()).to.eq(ethers.constants.AddressZero);
     });
 
     it('should emit an AskCanceled event', async () => {
       const block = await ethers.provider.getBlockNumber();
 
-      await asks.cancelAsk(1);
+      await asks.cancelAsk(zoraV1.address, 0);
 
       const events = await asks.queryFilter(
-        asks.filters.AskCanceled(null, null),
+        asks.filters.AskCanceled(null, null, null),
         block
       );
 
@@ -347,7 +339,7 @@ describe('AsksV1', () => {
 
     it('should revert when the seller is not msg.sender', async () => {
       await expect(
-        asks.connect(otherUser).cancelAsk(1)
+        asks.connect(otherUser).cancelAsk(zoraV1.address, 0)
       ).eventually.rejectedWith(
         revert`cancelAsk must be seller or invalid ask`
       );
@@ -359,7 +351,7 @@ describe('AsksV1', () => {
         await buyerA.getAddress(),
         0
       );
-      await asks.connect(buyerA).cancelAsk(1);
+      await asks.connect(buyerA).cancelAsk(zoraV1.address, 0);
       const ask = await asks.asks(1);
       expect(ask.seller.toString()).to.eq(
         ethers.constants.AddressZero.toString()
@@ -369,10 +361,12 @@ describe('AsksV1', () => {
     it('should revert if the ask has been filled already', async () => {
       await asks
         .connect(buyerA)
-        .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
+        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
+          value: ONE_ETH,
+        });
 
-      await expect(asks.cancelAsk(1)).rejectedWith(
-        revert`cancelAsk must be active ask`
+      await expect(asks.cancelAsk(zoraV1.address, 0)).rejectedWith(
+        revert`cancelAsk must be seller or invalid ask`
       );
     });
   });
@@ -406,7 +400,9 @@ describe('AsksV1', () => {
       const finderBeforeBalance = await finder.getBalance();
       await asks
         .connect(buyerA)
-        .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
+        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
+          value: ONE_ETH,
+        });
       const buyerAfterBalance = await buyerA.getBalance();
       const minterAfterBalance = await deployer.getBalance();
       const sellerFundsRecipientAfterBalance =
@@ -453,7 +449,9 @@ describe('AsksV1', () => {
 
       await asks
         .connect(buyerA)
-        .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
+        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
+          value: ONE_ETH,
+        });
 
       const events = await asks.queryFilter(
         asks.filters.ExchangeExecuted(null, null, null, null),

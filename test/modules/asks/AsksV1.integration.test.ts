@@ -38,7 +38,7 @@ import {
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
 
-describe('AsksV1 integration', () => {
+describe.only('AsksV1 integration', () => {
   let asks: AsksV1;
   let zoraV1: Media;
   let testERC721: TestERC721;
@@ -121,7 +121,9 @@ describe('AsksV1 integration', () => {
 
         await asks
           .connect(buyerA)
-          .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
+          .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
+            value: ONE_ETH,
+          });
       }
 
       it('should transfer the NFT to the buyer', async () => {
@@ -209,7 +211,9 @@ describe('AsksV1 integration', () => {
           10
         );
 
-        await asks.connect(buyerA).fillAsk(1, await finder.getAddress());
+        await asks
+          .connect(buyerA)
+          .fillAsk(zoraV1.address, 0, await finder.getAddress());
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -313,7 +317,9 @@ describe('AsksV1 integration', () => {
 
         await asks
           .connect(buyerA)
-          .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
+          .fillAsk(testEIP2981ERC721.address, 0, await finder.getAddress(), {
+            value: ONE_ETH,
+          });
       }
 
       it('should transfer the NFT to the buyer', async () => {
@@ -403,7 +409,9 @@ describe('AsksV1 integration', () => {
           10
         );
 
-        await asks.connect(buyerA).fillAsk(1, await finder.getAddress());
+        await asks
+          .connect(buyerA)
+          .fillAsk(testEIP2981ERC721.address, 0, await finder.getAddress());
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -510,7 +518,9 @@ describe('AsksV1 integration', () => {
 
         await asks
           .connect(buyerA)
-          .fillAsk(1, await finder.getAddress(), { value: ONE_ETH });
+          .fillAsk(testERC721.address, 0, await finder.getAddress(), {
+            value: ONE_ETH,
+          });
       }
 
       it('should transfer the NFT to the buyer', async () => {
@@ -586,7 +596,9 @@ describe('AsksV1 integration', () => {
           10
         );
 
-        await asks.connect(buyerA).fillAsk(1, await finder.getAddress());
+        await asks
+          .connect(buyerA)
+          .fillAsk(testERC721.address, 0, await finder.getAddress());
       }
 
       it('should transfer the NFT to the buyer', async () => {
