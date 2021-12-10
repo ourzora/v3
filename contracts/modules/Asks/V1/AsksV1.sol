@@ -25,9 +25,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         address seller;
         address sellerFundsRecipient;
         address askCurrency;
-        address listingFeeRecipient;
         uint256 askPrice;
-        uint8 listingFeePercentage;
         uint8 findersFeePercentage;
     }
 
@@ -58,8 +56,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _askPrice The price of the sale
     /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
     /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _listingFeeRecipient The listingFeeRecipient of the sale, who can receive _listingFeePercentage of the sale price
-    /// @param _listingFeePercentage The percentage of the sale amount to be sent to the listingFeeRecipient
     /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
     function createAsk(
         address _tokenContract,
@@ -67,8 +63,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 _askPrice,
         address _askCurrency,
         address _sellerFundsRecipient,
-        address _listingFeeRecipient,
-        uint8 _listingFeePercentage,
         uint8 _findersFeePercentage
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
@@ -82,16 +76,14 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         }
 
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
-        require((_listingFeePercentage + _findersFeePercentage) <= 100, "createAsk listing fee and finders fee percentage must be less than 100");
+        require(_findersFeePercentage <= 100, "createAsk finders fee percentage must be less than or equal to 100");
 
         // Create an ask
         askForNFT[_tokenContract][_tokenId] = Ask({
             seller: msg.sender,
             sellerFundsRecipient: _sellerFundsRecipient,
             askCurrency: _askCurrency,
-            listingFeeRecipient: _listingFeeRecipient,
             askPrice: _askPrice,
-            listingFeePercentage: _listingFeePercentage,
             findersFeePercentage: _findersFeePercentage
         });
 
@@ -154,13 +146,11 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         // Payout respective parties, ensuring royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
-        uint256 listingFeeRecipientProfit = (remainingProfit * ask.listingFeePercentage) / 100;
         uint256 finderFee = (remainingProfit * ask.findersFeePercentage) / 100;
 
-        _handleOutgoingTransfer(ask.listingFeeRecipient, listingFeeRecipientProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
         _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        remainingProfit = remainingProfit - listingFeeRecipientProfit - finderFee;
+        remainingProfit = remainingProfit - finderFee;
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
