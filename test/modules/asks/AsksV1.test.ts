@@ -43,7 +43,6 @@ describe('AsksV1', () => {
   let deployer: Signer;
   let buyerA: Signer;
   let sellerFundsRecipient: Signer;
-  let listingFeeRecipient: Signer;
   let finder: Signer;
   let otherUser: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
@@ -55,9 +54,8 @@ describe('AsksV1', () => {
     deployer = signers[0];
     buyerA = signers[1];
     sellerFundsRecipient = signers[2];
-    listingFeeRecipient = signers[3];
-    otherUser = signers[4];
-    finder = signers[5];
+    otherUser = signers[3];
+    finder = signers[4];
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
     weth = await deployWETH();
@@ -101,8 +99,6 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await listingFeeRecipient.getAddress(),
-        10,
         10
       );
 
@@ -127,8 +123,6 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await listingFeeRecipient.getAddress(),
-        10,
         10
       );
 
@@ -149,8 +143,6 @@ describe('AsksV1', () => {
           TWO_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          await listingFeeRecipient.getAddress(),
-          10,
           10
         );
 
@@ -171,8 +163,6 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await listingFeeRecipient.getAddress(),
-        10,
         10
       );
 
@@ -198,8 +188,6 @@ describe('AsksV1', () => {
             ONE_ETH,
             ethers.constants.AddressZero,
             ethers.constants.AddressZero,
-            await listingFeeRecipient.getAddress(),
-            10,
             10
           )
       ).eventually.rejectedWith(
@@ -215,14 +203,12 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
-          await listingFeeRecipient.getAddress(),
-          10,
           10
         )
       ).eventually.rejectedWith('createAsk must specify sellerFundsRecipient');
     });
 
-    it('should revert if the lising fee percentage is greater than 100', async () => {
+    it('should revert if the finders fee percentage is greater than 100', async () => {
       await expect(
         asks.createAsk(
           zoraV1.address,
@@ -230,12 +216,10 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          await listingFeeRecipient.getAddress(),
-          101,
-          10
+          101
         )
       ).eventually.rejectedWith(
-        'createAsk listing fee and finders fee percentage must be less than 100'
+        'createAsk finders fee percentage must be less than or equal to 100'
       );
     });
   });
@@ -248,8 +232,6 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await listingFeeRecipient.getAddress(),
-        10,
         10
       );
     });
@@ -282,7 +264,7 @@ describe('AsksV1', () => {
 
     it('should revert when the msg.sender is not the seller', async () => {
       await expect(
-        asks.connect(listingFeeRecipient).setAskPrice(1, TWO_ETH, weth.address)
+        asks.connect(otherUser).setAskPrice(1, TWO_ETH, weth.address)
       ).eventually.rejectedWith(revert`setAskPrice must be seller`);
     });
     it('should revert if the ask has been sold', async () => {
@@ -311,8 +293,6 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await listingFeeRecipient.getAddress(),
-        10,
         10
       );
     });
@@ -385,8 +365,6 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        await listingFeeRecipient.getAddress(),
-        10,
         10
       );
     });
@@ -401,8 +379,6 @@ describe('AsksV1', () => {
       const minterBeforeBalance = await deployer.getBalance();
       const sellerFundsRecipientBeforeBalance =
         await sellerFundsRecipient.getBalance();
-      const listingFeeRecipientBeforeBalance =
-        await listingFeeRecipient.getBalance();
       const finderBeforeBalance = await finder.getBalance();
       await asks
         .connect(buyerA)
@@ -411,8 +387,6 @@ describe('AsksV1', () => {
       const minterAfterBalance = await deployer.getBalance();
       const sellerFundsRecipientAfterBalance =
         await sellerFundsRecipient.getBalance();
-      const listingFeeRecipientAfterBalance =
-        await listingFeeRecipient.getBalance();
       const finderAfterBalance = await finder.getBalance();
 
       const ask = await asks.asks(1);
@@ -426,22 +400,16 @@ describe('AsksV1', () => {
       expect(toRoundedNumber(minterAfterBalance)).to.eq(
         toRoundedNumber(minterBeforeBalance.add(ONE_ETH.div(2)))
       );
-      // 0.5ETH creator fee + 1 ETH bid * 10% ask fee -> .05 ETH profit
-      expect(toRoundedNumber(listingFeeRecipientAfterBalance)).to.eq(
-        toRoundedNumber(
-          listingFeeRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(50))
-        )
-      );
 
       // 0.5ETH creator fee + 1 ETH bid * 10% finder fee -> .05 ETH profit
       expect(toRoundedNumber(finderAfterBalance)).to.eq(
         toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(50)))
       );
 
-      // ask fee - creator fee - finder fee -> .68 ETH profit
+      // ask fee - creator fee - finder fee -> .765 ETH profit
       expect(toRoundedNumber(sellerFundsRecipientAfterBalance)).to.eq(
         toRoundedNumber(
-          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(400))
+          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(450))
         )
       );
 
