@@ -253,7 +253,7 @@ describe('AsksV1', () => {
     it('should revert when the msg.sender is not the seller', async () => {
       await expect(
         asks
-          .connect(listingFeeRecipient)
+          .connect(buyerA)
           .setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address)
       ).eventually.rejectedWith(revert`setAskPrice must be seller`);
     });
@@ -332,7 +332,7 @@ describe('AsksV1', () => {
         0
       );
       await asks.connect(buyerA).cancelAsk(zoraV1.address, 0);
-      const ask = await asks.asks(1);
+      const ask = await asks.askForNFT(zoraV1.address, 0);
       expect(ask.seller.toString()).to.eq(
         ethers.constants.AddressZero.toString()
       );
@@ -385,7 +385,7 @@ describe('AsksV1', () => {
         await sellerFundsRecipient.getBalance();
       const finderAfterBalance = await finder.getBalance();
 
-      const ask = await asks.asks(1);
+      const ask = await asks.askForNFT(zoraV1.address, 0);
       expect(ask.seller.toString()).to.eq(ethers.constants.AddressZero);
 
       expect(toRoundedNumber(buyerAfterBalance)).to.approximately(

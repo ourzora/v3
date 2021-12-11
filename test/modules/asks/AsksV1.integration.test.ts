@@ -38,7 +38,7 @@ import {
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
 
-describe.only('AsksV1 integration', () => {
+describe('AsksV1 integration', () => {
   let asks: AsksV1;
   let zoraV1: Media;
   let testERC721: TestERC721;
