@@ -17,33 +17,25 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
-    /// @notice The total number of asks
-    uint256 public askCounter;
-
     /// @notice The ask for a given NFT, if one exists
     /// @dev NFT address => NFT ID => ask ID
-    mapping(address => mapping(uint256 => uint256)) public askForNFT;
-
-    /// @notice A mapping of IDs to their respective ask
-    mapping(uint256 => Ask) public asks;
+    mapping(address => mapping(uint256 => Ask)) public askForNFT;
 
     struct Ask {
-        address tokenContract;
         address seller;
         address sellerFundsRecipient;
         address askCurrency;
-        uint256 tokenId;
         uint256 askPrice;
         uint8 findersFeePercentage;
     }
 
-    event AskCreated(uint256 indexed id, Ask ask);
+    event AskCreated(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
 
-    event AskPriceUpdated(uint256 indexed id, Ask ask);
+    event AskPriceUpdated(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
 
-    event AskCanceled(uint256 indexed id, Ask ask);
+    event AskCanceled(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
 
-    event AskFilled(uint256 indexed id, address indexed buyer, address indexed finder, Ask ask);
+    event AskFilled(address indexed tokenContract, uint256 indexed tokenId, address indexed buyer, address finder, Ask ask);
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -65,7 +57,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
     /// @param _sellerFundsRecipient The address to send funds to once the token is sold
     /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
-    /// @return The ID of the created ask
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -73,121 +64,117 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         address _askCurrency,
         address _sellerFundsRecipient,
         uint8 _findersFeePercentage
-    ) external nonReentrant returns (uint256) {
+    ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         bool isOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
         bool isApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == msg.sender;
 
         require((msg.sender == tokenOwner) || isOperatorForTokenOwner || isApprovedForToken, "createAsk must be token owner or approved operator");
 
-        if (askForNFT[_tokenContract][_tokenId] != 0) {
-            _cancelAsk(askForNFT[_tokenContract][_tokenId]);
+        if (askForNFT[_tokenContract][_tokenId].seller != address(0)) {
+            _cancelAsk(_tokenContract, _tokenId);
         }
 
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
         require(_findersFeePercentage <= 100, "createAsk finders fee percentage must be less than or equal to 100");
 
         // Create an ask
-        askCounter++;
-        uint256 askId = askCounter;
-
-        asks[askId] = Ask({
-            tokenContract: _tokenContract,
+        askForNFT[_tokenContract][_tokenId] = Ask({
             seller: msg.sender,
             sellerFundsRecipient: _sellerFundsRecipient,
             askCurrency: _askCurrency,
-            tokenId: _tokenId,
             askPrice: _askPrice,
             findersFeePercentage: _findersFeePercentage
         });
 
-        askForNFT[_tokenContract][_tokenId] = askId;
-
-        emit AskCreated(askId, asks[askId]);
-
-        return askId;
+        emit AskCreated(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
     }
 
     /// @notice Updates the ask price for a given ask
-    /// @param _askId the ID of the ask to update
+    /// @param _tokenContract The address of the ERC-721 token contract for the token
+    /// @param _tokenId The ERC-721 token ID for the token
     /// @param _askPrice the price to update the ask to
     /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
     function setAskPrice(
-        uint256 _askId,
+        address _tokenContract,
+        uint256 _tokenId,
         uint256 _askPrice,
         address _askCurrency
     ) external {
-        Ask storage ask = asks[_askId];
+        Ask storage ask = askForNFT[_tokenContract][_tokenId];
 
-        require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "setAskPrice must be active ask");
         require(ask.seller == msg.sender, "setAskPrice must be seller");
 
         ask.askPrice = _askPrice;
         ask.askCurrency = _askCurrency;
 
-        emit AskPriceUpdated(_askId, ask);
+        emit AskPriceUpdated(_tokenContract, _tokenId, ask);
     }
 
     /// @notice Cancels a ask
-    /// @param _askId the ID of the ask to cancel
-    function cancelAsk(uint256 _askId) external {
-        Ask storage ask = asks[_askId];
+    /// @param _tokenContract The address of the ERC-721 token contract for the token
+    /// @param _tokenId The ERC-721 token ID for the token
+    function cancelAsk(address _tokenContract, uint256 _tokenId) external {
+        Ask storage ask = askForNFT[_tokenContract][_tokenId];
 
-        require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "cancelAsk must be active ask");
-
-        address tokenOwner = IERC721(ask.tokenContract).ownerOf(ask.tokenId);
+        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         bool isTokenOwner = tokenOwner == msg.sender;
-        bool isOperatorForTokenOwner = IERC721(ask.tokenContract).isApprovedForAll(tokenOwner, msg.sender);
-        bool isApprovedForToken = IERC721(ask.tokenContract).getApproved(ask.tokenId) == msg.sender;
+        bool isOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
+        bool isApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == msg.sender;
 
         require((msg.sender == ask.seller) || isTokenOwner || isOperatorForTokenOwner || isApprovedForToken, "cancelAsk must be seller or invalid ask");
 
-        _cancelAsk(_askId);
+        _cancelAsk(_tokenContract, _tokenId);
     }
 
     /// @notice Purchase an NFT from a ask, transferring the NFT to the buyer and funds to the recipients
-    /// @param _askId The ID of the ask
+    /// @param _tokenContract The address of the ERC-721 token contract for the token
+    /// @param _tokenId The ERC-721 token ID for the token
     /// @param _finder The address of the referrer for this ask
-    function fillAsk(uint256 _askId, address _finder) external payable nonReentrant {
-        Ask storage ask = asks[_askId];
+    function fillAsk(
+        address _tokenContract,
+        uint256 _tokenId,
+        address _finder
+    ) external payable nonReentrant {
+        Ask storage ask = askForNFT[_tokenContract][_tokenId];
 
-        require(_askId == askForNFT[ask.tokenContract][ask.tokenId], "fillAsk must be active ask");
-        require(_finder != address(0), "fillAsk _finder must not be 0 address");
+        require(ask.seller != address(0), "fillAsk must be active ask");
 
         // Ensure payment is valid and take custody of payment
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(ask.tokenContract, ask.tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
-        uint256 finderFee = (remainingProfit * ask.findersFeePercentage) / 100;
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
+        if (_finder != address(0)) {
+            uint256 finderFee = (remainingProfit * ask.findersFeePercentage) / 100;
+            _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        remainingProfit = remainingProfit - finderFee;
+            remainingProfit = remainingProfit - finderFee;
+        }
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(ask.tokenContract, ask.seller, msg.sender, ask.tokenId);
+        erc721TransferHelper.transferFrom(_tokenContract, ask.seller, msg.sender, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ask.tokenContract, tokenId: ask.tokenId, amount: 1});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ask.askCurrency, tokenId: 0, amount: ask.askPrice});
 
         emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
-        emit AskFilled(_askId, msg.sender, _finder, ask);
+        emit AskFilled(_tokenContract, _tokenId, msg.sender, _finder, ask);
 
-        delete askForNFT[ask.tokenContract][ask.tokenId];
-        delete asks[_askId];
+        delete askForNFT[_tokenContract][_tokenId];
     }
 
     /// @notice Removes an ask
-    /// @param _askId The ID of the ask
-    function _cancelAsk(uint256 _askId) private {
-        Ask storage ask = asks[_askId];
+    /// @param _tokenContract The address of the ERC-721 token contract for the token
+    /// @param _tokenId The ERC-721 token ID for the token
+    function _cancelAsk(address _tokenContract, uint256 _tokenId) private {
+        Ask storage ask = askForNFT[_tokenContract][_tokenId];
 
-        emit AskCanceled(_askId, ask);
+        emit AskCanceled(_tokenContract, _tokenId, ask);
 
-        delete askForNFT[ask.tokenContract][ask.tokenId];
-        delete asks[_askId];
+        delete askForNFT[_tokenContract][_tokenId];
     }
 }
