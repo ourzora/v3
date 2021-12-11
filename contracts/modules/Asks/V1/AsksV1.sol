@@ -139,18 +139,19 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         Ask storage ask = askForNFT[_tokenContract][_tokenId];
 
         require(ask.seller != address(0), "fillAsk must be active ask");
-        require(_finder != address(0), "fillAsk _finder must not be 0 address");
 
         // Ensure payment is valid and take custody of payment
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
-        uint256 finderFee = (remainingProfit * ask.findersFeePercentage) / 100;
 
-        _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
+        if (_finder != address(0)) {
+            uint256 finderFee = (remainingProfit * ask.findersFeePercentage) / 100;
+            _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        remainingProfit = remainingProfit - finderFee;
+            remainingProfit = remainingProfit - finderFee;
+        }
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
