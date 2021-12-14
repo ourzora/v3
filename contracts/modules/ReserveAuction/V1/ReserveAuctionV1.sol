@@ -180,7 +180,6 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             _amount >= (auction.amount + ((auction.amount * minBidIncrementPercentage) / 100)),
             "createBid must send more than the last bid by minBidIncrementPercentage amount"
         );
-        require(_finder != ADDRESS_ZERO, "createBid _finder must not be 0 address");
 
         // For Zora V1 Protocol, ensure that the bid is valid for the current bidShare configuration
         if (_tokenContract == zoraV1Media) {

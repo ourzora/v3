@@ -510,16 +510,6 @@ describe('ReserveAuctionV1', () => {
       );
     });
 
-    it('should revert if the _finder is zero address', async () => {
-      await expect(
-        reserveAuction
-          .connect(bidderB)
-          .createBid(zoraV1.address, 0, ONE_ETH, ethers.constants.AddressZero)
-      ).eventually.rejectedWith(
-        revert`createBid _finder must not be 0 address`
-      );
-    });
-
     it('should revert if the bid is invalid on zora v1', async () => {
       await expect(
         reserveAuction
