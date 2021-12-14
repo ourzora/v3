@@ -4,7 +4,6 @@ import asPromised from 'chai-as-promised';
 import { Signer } from 'ethers';
 import { Market, Media } from '@zoralabs/core/dist/typechain';
 import {
-  BadERC721,
   ReserveAuctionV1,
   TestEIP2981ERC721,
   TestERC721,
@@ -15,7 +14,6 @@ import {
 } from '../../../typechain';
 import {
   approveNFTTransfer,
-  deployBadERC721,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployReserveAuctionV1,
@@ -51,7 +49,6 @@ describe('ReserveAuctionV1 integration', () => {
   let testEIP2981ERC721: TestEIP2981ERC721;
   let weth: WETH;
   let deployer: Signer;
-  let listingFeeRecipient: Signer;
   let bidderA: Signer;
   let bidderB: Signer;
   let sellerFundsRecipient: Signer;
@@ -65,7 +62,6 @@ describe('ReserveAuctionV1 integration', () => {
     await ethers.provider.send('hardhat_reset', []);
     const signers = await ethers.getSigners();
     deployer = signers[0];
-    listingFeeRecipient = signers[1];
     bidderA = signers[2];
     bidderB = signers[3];
     sellerFundsRecipient = signers[4];
@@ -131,13 +127,11 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction
           .connect(deployer)
           .createAuction(
-            0,
             zoraV1.address,
+            0,
             ONE_DAY,
             TENTH_ETH,
-            await listingFeeRecipient.getAddress(),
             await sellerFundsRecipient.getAddress(),
-            10,
             10,
             ethers.constants.AddressZero,
             0
@@ -145,14 +139,24 @@ describe('ReserveAuctionV1 integration', () => {
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(1, ONE_HALF_ETH, await finder.getAddress(), {
-            value: ONE_HALF_ETH,
-          });
+          .createBid(
+            zoraV1.address,
+            0,
+            ONE_HALF_ETH,
+            await finder.getAddress(),
+            {
+              value: ONE_HALF_ETH,
+            }
+          );
         await reserveAuction
           .connect(bidderB)
-          .createBid(1, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
-        await timeTravelToEndOfAuction(reserveAuction, 1, true);
-        await reserveAuction.connect(otherUser).settleAuction(1);
+          .createBid(zoraV1.address, 0, ONE_ETH, await finder.getAddress(), {
+            value: ONE_ETH,
+          });
+        await timeTravelToEndOfAuction(reserveAuction, zoraV1.address, 0, true);
+        await reserveAuction
+          .connect(otherUser)
+          .settleAuction(zoraV1.address, 0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -185,9 +189,9 @@ describe('ReserveAuctionV1 integration', () => {
         await run();
         const afterBalance = await sellerFundsRecipient.getBalance();
 
-        // 15% creator fee + 10% listing fee + 10% finders fee
+        // 15% creator fee + 10% finders fee
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(680))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765))),
           10
         );
       });
@@ -233,13 +237,11 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction
           .connect(deployer)
           .createAuction(
-            0,
             zoraV1.address,
+            0,
             ONE_DAY,
             TENTH_ETH,
-            await listingFeeRecipient.getAddress(),
             await sellerFundsRecipient.getAddress(),
-            10,
             10,
             weth.address,
             0
@@ -247,12 +249,19 @@ describe('ReserveAuctionV1 integration', () => {
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(1, ONE_HALF_ETH, await finder.getAddress());
+          .createBid(
+            zoraV1.address,
+            0,
+            ONE_HALF_ETH,
+            await finder.getAddress()
+          );
         await reserveAuction
           .connect(bidderB)
-          .createBid(1, ONE_ETH, await finder.getAddress());
-        await timeTravelToEndOfAuction(reserveAuction, 1, true);
-        await reserveAuction.connect(otherUser).settleAuction(1);
+          .createBid(zoraV1.address, 0, ONE_ETH, await finder.getAddress());
+        await timeTravelToEndOfAuction(reserveAuction, zoraV1.address, 0, true);
+        await reserveAuction
+          .connect(otherUser)
+          .settleAuction(zoraV1.address, 0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -287,24 +296,9 @@ describe('ReserveAuctionV1 integration', () => {
           await sellerFundsRecipient.getAddress()
         );
 
-        // 15% creator fee + 10% listing fee + 10% finders fee -> 1 WETH * 15% * 20%  = .68WETH
-        expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(680)))
-        );
-      });
-
-      it('should pay the listing fee recipient', async () => {
-        const beforeBalance = await weth.balanceOf(
-          await listingFeeRecipient.getAddress()
-        );
-        await run();
-        const afterBalance = await weth.balanceOf(
-          await listingFeeRecipient.getAddress()
-        );
-
-        // 15% creator fee -> 0.85 ETH * 10% listing fee -> 0.085 ETH
+        // 15% creator fee + 10% finders fee
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765))),
           10
         );
       });
@@ -354,13 +348,11 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction
           .connect(deployer)
           .createAuction(
-            0,
             testEIP2981ERC721.address,
+            0,
             ONE_DAY,
             TENTH_ETH,
-            await listingFeeRecipient.getAddress(),
             await sellerFundsRecipient.getAddress(),
-            10,
             10,
             ethers.constants.AddressZero,
             0
@@ -368,14 +360,35 @@ describe('ReserveAuctionV1 integration', () => {
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(1, ONE_HALF_ETH, await finder.getAddress(), {
-            value: ONE_HALF_ETH,
-          });
+          .createBid(
+            testEIP2981ERC721.address,
+            0,
+            ONE_HALF_ETH,
+            await finder.getAddress(),
+            {
+              value: ONE_HALF_ETH,
+            }
+          );
         await reserveAuction
           .connect(bidderB)
-          .createBid(1, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
-        await timeTravelToEndOfAuction(reserveAuction, 1, true);
-        await reserveAuction.connect(otherUser).settleAuction(1);
+          .createBid(
+            testEIP2981ERC721.address,
+            0,
+            ONE_ETH,
+            await finder.getAddress(),
+            {
+              value: ONE_ETH,
+            }
+          );
+        await timeTravelToEndOfAuction(
+          reserveAuction,
+          testEIP2981ERC721.address,
+          0,
+          true
+        );
+        await reserveAuction
+          .connect(otherUser)
+          .settleAuction(testEIP2981ERC721.address, 0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -410,21 +423,9 @@ describe('ReserveAuctionV1 integration', () => {
         await run();
         const afterBalance = await sellerFundsRecipient.getBalance();
 
-        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 20% fees -> .4 ETH
+        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 10% finders fee -> .45 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(4))),
-          10
-        );
-      });
-
-      it('should pay the listing fee recipient', async () => {
-        const beforeBalance = await listingFeeRecipient.getBalance();
-        await run();
-        const afterBalance = await listingFeeRecipient.getBalance();
-
-        // 50% creator fee -> 0.5 ETH * 10% listing fee -> 0.05 ETH
-        expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
           10
         );
       });
@@ -470,13 +471,11 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction
           .connect(deployer)
           .createAuction(
-            0,
             testEIP2981ERC721.address,
+            0,
             ONE_DAY,
             TENTH_ETH,
-            await listingFeeRecipient.getAddress(),
             await sellerFundsRecipient.getAddress(),
-            10,
             10,
             weth.address,
             0
@@ -484,12 +483,29 @@ describe('ReserveAuctionV1 integration', () => {
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(1, ONE_HALF_ETH, await finder.getAddress());
+          .createBid(
+            testEIP2981ERC721.address,
+            0,
+            ONE_HALF_ETH,
+            await finder.getAddress()
+          );
         await reserveAuction
           .connect(bidderB)
-          .createBid(1, ONE_ETH, await finder.getAddress());
-        await timeTravelToEndOfAuction(reserveAuction, 1, true);
-        await reserveAuction.connect(otherUser).settleAuction(1);
+          .createBid(
+            testEIP2981ERC721.address,
+            0,
+            ONE_ETH,
+            await finder.getAddress()
+          );
+        await timeTravelToEndOfAuction(
+          reserveAuction,
+          testEIP2981ERC721.address,
+          0,
+          true
+        );
+        await reserveAuction
+          .connect(otherUser)
+          .settleAuction(testEIP2981ERC721.address, 0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -526,25 +542,9 @@ describe('ReserveAuctionV1 integration', () => {
           await sellerFundsRecipient.getAddress()
         );
 
-        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 20% fees -> .4 ETH
+        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 10% finders fee -> .45 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(4))),
-          10
-        );
-      });
-
-      it('should pay the listing fee recipient', async () => {
-        const beforeBalance = await weth.balanceOf(
-          await listingFeeRecipient.getAddress()
-        );
-        await run();
-        const afterBalance = await weth.balanceOf(
-          await listingFeeRecipient.getAddress()
-        );
-
-        // 50% creator fee -> 0.5 ETH * 10% listing fee -> 0.05 ETH
-        expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
           10
         );
       });
@@ -594,13 +594,11 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction
           .connect(deployer)
           .createAuction(
-            0,
             testERC721.address,
+            0,
             ONE_DAY,
             TENTH_ETH,
-            await listingFeeRecipient.getAddress(),
             await sellerFundsRecipient.getAddress(),
-            10,
             10,
             ethers.constants.AddressZero,
             0
@@ -608,14 +606,35 @@ describe('ReserveAuctionV1 integration', () => {
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(1, ONE_HALF_ETH, await finder.getAddress(), {
-            value: ONE_HALF_ETH,
-          });
+          .createBid(
+            testERC721.address,
+            0,
+            ONE_HALF_ETH,
+            await finder.getAddress(),
+            {
+              value: ONE_HALF_ETH,
+            }
+          );
         await reserveAuction
           .connect(bidderB)
-          .createBid(1, ONE_ETH, await finder.getAddress(), { value: ONE_ETH });
-        await timeTravelToEndOfAuction(reserveAuction, 1, true);
-        await reserveAuction.connect(otherUser).settleAuction(1);
+          .createBid(
+            testERC721.address,
+            0,
+            ONE_ETH,
+            await finder.getAddress(),
+            {
+              value: ONE_ETH,
+            }
+          );
+        await timeTravelToEndOfAuction(
+          reserveAuction,
+          testERC721.address,
+          0,
+          true
+        );
+        await reserveAuction
+          .connect(otherUser)
+          .settleAuction(testERC721.address, 0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -648,21 +667,9 @@ describe('ReserveAuctionV1 integration', () => {
         await run();
         const afterBalance = await sellerFundsRecipient.getBalance();
 
-        // 20% fees -> 0.8 ETH
+        // 10% finders fee -> 0.9 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(8))),
-          10
-        );
-      });
-
-      it('should pay the listing fee recipient', async () => {
-        const beforeBalance = await listingFeeRecipient.getBalance();
-        await run();
-        const afterBalance = await listingFeeRecipient.getBalance();
-
-        // 10% listing fee -> 0.9 ETH
-        expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH)),
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9))),
           10
         );
       });
@@ -696,13 +703,11 @@ describe('ReserveAuctionV1 integration', () => {
         await reserveAuction
           .connect(deployer)
           .createAuction(
-            0,
             testERC721.address,
+            0,
             ONE_DAY,
             TENTH_ETH,
-            await listingFeeRecipient.getAddress(),
             await sellerFundsRecipient.getAddress(),
-            10,
             10,
             weth.address,
             0
@@ -710,12 +715,24 @@ describe('ReserveAuctionV1 integration', () => {
 
         await reserveAuction
           .connect(bidderA)
-          .createBid(1, ONE_HALF_ETH, await finder.getAddress());
+          .createBid(
+            testERC721.address,
+            0,
+            ONE_HALF_ETH,
+            await finder.getAddress()
+          );
         await reserveAuction
           .connect(bidderB)
-          .createBid(1, ONE_ETH, await finder.getAddress());
-        await timeTravelToEndOfAuction(reserveAuction, 1, true);
-        await reserveAuction.connect(otherUser).settleAuction(1);
+          .createBid(testERC721.address, 0, ONE_ETH, await finder.getAddress());
+        await timeTravelToEndOfAuction(
+          reserveAuction,
+          testERC721.address,
+          0,
+          true
+        );
+        await reserveAuction
+          .connect(otherUser)
+          .settleAuction(testERC721.address, 0);
       }
 
       it('should transfer the NFT to the winning bidder', async () => {
@@ -750,25 +767,9 @@ describe('ReserveAuctionV1 integration', () => {
           await sellerFundsRecipient.getAddress()
         );
 
-        // 20% fees -> 0.8 ETH
+        // 10% finders fee -> 0.9 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(8))),
-          10
-        );
-      });
-
-      it('should pay the listing fee recipient', async () => {
-        const beforeBalance = await weth.balanceOf(
-          await listingFeeRecipient.getAddress()
-        );
-        await run();
-        const afterBalance = await weth.balanceOf(
-          await listingFeeRecipient.getAddress()
-        );
-
-        // 10% listing fee -> 0.9 ETH
-        expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH)),
+          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9))),
           10
         );
       });
