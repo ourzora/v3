@@ -272,7 +272,6 @@ export async function createReserveAuction(
   tokenContract: Contract,
   reserveAuction: ReserveAuctionV1,
   sellerFundsRecipient: string,
-  listingFeeRecipient: string,
   findersFeePercentage: number,
   currency = ethers.constants.AddressZero,
   tokenId = 0
@@ -281,13 +280,11 @@ export async function createReserveAuction(
   const reservePrice = BigNumber.from(10).pow(18).div(2);
 
   await reserveAuction.createAuction(
-    tokenId,
     tokenContract.address,
+    tokenId,
     duration,
     reservePrice,
-    listingFeeRecipient,
     sellerFundsRecipient,
-    5,
     findersFeePercentage,
     currency,
     0
@@ -296,12 +293,13 @@ export async function createReserveAuction(
 
 export async function bid(
   reserveAuction: ReserveAuctionV1,
-  auctionId: number,
+  tokenContract: string,
+  tokenId: number,
   amount: BigNumberish,
   finder: string,
   currency = ethers.constants.AddressZero
 ) {
-  await reserveAuction.createBid(auctionId, amount, finder, {
+  await reserveAuction.createBid(tokenContract, tokenId, amount, finder, {
     value: currency === ethers.constants.AddressZero ? amount : 0,
   });
 }
@@ -312,10 +310,11 @@ export async function timeTravel(to: number) {
 
 export async function timeTravelToEndOfAuction(
   reserveAuction: ReserveAuctionV1,
-  auctionId: number,
+  tokenContract: string,
+  tokenId: number,
   afterEnd = false
 ) {
-  const auction = await reserveAuction.auctions(auctionId);
+  const auction = await reserveAuction.auctionForNFT(tokenContract, tokenId);
   const base = auction.firstBidTime.add(auction.duration);
   const target = afterEnd ? base : base.sub(1);
   await timeTravel(target.toNumber());
@@ -323,9 +322,10 @@ export async function timeTravelToEndOfAuction(
 
 export async function settleAuction(
   reserveAuction: ReserveAuctionV1,
-  auctionId: number
+  tokenContract: string,
+  tokenId: number
 ) {
-  await reserveAuction.settleAuction(auctionId);
+  await reserveAuction.settleAuction(tokenContract, tokenId);
 }
 
 export async function mintERC2981Token(eip2981: TestEIP2981ERC721, to: string) {
