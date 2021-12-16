@@ -80,7 +80,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         // Create an ask
         askForNFT[_tokenContract][_tokenId] = Ask({
-            seller: msg.sender,
+            seller: tokenOwner,
             sellerFundsRecipient: _sellerFundsRecipient,
             askCurrency: _askCurrency,
             askPrice: _askPrice,
