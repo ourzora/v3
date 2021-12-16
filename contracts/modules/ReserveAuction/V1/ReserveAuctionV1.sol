@@ -123,7 +123,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         }
 
         auctionForNFT[_tokenContract][_tokenId] = Auction({
-            seller: msg.sender,
+            seller: tokenOwner,
             auctionCurrency: _auctionCurrency,
             sellerFundsRecipient: _sellerFundsRecipient,
             bidder: payable(ADDRESS_ZERO),
