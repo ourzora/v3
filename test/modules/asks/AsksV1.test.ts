@@ -41,6 +41,7 @@ describe('AsksV1', () => {
   let sellerFundsRecipient: Signer;
   let finder: Signer;
   let otherUser: Signer;
+  let operator: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
   let royaltyEngine: RoyaltyEngineV1;
@@ -52,6 +53,7 @@ describe('AsksV1', () => {
     sellerFundsRecipient = signers[2];
     otherUser = signers[3];
     finder = signers[4];
+    operator = signers[5];
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
     weth = await deployWETH();
@@ -88,7 +90,7 @@ describe('AsksV1', () => {
   });
 
   describe('#createAsk', () => {
-    it('should create an ask', async () => {
+    it('should create an ask from a token owner', async () => {
       await asks.createAsk(
         zoraV1.address,
         0,
@@ -106,6 +108,25 @@ describe('AsksV1', () => {
       );
       expect(ask.askCurrency).to.eq(ethers.constants.AddressZero);
       expect(ask.askPrice.toString()).to.eq(ONE_ETH.toString());
+    });
+
+    it('should create an ask from an approved operator', async () => {
+      await zoraV1.connect(deployer).approve(await operator.getAddress(), 0);
+
+      await asks
+        .connect(operator)
+        .createAsk(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          await sellerFundsRecipient.getAddress(),
+          10
+        );
+
+      const ask = await asks.askForNFT(zoraV1.address, 0);
+
+      expect(ask.seller).to.eq(await deployer.getAddress());
     });
 
     it('should cancel an ask created by previous owner', async () => {
