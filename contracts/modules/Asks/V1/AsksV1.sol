@@ -26,7 +26,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         address sellerFundsRecipient;
         address askCurrency;
         uint256 askPrice;
-        uint8 findersFeePercentage;
+        uint256 findersFeePercentage;
     }
 
     event AskCreated(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
