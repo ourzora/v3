@@ -63,7 +63,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 _askPrice,
         address _askCurrency,
         address _sellerFundsRecipient,
-        uint8 _findersFeePercentage
+        uint256 _findersFeePercentage
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
