@@ -130,6 +130,36 @@ describe('ReserveAuctionV1', () => {
       );
     });
 
+    it('should revert if seller did not approve ERC-721 Transfer Helper', async () => {
+      const duration = 60 * 68 * 24;
+      const reservePrice = BigNumber.from(10).pow(18).div(2);
+      const findersFeePercentage = 10;
+      const fundsRecipientAddress = await sellerFundsRecipient.getAddress();
+      const auctionCurrency = ethers.constants.AddressZero;
+
+      await zoraV1.transferFrom(
+        await deployer.getAddress(),
+        await otherUser.getAddress(),
+        0
+      );
+      await expect(
+        reserveAuction
+          .connect(otherUser)
+          .createAuction(
+            zoraV1.address,
+            0,
+            duration,
+            reservePrice,
+            fundsRecipientAddress,
+            findersFeePercentage,
+            auctionCurrency,
+            0
+          )
+      ).eventually.rejectedWith(
+        'createAuction must approve ZORA ERC-721 Transfer Helper from _tokenContract'
+      );
+    });
+
     it('should revert if the token ID does not exist', async () => {
       const duration = 60 * 68 * 24;
       const reservePrice = BigNumber.from(10).pow(18).div(2);
@@ -199,7 +229,9 @@ describe('ReserveAuctionV1', () => {
       expect(auction.reservePrice.toString()).to.eq(reservePrice.toString());
       expect(auction.sellerFundsRecipient).to.eq(fundsRecipientAddress);
       expect(auction.seller).to.eq(await deployer.getAddress());
-      expect(auction.findersFeePercentage).to.eq(findersFeePercentage);
+      expect(auction.findersFeePercentage.toString()).to.eq(
+        findersFeePercentage.toString()
+      );
     });
 
     it('should create a future auction', async () => {
@@ -225,9 +257,13 @@ describe('ReserveAuctionV1', () => {
 
       expect(auction.duration.toNumber()).to.eq(duration);
       expect(auction.reservePrice.toString()).to.eq(reservePrice.toString());
-      expect(auction.sellerFundsRecipient).to.eq(fundsRecipientAddress);
+      expect(auction.sellerFundsRecipient.toString()).to.eq(
+        fundsRecipientAddress.toString()
+      );
       expect(auction.seller).to.eq(await deployer.getAddress());
-      expect(auction.findersFeePercentage).to.eq(findersFeePercentage);
+      expect(auction.findersFeePercentage.toString()).to.eq(
+        findersFeePercentage.toString()
+      );
     });
 
     it('should cancel an old auction if one currently exists for it and create a new one', async () => {
@@ -256,6 +292,10 @@ describe('ReserveAuctionV1', () => {
         await otherUser.getAddress(),
         0
       );
+
+      await zoraV1
+        .connect(otherUser)
+        .setApprovalForAll(erc721TransferHelper.address, true);
 
       await reserveAuction
         .connect(otherUser)
