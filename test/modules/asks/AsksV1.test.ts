@@ -396,7 +396,7 @@ describe('AsksV1', () => {
         });
 
       await expect(asks.cancelAsk(zoraV1.address, 0)).rejectedWith(
-        revert`cancelAsk must be seller or invalid ask`
+        revert`cancelAsk ask doesn't exist`
       );
     });
   });
