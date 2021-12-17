@@ -120,14 +120,14 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
     function cancelAsk(address _tokenContract, uint256 _tokenId) external {
-        Ask storage ask = askForNFT[_tokenContract][_tokenId];
-
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        bool isTokenOwner = tokenOwner == msg.sender;
-        bool isOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
-        bool isApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == msg.sender;
 
-        require((msg.sender == ask.seller) || isTokenOwner || isOperatorForTokenOwner || isApprovedForToken, "cancelAsk must be seller or invalid ask");
+        require(
+            (msg.sender == tokenOwner) ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
+                (msg.sender == IERC721(_tokenContract).getApproved(_tokenId)),
+            "cancelAsk must be seller or invalid ask"
+        );
 
         _cancelAsk(_tokenContract, _tokenId);
     }
