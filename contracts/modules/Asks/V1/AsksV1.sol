@@ -66,13 +66,13 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint8 _findersFeePercentage
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        bool isCallerOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
-        require((msg.sender == tokenOwner) || isCallerOperatorForTokenOwner, "createAsk must be token owner or approved operator");
-
-        bool isTransferHelperApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == address(erc721TransferHelper);
-        bool isTransferHelperOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper));
         require(
-            isTransferHelperApprovedForToken || isTransferHelperOperatorForTokenOwner,
+            (msg.sender == tokenOwner) || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "createAsk must be token owner or approved operator"
+        );
+        require(
+            (IERC721(_tokenContract).getApproved(_tokenId) == address(erc721TransferHelper)) ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
             "createAsk must approve ZORA ERC-721 Transfer Helper from _tokenContract"
         );
 
