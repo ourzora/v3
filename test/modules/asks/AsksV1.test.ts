@@ -111,7 +111,9 @@ describe('AsksV1', () => {
     });
 
     it('should create an ask from an approved operator', async () => {
-      await zoraV1.connect(deployer).approve(await operator.getAddress(), 0);
+      await zoraV1
+        .connect(deployer)
+        .setApprovalForAll(await operator.getAddress(), true);
 
       await asks
         .connect(operator)
@@ -147,6 +149,10 @@ describe('AsksV1', () => {
         await buyerA.getAddress(),
         0
       );
+
+      await zoraV1
+        .connect(buyerA)
+        .setApprovalForAll(erc721TransferHelper.address, true);
 
       await asks
         .connect(buyerA)
@@ -201,6 +207,29 @@ describe('AsksV1', () => {
           )
       ).eventually.rejectedWith(
         'createAsk must be token owner or approved operator'
+      );
+    });
+
+    it('should revert if seller did not approve ERC-721 Transfer Helper', async () => {
+      await zoraV1.transferFrom(
+        await deployer.getAddress(),
+        await otherUser.getAddress(),
+        0
+      );
+
+      await expect(
+        asks
+          .connect(otherUser)
+          .createAsk(
+            zoraV1.address,
+            0,
+            TWO_ETH,
+            ethers.constants.AddressZero,
+            await sellerFundsRecipient.getAddress(),
+            10
+          )
+      ).eventually.rejectedWith(
+        'createAsk must approve ZORA ERC-721 Transfer Helper from _tokenContract'
       );
     });
 
