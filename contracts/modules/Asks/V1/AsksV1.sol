@@ -176,9 +176,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
     function _cancelAsk(address _tokenContract, uint256 _tokenId) private {
-        Ask storage ask = askForNFT[_tokenContract][_tokenId];
-
-        emit AskCanceled(_tokenContract, _tokenId, ask);
+        emit AskCanceled(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
 
         delete askForNFT[_tokenContract][_tokenId];
     }
