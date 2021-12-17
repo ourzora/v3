@@ -43,7 +43,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         uint256 startTime; // The time of the auction start
         uint256 firstBidTime; // The time of the first bid
         uint256 reservePrice; // The minimum price of the first bid
-        uint8 findersFeePercentage; // The sale percentage to send to the winning bid finder
+        uint256 findersFeePercentage; // The sale percentage to send to the winning bid finder
     }
 
     event AuctionCreated(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
@@ -100,17 +100,21 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         uint256 _duration,
         uint256 _reservePrice,
         address payable _sellerFundsRecipient,
-        uint8 _findersFeePercentage,
+        uint256 _findersFeePercentage,
         address _auctionCurrency,
         uint256 _startTime
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
-            (msg.sender == tokenOwner) ||
-                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
-                (msg.sender == IERC721(_tokenContract).getApproved(_tokenId)),
+            (msg.sender == tokenOwner) || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
             "createAuction must be token owner or approved operator"
         );
+        require(
+            (IERC721(_tokenContract).getApproved(_tokenId) == address(erc721TransferHelper)) ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
+            "createAuction must approve ZORA ERC-721 Transfer Helper from _tokenContract"
+        );
+
         if (auctionForNFT[_tokenContract][_tokenId].seller != ADDRESS_ZERO) {
             _cancelAuction(_tokenContract, _tokenId);
         }
@@ -190,7 +194,6 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         // If it's not, then we should refund the last bidder
         if (auction.firstBidTime == 0) {
             auction.firstBidTime = block.timestamp;
-
             erc721TransferHelper.transferFrom(_tokenContract, auction.seller, address(this), _tokenId);
         } else if (lastBidder != ADDRESS_ZERO) {
             _handleOutgoingTransfer(lastBidder, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
@@ -284,12 +287,11 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         require(auction.firstBidTime == 0, "cancelAuction auction already started");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        bool isTokenOwner = tokenOwner == msg.sender;
-        bool isOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
-        bool isApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == msg.sender;
 
         require(
-            (msg.sender == auction.seller) || isTokenOwner || isOperatorForTokenOwner || isApprovedForToken,
+            (msg.sender == tokenOwner) ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
+                (msg.sender == IERC721(_tokenContract).getApproved(_tokenId)),
             "cancelAuction must be auction creator or invalid auction"
         );
 
