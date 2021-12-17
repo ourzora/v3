@@ -26,7 +26,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         address sellerFundsRecipient;
         address askCurrency;
         uint256 askPrice;
-        uint8 findersFeePercentage;
+        uint256 findersFeePercentage;
     }
 
     event AskCreated(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
@@ -63,16 +63,16 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 _askPrice,
         address _askCurrency,
         address _sellerFundsRecipient,
-        uint8 _findersFeePercentage
+        uint256 _findersFeePercentage
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        bool isCallerOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
-        require((msg.sender == tokenOwner) || isCallerOperatorForTokenOwner, "createAsk must be token owner or approved operator");
-
-        bool isTransferHelperApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == address(erc721TransferHelper);
-        bool isTransferHelperOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper));
         require(
-            isTransferHelperApprovedForToken || isTransferHelperOperatorForTokenOwner,
+            (msg.sender == tokenOwner) || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "createAsk must be token owner or approved operator"
+        );
+        require(
+            (IERC721(_tokenContract).getApproved(_tokenId) == address(erc721TransferHelper)) ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
             "createAsk must approve ZORA ERC-721 Transfer Helper from _tokenContract"
         );
 
@@ -120,14 +120,14 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
     function cancelAsk(address _tokenContract, uint256 _tokenId) external {
-        Ask storage ask = askForNFT[_tokenContract][_tokenId];
-
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        bool isTokenOwner = tokenOwner == msg.sender;
-        bool isOperatorForTokenOwner = IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender);
-        bool isApprovedForToken = IERC721(_tokenContract).getApproved(_tokenId) == msg.sender;
 
-        require((msg.sender == ask.seller) || isTokenOwner || isOperatorForTokenOwner || isApprovedForToken, "cancelAsk must be seller or invalid ask");
+        require(
+            (msg.sender == tokenOwner) ||
+                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
+                (msg.sender == IERC721(_tokenContract).getApproved(_tokenId)),
+            "cancelAsk must be seller or invalid ask"
+        );
 
         _cancelAsk(_tokenContract, _tokenId);
     }
@@ -176,9 +176,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
     function _cancelAsk(address _tokenContract, uint256 _tokenId) private {
-        Ask storage ask = askForNFT[_tokenContract][_tokenId];
-
-        emit AskCanceled(_tokenContract, _tokenId, ask);
+        emit AskCanceled(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
 
         delete askForNFT[_tokenContract][_tokenId];
     }
