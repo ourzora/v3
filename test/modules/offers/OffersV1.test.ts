@@ -112,8 +112,8 @@ describe('OffersV1', () => {
       expect(offer.buyer).to.eq(await buyer.getAddress());
       expect(offer.tokenContract).to.eq(zoraV1.address);
       expect(offer.tokenId.toNumber()).to.eq(0);
-      expect(offer.offerAmount.toString()).to.eq(ONE_ETH.toString());
-      expect(offer.offerCurrency).to.eq(ethers.constants.AddressZero);
+      expect(offer.amount.toString()).to.eq(ONE_ETH.toString());
+      expect(offer.currency).to.eq(ethers.constants.AddressZero);
 
       expect(
         (await offers.offersForNFT(zoraV1.address, 0, 0)).toNumber()
@@ -204,7 +204,7 @@ describe('OffersV1', () => {
       await offers
         .connect(buyer)
         .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
-      expect((await (await offers.offers(1)).offerAmount).toString()).to.eq(
+      expect((await (await offers.offers(1)).amount).toString()).to.eq(
         TWO_ETH.toString()
       );
     });
@@ -224,7 +224,7 @@ describe('OffersV1', () => {
         );
 
       await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
-      expect((await (await offers.offers(1)).offerAmount).toString()).to.eq(
+      expect((await (await offers.offers(1)).amount).toString()).to.eq(
         ONE_HALF_ETH.toString()
       );
     });
@@ -247,7 +247,7 @@ describe('OffersV1', () => {
           .connect(otherUser)
           .setNFTOfferAmount(1, TWO_ETH, { value: TWO_ETH })
       ).eventually.rejectedWith(
-        revert`setNFTOfferAmount must be buyer from original offer`
+        revert`setNFTOfferAmount offer must be active and caller must be original buyer`
       );
     });
 
@@ -267,7 +267,7 @@ describe('OffersV1', () => {
       await expect(
         offers.connect(otherUser).setNFTOfferAmount(1, ONE_HALF_ETH)
       ).eventually.rejectedWith(
-        revert`setNFTOfferAmount must be buyer from original offer`
+        revert`setNFTOfferAmount offer must be active and caller must be original buyer`
       );
     });
 
@@ -308,7 +308,9 @@ describe('OffersV1', () => {
 
       await expect(
         offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH)
-      ).eventually.rejectedWith(revert`setNFTOfferAmount must be active offer`);
+      ).eventually.rejectedWith(
+        revert`setNFTOfferAmount offer must be active and caller must be original buyer`
+      );
     });
 
     it('should emit an NFTOfferAmountUpdated event', async () => {
@@ -337,7 +339,7 @@ describe('OffersV1', () => {
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('NFTOfferAmountUpdated');
       expect(logDescription.args.id.toNumber()).to.eq(1);
-      expect(logDescription.args.offer.offerAmount.toString()).to.eq(
+      expect(logDescription.args.offer.amount.toString()).to.eq(
         TWO_ETH.toString()
       );
     });
@@ -379,7 +381,9 @@ describe('OffersV1', () => {
       await offers.fillNFTOffer(1, await finder.getAddress());
       await expect(
         offers.connect(buyer).cancelNFTOffer(1)
-      ).eventually.rejectedWith(revert`cancelNFTOffer must be active offer`);
+      ).eventually.rejectedWith(
+        revert`cancelNFTOffer offer must be active and caller must be original buyer`
+      );
     });
 
     it('should revert canceling an offer not originally made', async () => {
@@ -399,7 +403,7 @@ describe('OffersV1', () => {
       await expect(
         offers.connect(otherUser).cancelNFTOffer(1)
       ).eventually.rejectedWith(
-        revert`cancelNFTOffer must be buyer from original offer`
+        revert`cancelNFTOffer offer must be active and caller must be original buyer`
       );
     });
 
@@ -429,7 +433,7 @@ describe('OffersV1', () => {
             value: TENTH_ETH,
           }
         );
-      expect((await (await offers.offers(2)).offerAmount).toString()).to.eq(
+      expect((await (await offers.offers(2)).amount).toString()).to.eq(
         TENTH_ETH.toString()
       );
     });
@@ -572,6 +576,9 @@ describe('OffersV1', () => {
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('NFTOfferFilled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.seller.toString()).to.eq(
+        await deployer.getAddress()
+      );
     });
 
     it('should emit an ExchangeExecuted event', async () => {
