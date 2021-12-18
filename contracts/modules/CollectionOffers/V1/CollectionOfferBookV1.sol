@@ -16,7 +16,6 @@ contract CollectionOfferBookV1 {
 
     /// @notice An individual offer
     struct Offer {
-        bool active;
         address buyer;
         uint256 amount;
         uint256 id;
@@ -27,7 +26,7 @@ contract CollectionOfferBookV1 {
     /// ------------ PUBLIC STORAGE ------------
 
     /// @notice The offer for a given collection + offer ID
-    /// @dev NFT address => offer ID
+    /// @dev NFT address => offer ID => Offer
     mapping(address => mapping(uint256 => Offer)) public offers;
 
     /// @notice The floor offer ID for a given collection
@@ -56,7 +55,7 @@ contract CollectionOfferBookV1 {
 
         // If its the first offer for a collection, mark it as both floor and ceiling
         if (_isFirstOffer(_collection)) {
-            offers[_collection][_id] = Offer({active: true, buyer: _buyer, amount: _offerAmount, id: _id, prevId: 0, nextId: 0});
+            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: 0, nextId: 0});
 
             floorOfferId[_collection] = _id;
             floorOfferAmount[_collection] = _offerAmount;
@@ -69,7 +68,7 @@ contract CollectionOfferBookV1 {
             uint256 prevCeilingId = ceilingOfferId[_collection];
 
             offers[_collection][prevCeilingId].nextId = _id;
-            offers[_collection][_id] = Offer({active: true, buyer: _buyer, amount: _offerAmount, id: _id, prevId: prevCeilingId, nextId: 0});
+            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: prevCeilingId, nextId: 0});
 
             ceilingOfferId[_collection] = _id;
             ceilingOfferAmount[_collection] = _offerAmount;
@@ -79,7 +78,7 @@ contract CollectionOfferBookV1 {
             uint256 prevFloorId = floorOfferId[_collection];
 
             offers[_collection][prevFloorId].prevId = _id;
-            offers[_collection][_id] = Offer({active: true, buyer: _buyer, amount: _offerAmount, id: _id, prevId: 0, nextId: prevFloorId});
+            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: 0, nextId: prevFloorId});
 
             floorOfferId[_collection] = _id;
             floorOfferAmount[_collection] = _offerAmount;
@@ -94,7 +93,7 @@ contract CollectionOfferBookV1 {
                 offer = offers[_collection][offer.nextId];
             }
 
-            offers[_collection][_id] = Offer({active: true, buyer: _buyer, amount: _offerAmount, id: _id, prevId: offer.prevId, nextId: offer.id});
+            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: offer.prevId, nextId: offer.id});
 
             // Update neighboring pointers
             offers[_collection][offer.id].prevId = _id;

@@ -798,7 +798,9 @@ describe('CollectionOffersV1', () => {
         collectionOffers
           .connect(buyer2)
           .setCollectionOfferAmount(zoraV1.address, 1, ONE_HALF_ETH)
-      ).rejectedWith('setCollectionOfferAmount msg sender must be buyer');
+      ).rejectedWith(
+        'setCollectionOfferAmount offer must be active & msg sender must be buyer'
+      );
     });
 
     it('should revert an inactive offer', async () => {
@@ -810,7 +812,9 @@ describe('CollectionOffersV1', () => {
         collectionOffers
           .connect(buyer2)
           .setCollectionOfferAmount(zoraV1.address, 3, ONE_HALF_ETH)
-      ).rejectedWith('setCollectionOfferAmount must be active offer');
+      ).rejectedWith(
+        'setCollectionOfferAmount offer must be active & msg sender must be buyer'
+      );
     });
 
     it('should emit a CollectionOfferPriceUpdated event', async () => {
@@ -901,7 +905,7 @@ describe('CollectionOffersV1', () => {
       await expect(
         collectionOffers.connect(buyer).cancelCollectionOffer(zoraV1.address, 1)
       ).eventually.rejectedWith(
-        revert`cancelCollectionOffer must be active offer`
+        revert`cancelCollectionOffer offer must be active & msg sender must be buyer`
       );
     });
 
@@ -910,7 +914,9 @@ describe('CollectionOffersV1', () => {
         collectionOffers
           .connect(buyer2)
           .cancelCollectionOffer(zoraV1.address, 1)
-      ).rejectedWith('cancelCollectionOffer msg sender must be buyer');
+      ).rejectedWith(
+        'cancelCollectionOffer offer must be active & msg sender must be buyer'
+      );
     });
 
     it('should emit a CollectionOfferCanceled event', async () => {
@@ -1631,7 +1637,6 @@ describe('CollectionOffersV1', () => {
 
       const offer = await collectionOffers.offers(zoraV1.address, 1);
 
-      expect(offer.active).to.eq(false);
       expect(offer.buyer.toString()).to.eq(
         '0x0000000000000000000000000000000000000000'
       );
