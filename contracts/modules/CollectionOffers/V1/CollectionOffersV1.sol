@@ -67,32 +67,30 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
     /// @notice Updates the price of a collection offer
     /// @param _tokenContract The ERC-721 collection address
     /// @param _offerId The ID of the created offer
-    /// @param _newOfferAmount The new offer price
+    /// @param _newAmount The new offer amount
     function setCollectionOfferAmount(
         address _tokenContract,
         uint256 _offerId,
-        uint256 _newOfferAmount
+        uint256 _newAmount
     ) external payable nonReentrant {
-        require(offers[_tokenContract][_offerId].active, "setCollectionOfferAmount must be active offer");
-        require(msg.sender == offers[_tokenContract][_offerId].buyer, "setCollectionOfferAmount msg sender must be buyer");
-        uint256 prevOfferAmount = offers[_tokenContract][_offerId].amount;
+        require(msg.sender == offers[_tokenContract][_offerId].buyer, "setCollectionOfferAmount offer must be active & msg sender must be buyer");
         require(
-            (_newOfferAmount > 0) && (_newOfferAmount != prevOfferAmount),
-            "setCollectionOfferAmount _newOfferAmount must be greater than 0 and not equal to previous offer"
+            (_newAmount > 0) && (_newAmount != offers[_tokenContract][_offerId].amount),
+            "setCollectionOfferAmount _newAmount must be greater than 0 and not equal to previous offer"
         );
+        uint256 prevOfferAmount = offers[_tokenContract][_offerId].amount;
 
-        if (_newOfferAmount > prevOfferAmount) {
-            uint256 increaseAmount = _newOfferAmount - prevOfferAmount;
-
+        if (_newAmount > prevOfferAmount) {
+            uint256 increaseAmount = _newAmount - prevOfferAmount;
             require(msg.value == increaseAmount, "setCollectionOfferAmount must send exact increase amount");
 
             _handleIncomingTransfer(increaseAmount, ETH);
-            _updateOffer(_tokenContract, _offerId, _newOfferAmount, true);
-        } else if (_newOfferAmount < prevOfferAmount) {
-            uint256 decreaseAmount = prevOfferAmount - _newOfferAmount;
+            _updateOffer(_tokenContract, _offerId, _newAmount, true);
+        } else if (_newAmount < prevOfferAmount) {
+            uint256 decreaseAmount = prevOfferAmount - _newAmount;
 
             _handleOutgoingTransfer(msg.sender, decreaseAmount, ETH, USE_ALL_GAS_FLAG);
-            _updateOffer(_tokenContract, _offerId, _newOfferAmount, false);
+            _updateOffer(_tokenContract, _offerId, _newAmount, false);
         }
 
         emit CollectionOfferPriceUpdated(_offerId, offers[_tokenContract][_offerId]);
@@ -102,8 +100,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
     /// @param _tokenContract The ERC-721 collection address
     /// @param _offerId The ID of the created offer
     function cancelCollectionOffer(address _tokenContract, uint256 _offerId) external nonReentrant {
-        require(offers[_tokenContract][_offerId].active, "cancelCollectionOffer must be active offer");
-        require(msg.sender == offers[_tokenContract][_offerId].buyer, "cancelCollectionOffer msg sender must be buyer");
+        require(msg.sender == offers[_tokenContract][_offerId].buyer, "cancelCollectionOffer offer must be active & msg sender must be buyer");
 
         _handleOutgoingTransfer(msg.sender, offers[_tokenContract][_offerId].amount, ETH, USE_ALL_GAS_FLAG);
 
@@ -117,7 +114,7 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
     /// @notice Fills the highest collection offer available, above a specified minimum
     /// @param _tokenContract The ERC-721 collection address
     /// @param _tokenId The ID of the seller's collection NFT
-    /// @param _minAmount The minimum offer price the seller is willing to accept
+    /// @param _minAmount The minimum offer amount the seller is willing to accept
     /// @param _finder The address of the referrer for this fill
     function fillCollectionOffer(
         address _tokenContract,
@@ -134,11 +131,13 @@ contract CollectionOffersV1 is ReentrancyGuard, UniversalExchangeEventV1, Incomi
         Offer memory offer = offers[_tokenContract][offerId];
 
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, ETH, USE_ALL_GAS_FLAG);
-        uint256 finderFee = remainingProfit / 100; // 1% finder's fee
 
-        _handleOutgoingTransfer(_finder, finderFee, ETH, USE_ALL_GAS_FLAG);
+        if (_finder != address(0)) {
+            uint256 finderFee = remainingProfit / 100; // 1% finder's fee
+            _handleOutgoingTransfer(_finder, finderFee, ETH, USE_ALL_GAS_FLAG);
 
-        remainingProfit -= finderFee;
+            remainingProfit -= finderFee;
+        }
 
         _handleOutgoingTransfer(msg.sender, remainingProfit, ETH, USE_ALL_GAS_FLAG);
 
