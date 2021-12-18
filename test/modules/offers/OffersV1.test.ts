@@ -569,13 +569,16 @@ describe('OffersV1', () => {
         );
       await offers.fillNFTOffer(1, await finder.getAddress());
       const events = await offers.queryFilter(
-        offers.filters.NFTOfferFilled(null, null, null),
+        offers.filters.NFTOfferFilled(null, null, null, null),
         block
       );
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('NFTOfferFilled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.seller.toString()).to.eq(
+        await deployer.getAddress()
+      );
     });
 
     it('should emit an ExchangeExecuted event', async () => {

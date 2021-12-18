@@ -53,7 +53,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
     event NFTOfferCanceled(uint256 indexed id, Offer offer);
 
-    event NFTOfferFilled(uint256 indexed id, address indexed finder, Offer offer);
+    event NFTOfferFilled(uint256 indexed id, address indexed seller, address indexed finder, Offer offer);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -181,7 +181,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.currency, tokenId: 0, amount: offer.amount});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
-        emit NFTOfferFilled(_offerId, _finder, offer);
+        emit NFTOfferFilled(_offerId, msg.sender, _finder, offer);
 
         delete offers[_offerId];
     }
