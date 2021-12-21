@@ -39,9 +39,9 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
 
     event CallCreated(address indexed tokenContract, uint256 indexed tokenId, Call call);
 
-    event CallPriceUpdated(address indexed tokenContract, uint256 indexed tokenId, Call call);
-
     event CallCanceled(address indexed tokenContract, uint256 indexed tokenId, Call call);
+
+    event CallReclaimed(address indexed tokenContract, uint256 indexed tokenId, Call call);
 
     event CallPurchased(address indexed tokenContract, uint256 indexed tokenId, address indexed buyer, Call call);
 
@@ -129,6 +129,23 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         _cancelCall(_tokenContract, _tokenId);
     }
 
+    /// @notice Refunds an NFT after a purchased, non-exercised call
+    /// @param _tokenContract The address of the ERC-721 token contract for the token
+    /// @param _tokenId The ERC-721 token ID for the token
+    function reclaimCall(address _tokenContract, uint256 _tokenId) external nonReentrant {
+        Call storage call = callForNFT[_tokenContract][_tokenId];
+
+        require(msg.sender == call.seller, "reclaimCall must be seller");
+        require((call.buyer != address(0)) && (block.timestamp > call.expiry), "reclaimCall must be expired call");
+
+        // Transfer NFT back to seller
+        IERC721(_tokenContract).transferFrom(address(this), msg.sender, _tokenId);
+
+        emit CallReclaimed(_tokenContract, _tokenId, callForNFT[_tokenContract][_tokenId]);
+
+        delete callForNFT[_tokenContract][_tokenId];
+    }
+
     /// ------------ BUYER FUNCTIONS ------------
 
     /// @notice Purchase an NFT call option, transferring the NFT to the buyer and funds to the recipients
@@ -143,6 +160,10 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
 
         // Ensure payment is valid and take custody of premium
         _handleIncomingTransfer(call.premium, call.currency);
+
+        // Hold NFT as escrow
+        erc721TransferHelper.transferFrom(_tokenContract, call.seller, address(this), _tokenId);
+
         // Transfer premium to seller
         _handleOutgoingTransfer(call.seller, call.premium, call.currency, USE_ALL_GAS_FLAG);
 
@@ -170,7 +191,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         _handleOutgoingTransfer(call.sellerFundsRecipient, remainingProfit, call.currency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(_tokenContract, call.seller, msg.sender, _tokenId);
+        IERC721(_tokenContract).transferFrom(address(this), msg.sender, _tokenId);
 
         ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: call.currency, tokenId: 0, amount: call.strike});
