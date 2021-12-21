@@ -10,7 +10,7 @@ import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/Universa
 import {RoyaltyPayoutSupportV1} from "../../../common/RoyaltyPayoutSupport/V1/RoyaltyPayoutSupportV1.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
 
-/// @title CoveredCalls V1
+/// @title CoveredCallsV1
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This module allows users to sell covered call options on their NFTs
 contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1 {
@@ -19,6 +19,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
+    /// @notice An individual call option
     struct Call {
         address seller;
         address sellerFundsRecipient;
@@ -26,7 +27,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         address currency;
         uint256 premium;
         uint256 strike;
-        uint256 expiry;
+        uint256 expiration;
     }
 
     /// ------------ PUBLIC STORAGE ------------
@@ -64,14 +65,14 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
 
     /// ------------ SELLER FUNCTIONS ------------
 
-    /// @notice Creates a covered call on an NFT
+    /// @notice Creates a covered call option on an NFT
     /// @param _tokenContract The address of the ERC-721 token contract for the token to be sold
     /// @param _tokenId The ERC-721 token ID for the token to be sold
     /// @param _premiumPrice The premium price for the call option
     /// @param _strikePrice The strike price for the call option
     /// @param _currency The currency to pay the strike and premium prices of the call option
     /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _expiry The time of expiration
+    /// @param _expiration The time of expiration
     function createCall(
         address _tokenContract,
         uint256 _tokenId,
@@ -79,7 +80,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         uint256 _strikePrice,
         address _currency,
         address _sellerFundsRecipient,
-        uint256 _expiry
+        uint256 _expiration
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
@@ -97,7 +98,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         }
 
         require(_sellerFundsRecipient != address(0), "createCall must specify sellerFundsRecipient");
-        require(_expiry > block.timestamp, "createCall _expiry must be a future block");
+        require(_expiration > block.timestamp, "createCall _expiration must be a future block");
 
         callForNFT[_tokenContract][_tokenId] = Call({
             seller: tokenOwner,
@@ -106,17 +107,20 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
             currency: _currency,
             premium: _premiumPrice,
             strike: _strikePrice,
-            expiry: _expiry
+            expiration: _expiration
         });
 
         emit CallCreated(_tokenContract, _tokenId, callForNFT[_tokenContract][_tokenId]);
     }
 
-    /// @notice Cancels a call
+    /// @notice Cancels a call if not purchased
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
     function cancelCall(address _tokenContract, uint256 _tokenId) external {
-        require(callForNFT[_tokenContract][_tokenId].seller != address(0), "cancelCall call doesn't exist");
+        Call storage call = callForNFT[_tokenContract][_tokenId];
+
+        require(call.seller != address(0), "cancelCall call doesn't exist");
+        require(call.buyer == address(0), "cancelCall call is active");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
@@ -129,14 +133,15 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         _cancelCall(_tokenContract, _tokenId);
     }
 
-    /// @notice Refunds an NFT after a purchased, non-exercised call
+    /// @notice Returns an NFT after a purchased, non-exercised call
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
     function reclaimCall(address _tokenContract, uint256 _tokenId) external nonReentrant {
         Call storage call = callForNFT[_tokenContract][_tokenId];
 
         require(msg.sender == call.seller, "reclaimCall must be seller");
-        require((call.buyer != address(0)) && (block.timestamp > call.expiry), "reclaimCall must be expired call");
+        require(call.buyer != address(0), "reclaimCall call not purchased");
+        require(block.timestamp > call.expiration, "reclaimCall call is active");
 
         // Transfer NFT back to seller
         IERC721(_tokenContract).transferFrom(address(this), msg.sender, _tokenId);
@@ -156,7 +161,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
 
         require(call.seller != address(0), "buyCall must be active call");
         require(call.buyer == address(0), "buyCall call already purchased");
-        require(call.expiry > block.timestamp, "buyCall call expired");
+        require(call.expiration > block.timestamp, "buyCall call expired");
 
         // Ensure payment is valid and take custody of premium
         _handleIncomingTransfer(call.premium, call.currency);
@@ -179,7 +184,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         Call storage call = callForNFT[_tokenContract][_tokenId];
 
         require(call.buyer == msg.sender, "exerciseCall must be buyer");
-        require(call.expiry > block.timestamp, "exerciseCall call expired");
+        require(call.expiration > block.timestamp, "exerciseCall call expired");
 
         // Ensure payment is valid and take custody of premium
         _handleIncomingTransfer(call.strike, call.currency);
