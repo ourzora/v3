@@ -10,7 +10,7 @@ import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/Universa
 import {RoyaltyPayoutSupportV1} from "../../../common/RoyaltyPayoutSupport/V1/RoyaltyPayoutSupportV1.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
 
-/// @title CoveredCallsV1
+/// @title CoveredCalls V1
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This module allows users to sell covered call options on their NFTs
 contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1 {
@@ -70,17 +70,17 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @param _tokenId The ERC-721 token ID for the token to be sold
     /// @param _premiumPrice The premium price for the call option
     /// @param _strikePrice The strike price for the call option
+    /// @param _expiration The time of expiration
     /// @param _currency The currency to pay the strike and premium prices of the call option
     /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _expiration The time of expiration
     function createCall(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _premiumPrice,
         uint256 _strikePrice,
+        uint256 _expiration,
         address _currency,
-        address _sellerFundsRecipient,
-        uint256 _expiration
+        address _sellerFundsRecipient
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
@@ -119,8 +119,8 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     function cancelCall(address _tokenContract, uint256 _tokenId) external {
         Call storage call = callForNFT[_tokenContract][_tokenId];
 
-        require(call.seller != address(0), "cancelCall call doesn't exist");
-        require(call.buyer == address(0), "cancelCall call is active");
+        require(call.seller != address(0), "cancelCall call does not exist");
+        require(call.buyer == address(0), "cancelCall call has been purchased");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
@@ -141,10 +141,10 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
 
         require(msg.sender == call.seller, "reclaimCall must be seller");
         require(call.buyer != address(0), "reclaimCall call not purchased");
-        require(block.timestamp > call.expiration, "reclaimCall call is active");
+        require(block.timestamp >= call.expiration, "reclaimCall call is active");
 
         // Transfer NFT back to seller
-        IERC721(_tokenContract).transferFrom(address(this), msg.sender, _tokenId);
+        IERC721(_tokenContract).transferFrom(address(this), call.seller, _tokenId);
 
         emit CallReclaimed(_tokenContract, _tokenId, callForNFT[_tokenContract][_tokenId]);
 
@@ -159,16 +159,14 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     function buyCall(address _tokenContract, uint256 _tokenId) external payable nonReentrant {
         Call storage call = callForNFT[_tokenContract][_tokenId];
 
-        require(call.seller != address(0), "buyCall must be active call");
+        require(call.seller != address(0), "buyCall call does not exist");
         require(call.buyer == address(0), "buyCall call already purchased");
         require(call.expiration > block.timestamp, "buyCall call expired");
 
         // Ensure payment is valid and take custody of premium
         _handleIncomingTransfer(call.premium, call.currency);
-
         // Hold NFT as escrow
         erc721TransferHelper.transferFrom(_tokenContract, call.seller, address(this), _tokenId);
-
         // Transfer premium to seller
         _handleOutgoingTransfer(call.seller, call.premium, call.currency, USE_ALL_GAS_FLAG);
 
@@ -201,8 +199,8 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: call.currency, tokenId: 0, amount: call.strike});
 
-        emit ExchangeExecuted(call.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
-        emit CallExercised(_tokenContract, _tokenId, msg.sender, call);
+        emit ExchangeExecuted(call.seller, call.buyer, userAExchangeDetails, userBExchangeDetails);
+        emit CallExercised(_tokenContract, _tokenId, call.buyer, call);
 
         delete callForNFT[_tokenContract][_tokenId];
     }

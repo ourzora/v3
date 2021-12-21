@@ -15,6 +15,7 @@ import {
   AsksV1,
   OffersV1,
   CollectionOffersV1,
+  CoveredCallsV1,
   ERC1155TransferHelper,
   TestERC1155,
   TestModuleV2,
@@ -397,4 +398,23 @@ export async function deployCollectionOffersV1(
   );
   await collectionOffers.deployed();
   return collectionOffers as CollectionOffersV1;
+}
+
+export async function deployCoveredCallsV1(
+  erc20Helper: string,
+  erc721Helper: string,
+  royaltyRegistry: string,
+  weth: string
+) {
+  const CoveredCallsV1Factory = await ethers.getContractFactory(
+    'CoveredCallsV1'
+  );
+  const coveredCalls = await CoveredCallsV1Factory.deploy(
+    erc20Helper,
+    erc721Helper,
+    royaltyRegistry,
+    weth
+  );
+  await coveredCalls.deployed();
+  return coveredCalls as CoveredCallsV1;
 }
