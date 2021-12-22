@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
@@ -280,7 +280,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @notice Cancel an auction
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
-    function cancelAuction(address _tokenContract, uint256 _tokenId) public nonReentrant {
+    function cancelAuction(address _tokenContract, uint256 _tokenId) external {
         Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
         require(auction.seller != ADDRESS_ZERO, "cancelAuction auction doesn't exist");

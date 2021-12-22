@@ -760,6 +760,11 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.3.2.tgz#ff80affd6d352dbe1bbc5b4e1833c41afd6283b6"
   integrity sha512-AybF1cesONZStg5kWf6ao9OlqTZuPqddvprc0ky7lrUVOjXeKpmQ2Y9FK+6ygxasb+4aic4O5pneFBfwVsRRRg==
 
+"@rari-capital/solmate@^5.9.0":
+  version "5.9.0"
+  resolved "https://registry.yarnpkg.com/@rari-capital/solmate/-/solmate-5.9.0.tgz#bb80a43ca3110521cc7d73bf34de2ec4bf71f024"
+  integrity sha512-Rf01eoR5i+8RMvavatNu8hdxDvzIOxpb3lAhjqGX2STvVB0a99V4GXVPMqoUomucuy0umZ39ORssPIgXTNHJdA==
+
 "@resolver-engine/core@^0.3.3":
   version "0.3.3"
   resolved "https://registry.yarnpkg.com/@resolver-engine/core/-/core-0.3.3.tgz#590f77d85d45bc7ecc4e06c654f41345db6ca967"
