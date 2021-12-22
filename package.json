@@ -46,6 +46,7 @@
   "dependencies": {
     "@manifoldxyz/royalty-registry-solidity": "^1.0.4",
     "@openzeppelin/contracts": "^4.3.2",
+    "@rari-capital/solmate": "^5.9.0",
     "@zoralabs/core": "^1.0.5"
   },
   "lint-staged": {
