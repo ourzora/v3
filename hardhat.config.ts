@@ -118,6 +118,10 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployCollectionOffersV1);
 
+task('deployProtocolFeeSettingsV1', 'Deploy Protocol Fee Settings V1')
+  .addParam('owner', 'owner', undefined, types.string)
+  .setAction();
+
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.10',
