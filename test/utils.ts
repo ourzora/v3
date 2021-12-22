@@ -21,6 +21,7 @@ import {
   CollectionRoyaltyRegistryV1,
   RoyaltyEngineV1,
   RoyaltyEngineV1__factory,
+  ZoraProtocolFeeSettingsV1,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -216,6 +217,14 @@ export const deployWETH = async () => {
   const WETHFactory = await ethers.getContractFactory('WETH');
   const weth = await WETHFactory.deploy();
   return weth as WETH;
+};
+
+export const deployProtocolFeeSettings = async (owner: string) => {
+  const FeeSettingsFactory = await ethers.getContractFactory(
+    'ZoraProtocolFeeSettingsV1'
+  );
+  const feeSettings = await FeeSettingsFactory.deploy(owner);
+  return feeSettings as ZoraProtocolFeeSettingsV1;
 };
 
 export const deployReserveAuctionV1 = async (
