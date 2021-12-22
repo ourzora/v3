@@ -14,6 +14,7 @@ import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
+import { deployCoveredCallsV1 } from './scripts/deployCoveredCallsV1';
 
 const env = dotenv.config().parsed;
 
@@ -99,6 +100,16 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
   )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployCollectionOffersV1);
+
+task('deployCoveredCallsV1', 'Deploy Covered Calls V1')
+  .addParam(
+    'royaltyRegistry',
+    'Manifold Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam('weth', 'WETH address', undefined, types.string)
+  .setAction(deployCoveredCallsV1);
 
 const config: HardhatUserConfig = {
   solidity: {
