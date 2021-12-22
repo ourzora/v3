@@ -24,10 +24,6 @@ import {
   ONE_ETH,
   proposeModule,
   registerModule,
-  revert,
-  THOUSANDTH_ETH,
-  toRoundedNumber,
-  TWO_ETH,
   deployZoraProtocol,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';

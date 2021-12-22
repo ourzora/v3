@@ -168,7 +168,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         // Hold NFT as escrow
         erc721TransferHelper.transferFrom(_tokenContract, call.seller, address(this), _tokenId);
         // Transfer premium to seller
-        _handleOutgoingTransfer(call.seller, call.premium, call.currency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(call.sellerFundsRecipient, call.premium, call.currency, USE_ALL_GAS_FLAG);
 
         call.buyer = msg.sender;
 
@@ -184,7 +184,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         require(call.buyer == msg.sender, "exerciseCall must be buyer");
         require(call.expiration > block.timestamp, "exerciseCall call expired");
 
-        // Ensure payment is valid and take custody of premium
+        // Ensure payment is valid and take custody of strike
         _handleIncomingTransfer(call.strike, call.currency);
 
         // Payout respective parties, ensuring NFT royalties are honored
