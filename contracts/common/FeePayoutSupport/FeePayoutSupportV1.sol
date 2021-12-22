@@ -3,20 +3,39 @@ pragma solidity 0.8.10;
 
 import {IRoyaltyEngineV1} from "@manifoldxyz/royalty-registry-solidity/contracts/IRoyaltyEngineV1.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {OutgoingTransferSupportV1} from "../../OutgoingTransferSupport/V1/OutgoingTransferSupportV1.sol";
+import {ZoraProtocolFeeSettingsV1} from "../../auxiliary/ZoraProtocolFeeSettings/ZoraProtocolFeeSettingsV1.sol";
+import {OutgoingTransferSupportV1} from "../OutgoingTransferSupport/V1/OutgoingTransferSupportV1.sol";
 
-/// @title RoyaltySupportV1
+/// @title FeePayoutSupportV1
 /// @author tbtstl <t@zora.co>
-/// @notice This contract extension supports paying out royalties using the Manifold Royalty Registry
-contract RoyaltyPayoutSupportV1 is OutgoingTransferSupportV1 {
+/// @notice This contract extension supports paying out protocol fees and royalties
+contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     IRoyaltyEngineV1 immutable royaltyEngine;
+    ZoraProtocolFeeSettingsV1 immutable protocolFeeSettings;
 
     event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
 
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
-    /// @param _wethAddress WETH token address
-    constructor(address _royaltyEngine, address _wethAddress) OutgoingTransferSupportV1(_wethAddress) {
+    /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
+    /// @param _wethAddress WETH address
+    constructor(
+        address _royaltyEngine,
+        address _protocolFeeSettings,
+        address _wethAddress
+    ) OutgoingTransferSupportV1(_wethAddress) {
         royaltyEngine = IRoyaltyEngineV1(_royaltyEngine);
+        protocolFeeSettings = ZoraProtocolFeeSettingsV1(_protocolFeeSettings);
+    }
+
+    /// @notice Pays out protocol fee to protocol fee recipient
+    /// @param _amount the sale amount
+    /// @param _payoutCurrency the currency amount to pay the fee in
+    /// @return remaining funds after paying protocol fee
+    function _handleProtocolFeePayout(uint256 _amount, address _payoutCurrency) internal returns (uint256) {
+        uint256 protocolFee = protocolFeeSettings.getFeeAmount(_amount);
+        _handleOutgoingTransfer(protocolFeeSettings.feeRecipient(), protocolFee, _payoutCurrency, 0);
+
+        return _amount - protocolFee;
     }
 
     /// @notice Pays out royalties for given NFTs

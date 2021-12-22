@@ -58,6 +58,12 @@ task('deployReserveAuctionV1', 'Deploy Reserve Auction V1')
     undefined,
     types.string
   )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
+    undefined,
+    types.string
+  )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployReserveAuctionV1);
 
@@ -74,6 +80,12 @@ task('deployAsksV1', 'Deploy Asks V1')
   .addParam(
     'royaltyRegistry',
     'Manifold Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
     undefined,
     types.string
   )
@@ -94,6 +106,12 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
   .addParam(
     'royaltyRegistry',
     'Manifold Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
     undefined,
     types.string
   )

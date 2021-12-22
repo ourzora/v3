@@ -33,6 +33,7 @@ import {
   TWO_ETH,
   TENTH_ETH,
   THOUSANDTH_ETH,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -78,12 +79,16 @@ describe('ReserveAuctionV1', () => {
     erc721TransferHelper = await deployERC721TransferHelper(
       approvalManager.address
     );
+    const feeSettings = await deployProtocolFeeSettings(
+      await deployer.getAddress()
+    );
     reserveAuction = await deployReserveAuctionV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       zoraV1.address,
       zoraV1Market.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 

@@ -4,11 +4,12 @@ import assert from 'assert';
 
 export interface Args {
   royaltyRegistry: string;
+  protocolFeeSettings: string;
   weth: string;
 }
 
 export async function deployCollectionOffersV1(
-  { royaltyRegistry, weth }: Args,
+  { royaltyRegistry, protocolFeeSettings, weth }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
   // @ts-ignore
@@ -39,6 +40,7 @@ export async function deployCollectionOffersV1(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
     royaltyRegistry,
+    protocolFeeSettings,
     weth
   );
   console.log(

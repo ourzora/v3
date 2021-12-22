@@ -16,6 +16,7 @@ import {
   approveNFTTransfer,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
+  deployProtocolFeeSettings,
   deployReserveAuctionV1,
   deployRoyaltyEngine,
   deployTestEIP2981ERC721,
@@ -86,12 +87,16 @@ describe('ReserveAuctionV1 integration', () => {
     erc721TransferHelper = await deployERC721TransferHelper(
       approvalManager.address
     );
+    const feeSettings = await deployProtocolFeeSettings(
+      await deployer.getAddress()
+    );
     reserveAuction = await deployReserveAuctionV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       zoraV1.address,
       zoraV1Market.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
     await proposeModule(proposalManager, reserveAuction.address);

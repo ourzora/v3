@@ -6,11 +6,18 @@ export interface Args {
   zoraV1Media: string;
   zoraV1Market: string;
   royaltyRegistry: string;
+  protocolFeeSettings: string;
   weth: string;
 }
 
 export async function deployReserveAuctionV1(
-  { zoraV1Media, zoraV1Market, royaltyRegistry, weth }: Args,
+  {
+    zoraV1Media,
+    zoraV1Market,
+    royaltyRegistry,
+    protocolFeeSettings,
+    weth,
+  }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
   // @ts-ignore
@@ -42,6 +49,7 @@ export async function deployReserveAuctionV1(
     zoraV1Media,
     zoraV1Market,
     royaltyRegistry,
+    protocolFeeSettings,
     // @ts-ignore
     weth
   );

@@ -28,6 +28,7 @@ import {
   toRoundedNumber,
   TWO_ETH,
   deployZoraProtocol,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -70,10 +71,14 @@ describe('AsksV1', () => {
       approvalManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
+    const feeSettings = await deployProtocolFeeSettings(
+      await deployer.getAddress()
+    );
     asks = await deployAsksV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 

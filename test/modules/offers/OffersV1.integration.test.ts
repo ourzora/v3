@@ -35,6 +35,7 @@ import {
   TWO_ETH,
   TEN_ETH,
   THOUSANDTH_ETH,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -82,11 +83,15 @@ describe('OffersV1 integration', () => {
       approvalManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
+    const feeSettings = await deployProtocolFeeSettings(
+      await deployer.getAddress()
+    );
 
     offers = await deployOffersV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 
