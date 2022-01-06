@@ -14,6 +14,7 @@ import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
+import { deployProtocolFeeSettingsV1 } from './scripts/deployProtocolFeeSettingsV1';
 
 const env = dotenv.config().parsed;
 
@@ -120,7 +121,7 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
 
 task('deployProtocolFeeSettingsV1', 'Deploy Protocol Fee Settings V1')
   .addParam('owner', 'owner', undefined, types.string)
-  .setAction();
+  .setAction(deployProtocolFeeSettingsV1);
 
 const config: HardhatUserConfig = {
   solidity: {

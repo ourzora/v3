@@ -5,7 +5,7 @@ export interface Args {
   owner: string;
 }
 
-export async function deployOffersV1(
+export async function deployProtocolFeeSettingsV1(
   { owner }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
