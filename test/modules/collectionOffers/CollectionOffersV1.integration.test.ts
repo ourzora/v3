@@ -245,8 +245,7 @@ describe('CollectionOffersV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testEIP2981ERC721,
-        erc721TransferHelper.address,
-        0
+        erc721TransferHelper.address
       );
     });
 
@@ -374,8 +373,7 @@ describe('CollectionOffersV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testERC721,
-        erc721TransferHelper.address,
-        0
+        erc721TransferHelper.address
       );
       await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
         [await deployer.getAddress()],

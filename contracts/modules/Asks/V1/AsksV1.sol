@@ -66,22 +66,17 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 _findersFeePercentage
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(
-            (msg.sender == tokenOwner) || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
-            "createAsk must be token owner or approved operator"
-        );
-        require(
-            (IERC721(_tokenContract).getApproved(_tokenId) == address(erc721TransferHelper)) ||
-                IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
-            "createAsk must approve ZORA ERC-721 Transfer Helper from _tokenContract"
-        );
+
+        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "createAsk must be token owner or operator");
+        require(erc721TransferHelper.isModuleApproved(msg.sender), "createAsk must approve AsksV1 module");
+        require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "createAsk must approve ERC721TransferHelper as operator");
 
         if (askForNFT[_tokenContract][_tokenId].seller != address(0)) {
             _cancelAsk(_tokenContract, _tokenId);
         }
 
-        require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
         require(_findersFeePercentage <= 100, "createAsk finders fee percentage must be less than or equal to 100");
+        require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
 
         // Create an ask
         askForNFT[_tokenContract][_tokenId] = Ask({
@@ -123,12 +118,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         require(askForNFT[_tokenContract][_tokenId].seller != address(0), "cancelAsk ask doesn't exist");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(
-            (msg.sender == tokenOwner) ||
-                IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender) ||
-                (msg.sender == IERC721(_tokenContract).getApproved(_tokenId)),
-            "cancelAsk must be seller or invalid ask"
-        );
+        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "cancelAsk must be token owner or operator");
 
         _cancelAsk(_tokenContract, _tokenId);
     }

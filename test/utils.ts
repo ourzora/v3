@@ -260,12 +260,8 @@ export const mintZoraNFT = async (zoraV1Media: Media, seed = '') => {
   );
 };
 
-export const approveNFTTransfer = async (
-  token: Erc721,
-  spender: string,
-  tokenId: string = '0'
-) => {
-  await token.approve(spender, tokenId);
+export const approveNFTTransfer = async (token: Erc721, spender: string) => {
+  await token.setApprovalForAll(spender, true);
 };
 
 export async function createReserveAuction(

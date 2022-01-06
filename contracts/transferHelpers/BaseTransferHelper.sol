@@ -7,7 +7,7 @@ import {ZoraModuleApprovalsManager} from "../ZoraModuleApprovalsManager.sol";
 /// @author tbtstl <t@zora.co>
 /// @notice This contract provides shared utility for ZORA transfer helpers
 contract BaseTransferHelper {
-    ZoraModuleApprovalsManager approvalsManager;
+    ZoraModuleApprovalsManager immutable approvalsManager;
 
     /// @param _approvalsManager The ZORA Module Approvals Manager to use as a reference for transfer permissions
     constructor(address _approvalsManager) {
@@ -16,10 +16,16 @@ contract BaseTransferHelper {
         approvalsManager = ZoraModuleApprovalsManager(_approvalsManager);
     }
 
-    // Only allows the method to continue if the caller is an approved zora module
-    modifier onlyApprovedModule(address _from) {
-        require(approvalsManager.isModuleApproved(_from, msg.sender), "module has not been approved by user");
-
+    /// @notice Ensures a user has approved the module they're calling
+    /// @param _user The address of the user
+    modifier onlyApprovedModule(address _user) {
+        require(isModuleApproved(_user), "module has not been approved by user");
         _;
+    }
+
+    /// @notice If a user has approved the module they're calling
+    /// @param _user The address of the user
+    function isModuleApproved(address _user) public view returns (bool) {
+        return approvalsManager.isModuleApproved(_user, msg.sender);
     }
 }
