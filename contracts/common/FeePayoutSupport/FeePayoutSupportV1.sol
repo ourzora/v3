@@ -32,8 +32,9 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     /// @param _payoutCurrency the currency amount to pay the fee in
     /// @return remaining funds after paying protocol fee
     function _handleProtocolFeePayout(uint256 _amount, address _payoutCurrency) internal returns (uint256) {
-        uint256 protocolFee = protocolFeeSettings.getFeeAmount(_amount);
-        _handleOutgoingTransfer(protocolFeeSettings.feeRecipient(), protocolFee, _payoutCurrency, 0);
+        uint256 protocolFee = protocolFeeSettings.getFeeAmount(address(this), _amount);
+        (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
+        _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 0);
 
         return _amount - protocolFee;
     }
