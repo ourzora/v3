@@ -8,8 +8,7 @@ import {ERC721Enumerable, ERC721} from "@openzeppelin/contracts/token/ERC721/ext
 /// @notice This contract allows an optional fee percentage and recipient to be set for individual ZORA modules
 contract ZoraProtocolFeeSettings is ERC721Enumerable {
     struct FeeSetting {
-        // TODO: maybe we should make this uint16 to allow up increments of 0.1% or 0.01%
-        uint8 feePct;
+        uint16 feeBps;
         address feeRecipient;
     }
 
@@ -20,7 +19,7 @@ contract ZoraProtocolFeeSettings is ERC721Enumerable {
     mapping(address => FeeSetting) public moduleFeeSetting;
 
     event OwnerUpdated(address indexed newOwner);
-    event ProtocolFeeUpdated(address indexed module, address feeRecipient, uint8 feePct);
+    event ProtocolFeeUpdated(address indexed module, address feeRecipient, uint16 feeBps);
 
     // Only allow the module fee owner to access the function
     modifier onlyModuleOwner(address _module) {
@@ -63,18 +62,18 @@ contract ZoraProtocolFeeSettings is ERC721Enumerable {
     /// @notice Sets fee parameters for ZORA protocol.
     /// @param _module The module to apply the fee settings to
     /// @param _feeRecipient The fee recipient address to send fees to
-    /// @param _feePct The % of transaction value to send to the fee recipient
+    /// @param _feeBps The bps of transaction value to send to the fee recipient
     function setFeeParams(
         address _module,
         address _feeRecipient,
-        uint8 _feePct
+        uint16 _feeBps
     ) external onlyModuleOwner(_module) {
-        require(_feePct <= 100, "setFeeParams must set fee <= 100%");
-        require(_feeRecipient != address(0) || _feePct == 0, "setFeeParams fee recipient cannot be 0 address if fee is greater than 0");
+        require(_feeBps <= 10000, "setFeeParams must set fee <= 100%");
+        require(_feeRecipient != address(0) || _feeBps == 0, "setFeeParams fee recipient cannot be 0 address if fee is greater than 0");
 
-        moduleFeeSetting[_module] = FeeSetting(_feePct, _feeRecipient);
+        moduleFeeSetting[_module] = FeeSetting(_feeBps, _feeRecipient);
 
-        emit ProtocolFeeUpdated(_module, _feeRecipient, _feePct);
+        emit ProtocolFeeUpdated(_module, _feeRecipient, _feeBps);
     }
 
     /// @notice Sets the owner of the contract
@@ -89,7 +88,7 @@ contract ZoraProtocolFeeSettings is ERC721Enumerable {
     /// @param _amount The amount to compute the fee for
     /// @return amount to be paid out to the fee recipient
     function getFeeAmount(address _module, uint256 _amount) external view returns (uint256) {
-        return (_amount * moduleFeeSetting[_module].feePct) / 100;
+        return (_amount * moduleFeeSetting[_module].feeBps) / 10000;
     }
 
     function _setOwner(address _owner) private {

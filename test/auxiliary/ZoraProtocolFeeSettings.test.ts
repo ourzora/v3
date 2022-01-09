@@ -121,7 +121,7 @@ describe('ZoraProtocolFeeSettings', () => {
 
       const settings = await feeSettings.moduleFeeSetting(testModuleAddress);
       const recip = settings.feeRecipient;
-      const pct = settings.feePct;
+      const pct = settings.feeBps;
       expect(recip).to.eq(await feeRecipient.getAddress());
       expect(pct).to.eq(1);
       expect(events.length).to.eq(1);
@@ -129,7 +129,7 @@ describe('ZoraProtocolFeeSettings', () => {
       expect(logDescription.args.feeRecipient).to.eq(
         await feeRecipient.getAddress()
       );
-      expect(logDescription.args.feePct).to.eq(1);
+      expect(logDescription.args.feeBps).to.eq(1);
     });
 
     it('should revert if not called by owner', async () => {
@@ -151,7 +151,7 @@ describe('ZoraProtocolFeeSettings', () => {
         feeSettings.setFeeParams(
           testModuleAddress,
           await feeRecipient.getAddress(),
-          101
+          10001
         )
       ).to.eventually.rejectedWith(revert`setFeeParams must set fee <= 100%`);
     });
@@ -183,7 +183,7 @@ describe('ZoraProtocolFeeSettings', () => {
 
       const settings = await feeSettings.moduleFeeSetting(testModuleAddress);
       const recip = settings.feeRecipient;
-      const pct = settings.feePct;
+      const pct = settings.feeBps;
       expect(recip).to.eq(ethers.constants.AddressZero);
       expect(pct).to.eq(0);
     });
