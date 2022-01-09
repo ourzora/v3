@@ -12,6 +12,7 @@ import {
   cancelModule,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
+  deployProtocolFeeSettings,
   deployTestModule,
   deployWETH,
   deployZoraModuleApprovalsManager,
@@ -44,9 +45,12 @@ describe('ERC20TransferHelper', () => {
 
     await weth.connect(otherUser).deposit({ value: ONE_ETH });
 
+    const feeSettings = await deployProtocolFeeSettings();
     proposalManager = await deployZoraProposalManager(
-      await registrar.getAddress()
+      await registrar.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     approvalsManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );

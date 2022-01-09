@@ -67,9 +67,12 @@ describe('ReserveAuctionV1', () => {
     zoraV1Market = zoraProtocol.market;
     royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -78,9 +81,6 @@ describe('ReserveAuctionV1', () => {
     );
     erc721TransferHelper = await deployERC721TransferHelper(
       approvalManager.address
-    );
-    const feeSettings = await deployProtocolFeeSettings(
-      await deployer.getAddress()
     );
     reserveAuction = await deployReserveAuctionV1(
       erc20TransferHelper.address,

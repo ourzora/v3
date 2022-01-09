@@ -21,7 +21,7 @@ import {
   CollectionRoyaltyRegistryV1,
   RoyaltyEngineV1,
   RoyaltyEngineV1__factory,
-  ZoraProtocolFeeSettingsV1,
+  ZoraProtocolFeeSettings,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -52,11 +52,17 @@ export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 export const toRoundedNumber = (bn: BigNumber) =>
   bn.div(THOUSANDTH_ETH).toNumber();
 
-export const deployZoraProposalManager = async (registrar: string) => {
+export const deployZoraProposalManager = async (
+  registrar: string,
+  feeSettings: string
+) => {
   const ZoraProposalManagerFactory = await ethers.getContractFactory(
     'ZoraProposalManager'
   );
-  const proposalManager = await ZoraProposalManagerFactory.deploy(registrar);
+  const proposalManager = await ZoraProposalManagerFactory.deploy(
+    registrar,
+    feeSettings
+  );
   await proposalManager.deployed();
   return proposalManager as ZoraProposalManager;
 };
@@ -219,12 +225,12 @@ export const deployWETH = async () => {
   return weth as WETH;
 };
 
-export const deployProtocolFeeSettings = async (owner: string) => {
+export const deployProtocolFeeSettings = async () => {
   const FeeSettingsFactory = await ethers.getContractFactory(
-    'ZoraProtocolFeeSettingsV1'
+    'ZoraProtocolFeeSettings'
   );
-  const feeSettings = await FeeSettingsFactory.deploy(owner);
-  return feeSettings as ZoraProtocolFeeSettingsV1;
+  const feeSettings = await FeeSettingsFactory.deploy();
+  return feeSettings as ZoraProtocolFeeSettings;
 };
 
 export const deployReserveAuctionV1 = async (

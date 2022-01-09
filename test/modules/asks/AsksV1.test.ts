@@ -58,9 +58,12 @@ describe('AsksV1', () => {
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
     weth = await deployWETH();
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -71,9 +74,6 @@ describe('AsksV1', () => {
       approvalManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
-    const feeSettings = await deployProtocolFeeSettings(
-      await deployer.getAddress()
-    );
     asks = await deployAsksV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,

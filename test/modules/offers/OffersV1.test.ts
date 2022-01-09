@@ -60,9 +60,12 @@ describe('OffersV1', () => {
 
     weth = await deployWETH();
 
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -74,9 +77,6 @@ describe('OffersV1', () => {
       approvalManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
-    const feeSettings = await deployProtocolFeeSettings(
-      await deployer.getAddress()
-    );
 
     offers = await deployOffersV1(
       erc20TransferHelper.address,

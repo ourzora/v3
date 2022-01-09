@@ -1,12 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as fs from 'fs-extra';
 
-export interface Args {
-  owner: string;
-}
-
 export async function deployProtocolFeeSettingsV1(
-  { owner }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
   const [deployer] = await hre.ethers.getSigners();
@@ -16,16 +11,16 @@ export async function deployProtocolFeeSettingsV1(
   const addressBook = JSON.parse(await fs.readFileSync(addressPath));
 
   const FeeSettingsFactory = await hre.ethers.getContractFactory(
-    'ZoraProtocolFeeSettingsV1'
+    'ZoraProtocolFeeSettings'
   );
-  const feeSettings = await FeeSettingsFactory.deploy(owner);
+  const feeSettings = await FeeSettingsFactory.deploy();
   console.log(
-    `Deploying ZoraProtocolFeeSettingsV1 with tx ${feeSettings.deployTransaction.hash} to address ${feeSettings.address}`
+    `Deploying ZoraProtocolFeeSettings with tx ${feeSettings.deployTransaction.hash} to address ${feeSettings.address}`
   );
 
   await feeSettings.deployed();
 
-  addressBook.ZoraProtocolFeeSettingsV1 = feeSettings.address;
+  addressBook.ZoraProtocolFeeSettings = feeSettings.address;
   await fs.writeFile(addressPath, JSON.stringify(addressBook, null, 2));
-  console.log(`Deployed ZoraProtocolFeeSettingsV1`);
+  console.log(`Deployed ZoraProtocolFeeSettings`);
 }

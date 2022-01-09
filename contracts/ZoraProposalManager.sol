@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {ZoraModuleFeeToken} from "./auxiliary/ZoraProtocolFeeSettings/ZoraModuleFeeToken.sol";
+import {ZoraProtocolFeeSettings} from "./auxiliary/ZoraProtocolFeeSettings/ZoraProtocolFeeSettings.sol";
 
 /// @title ZORA Module Proposal Manager
 /// @author tbtstl <t@zora.co>
@@ -24,7 +24,7 @@ contract ZoraProposalManager {
     /// @notice The registrar address that can register, or cancel
     address public registrar;
     /// @notice The module fee NFT contract to mint from upon module registration
-    ZoraModuleFeeToken public moduleFeeToken;
+    ZoraProtocolFeeSettings public moduleFeeToken;
     /// @notice A mapping of module addresses to proposals
     mapping(address => Proposal) public proposedModuleToProposal;
 
@@ -44,7 +44,7 @@ contract ZoraProposalManager {
         require(_registrarAddress != address(0), "ZPM::must set registrar to non-zero address");
 
         registrar = _registrarAddress;
-        moduleFeeToken = ZoraModuleFeeToken(_feeToken);
+        moduleFeeToken = ZoraProtocolFeeSettings(_feeToken);
     }
 
     /// @notice Returns true if the module has been registered

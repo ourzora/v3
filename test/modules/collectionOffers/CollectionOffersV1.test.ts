@@ -76,9 +76,12 @@ describe('CollectionOffersV1', () => {
     testERC721 = await deployTestERC271();
     weth = await deployWETH();
 
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -90,10 +93,6 @@ describe('CollectionOffersV1', () => {
       approvalManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
-
-    const feeSettings = await deployProtocolFeeSettings(
-      await deployer.getAddress()
-    );
 
     collectionOffers = await deployCollectionOffersV1(
       erc20TransferHelper.address,

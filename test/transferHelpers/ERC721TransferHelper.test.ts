@@ -13,6 +13,7 @@ import {
   cancelModule,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
+  deployProtocolFeeSettings,
   deployTestERC271,
   deployTestModule,
   deployWETH,
@@ -43,9 +44,12 @@ describe('ERC721TransferHelper', () => {
     registrar = signers[1];
     otherUser = signers[2];
 
+    const feeSettings = await deployProtocolFeeSettings();
     proposalManager = await deployZoraProposalManager(
-      await registrar.getAddress()
+      await registrar.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     approvalsManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );

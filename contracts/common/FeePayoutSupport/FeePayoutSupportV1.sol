@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import {IRoyaltyEngineV1} from "@manifoldxyz/royalty-registry-solidity/contracts/IRoyaltyEngineV1.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ZoraProtocolFeeSettingsV1} from "../../auxiliary/ZoraProtocolFeeSettings/ZoraProtocolFeeSettingsV1.sol";
+import {ZoraProtocolFeeSettings} from "../../auxiliary/ZoraProtocolFeeSettings/ZoraProtocolFeeSettings.sol";
 import {OutgoingTransferSupportV1} from "../OutgoingTransferSupport/V1/OutgoingTransferSupportV1.sol";
 
 /// @title FeePayoutSupportV1
@@ -11,7 +11,7 @@ import {OutgoingTransferSupportV1} from "../OutgoingTransferSupport/V1/OutgoingT
 /// @notice This contract extension supports paying out protocol fees and royalties
 contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     IRoyaltyEngineV1 immutable royaltyEngine;
-    ZoraProtocolFeeSettingsV1 immutable protocolFeeSettings;
+    ZoraProtocolFeeSettings immutable protocolFeeSettings;
 
     event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
 
@@ -24,7 +24,7 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
         address _wethAddress
     ) OutgoingTransferSupportV1(_wethAddress) {
         royaltyEngine = IRoyaltyEngineV1(_royaltyEngine);
-        protocolFeeSettings = ZoraProtocolFeeSettingsV1(_protocolFeeSettings);
+        protocolFeeSettings = ZoraProtocolFeeSettings(_protocolFeeSettings);
     }
 
     /// @notice Pays out protocol fee to protocol fee recipient
