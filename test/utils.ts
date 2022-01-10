@@ -1,5 +1,4 @@
 import { ethers } from 'hardhat';
-import { Signer } from 'ethers';
 import {
   BadERC721,
   ReserveAuctionV1,
@@ -18,7 +17,6 @@ import {
   ERC1155TransferHelper,
   TestERC1155,
   TestModuleV2,
-  CollectionRoyaltyRegistryV1,
   RoyaltyEngineV1,
   RoyaltyEngineV1__factory,
   ZoraProtocolFeeSettings,
@@ -136,16 +134,6 @@ export const deployERC1155TransferHelper = async (approvalsManager: string) => {
   await transferHelper.deployed();
 
   return transferHelper as ERC1155TransferHelper;
-};
-
-export const deployRoyaltyRegistry = async () => {
-  const RoyaltyRegistryFactory = await ethers.getContractFactory(
-    'CollectionRoyaltyRegistryV1'
-  );
-  const royaltyRegistry = await RoyaltyRegistryFactory.deploy();
-  await royaltyRegistry.deployed();
-
-  return royaltyRegistry as CollectionRoyaltyRegistryV1;
 };
 
 export const deployRoyaltyEngine = async () => {
