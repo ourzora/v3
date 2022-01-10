@@ -36,6 +36,7 @@ export async function deployOffersV1(
     addressBook.ERC721TransferHelper,
     royaltyRegistry,
     protocolFeeSettings,
+    // @ts-ignore
     weth
   );
   console.log(
