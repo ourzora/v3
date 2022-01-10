@@ -1,7 +1,7 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
-import { Signer } from 'ethers';
+import { BigNumber, Signer } from 'ethers';
 import { WETH, ZoraProtocolFeeSettings } from '../../typechain';
 import { deployProtocolFeeSettings, deployWETH, revert } from '../utils';
 chai.use(asPromised);
@@ -68,12 +68,16 @@ describe('ZoraProtocolFeeSettings', () => {
         .connect(minter)
         .mint(await otherUser.getAddress(), testModuleAddress);
 
-      expect(await feeSettings.ownerOf(0)).to.eq(await otherUser.getAddress());
-      expect((await feeSettings.totalSupply()).toNumber()).to.eq(1);
-      expect(await feeSettings.tokenIdToModule(0)).to.eq(testModuleAddress);
+      const tokenID = BigNumber.from(testModuleAddress);
+      expect(await feeSettings.ownerOf(tokenID)).to.eq(
+        await otherUser.getAddress()
+      );
+      expect(await feeSettings.tokenIdToModule(tokenID)).to.eq(
+        testModuleAddress
+      );
       expect(
-        (await feeSettings.moduleToTokenId(testModuleAddress)).toNumber()
-      ).to.eq(0);
+        (await feeSettings.moduleToTokenId(testModuleAddress)).toString()
+      ).to.eq(tokenID.toString());
     });
   });
 

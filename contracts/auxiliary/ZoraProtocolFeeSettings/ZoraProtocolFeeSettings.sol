@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {ERC721Enumerable, ERC721} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
 /// @title ZoraProtocolFeeSettings
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows an optional fee percentage and recipient to be set for individual ZORA modules
-contract ZoraProtocolFeeSettings is ERC721Enumerable {
+contract ZoraProtocolFeeSettings is ERC721 {
     struct FeeSetting {
         uint16 feeBps;
         address feeRecipient;
@@ -14,8 +14,6 @@ contract ZoraProtocolFeeSettings is ERC721Enumerable {
 
     address public owner;
     address public minter;
-    mapping(uint256 => address) public tokenIdToModule;
-    mapping(address => uint256) public moduleToTokenId;
     mapping(address => FeeSetting) public moduleFeeSetting;
 
     event OwnerUpdated(address indexed newOwner);
@@ -23,7 +21,7 @@ contract ZoraProtocolFeeSettings is ERC721Enumerable {
 
     // Only allow the module fee owner to access the function
     modifier onlyModuleOwner(address _module) {
-        uint256 tokenId = moduleToTokenId[_module];
+        uint256 tokenId = moduleToTokenId(_module);
         require(ownerOf(tokenId) == msg.sender, "onlyModuleOwner");
 
         _;
@@ -45,16 +43,10 @@ contract ZoraProtocolFeeSettings is ERC721Enumerable {
     /// @notice Mint a new protocol fee setting for a module
     /// @param _to, the address to send the protocol fee setting token to
     /// @param _module, the module for which the minted token will represent
-    /// TODO: derive token ID from module address to save double storage, and provide a pure func to convert easily
     function mint(address _to, address _module) external returns (uint256) {
         require(msg.sender == minter, "mint onlyMinter");
-
-        uint256 tokenId = totalSupply();
-
+        uint256 tokenId = moduleToTokenId(_module);
         _mint(_to, tokenId);
-
-        tokenIdToModule[tokenId] = _module;
-        moduleToTokenId[_module] = tokenId;
 
         return tokenId;
     }
@@ -89,6 +81,19 @@ contract ZoraProtocolFeeSettings is ERC721Enumerable {
     /// @return amount to be paid out to the fee recipient
     function getFeeAmount(address _module, uint256 _amount) external view returns (uint256) {
         return (_amount * moduleFeeSetting[_module].feeBps) / 10000;
+    }
+
+    /// @notice returns the module address for a given token ID
+    /// @param _tokenId The token ID
+    function tokenIdToModule(uint256 _tokenId) public pure returns (address) {
+        return address(uint160(_tokenId));
+    }
+
+    /// @notice returns the token ID for a given module
+    /// @dev we don't worry about losing the top 20 bytes when going from uint256 -> uint160 since we know token ID must have derived from an address
+    /// @param _module The module address
+    function moduleToTokenId(address _module) public pure returns (uint256) {
+        return uint256(uint160(_module));
     }
 
     function _setOwner(address _owner) private {
