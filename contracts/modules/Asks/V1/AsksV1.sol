@@ -102,7 +102,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 _tokenId,
         uint256 _askPrice,
         address _askCurrency
-    ) external {
+    ) external nonReentrant {
         Ask storage ask = askForNFT[_tokenContract][_tokenId];
 
         require(ask.seller == msg.sender, "setAskPrice must be seller");
@@ -116,7 +116,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @notice Cancels a ask
     /// @param _tokenContract The address of the ERC-721 token contract for the token
     /// @param _tokenId The ERC-721 token ID for the token
-    function cancelAsk(address _tokenContract, uint256 _tokenId) external {
+    function cancelAsk(address _tokenContract, uint256 _tokenId) external nonReentrant {
         require(askForNFT[_tokenContract][_tokenId].seller != address(0), "cancelAsk ask doesn't exist");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);

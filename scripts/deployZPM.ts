@@ -29,6 +29,7 @@ export async function deployZPM(
   );
   const proposalManager = await ZPMFactory.deploy(
     registrarAddress,
+    // @ts-ignore
     moduleFeeTokenAddress
   );
   console.log(
