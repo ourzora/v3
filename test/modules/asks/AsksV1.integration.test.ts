@@ -34,6 +34,7 @@ import {
   THOUSANDTH_ETH,
   toRoundedNumber,
   deployZoraProtocol,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -66,9 +67,12 @@ describe('AsksV1 integration', () => {
     zoraV1 = zoraProtocol.media;
     royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -82,6 +86,7 @@ describe('AsksV1 integration', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 

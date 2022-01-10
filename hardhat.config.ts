@@ -14,6 +14,7 @@ import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
+import { deployProtocolFeeSettingsV1 } from './scripts/deployProtocolFeeSettingsV1';
 
 const env = dotenv.config().parsed;
 
@@ -58,6 +59,12 @@ task('deployReserveAuctionV1', 'Deploy Reserve Auction V1')
     undefined,
     types.string
   )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
+    undefined,
+    types.string
+  )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployReserveAuctionV1);
 
@@ -74,6 +81,12 @@ task('deployAsksV1', 'Deploy Asks V1')
   .addParam(
     'royaltyRegistry',
     'Manifold Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
     undefined,
     types.string
   )
@@ -97,8 +110,18 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
     undefined,
     types.string
   )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
+    undefined,
+    types.string
+  )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployCollectionOffersV1);
+
+task('deployProtocolFeeSettingsV1', 'Deploy Protocol Fee Settings V1')
+  .addParam('owner', 'owner', undefined, types.string)
+  .setAction(deployProtocolFeeSettingsV1);
 
 const config: HardhatUserConfig = {
   solidity: {

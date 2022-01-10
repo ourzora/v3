@@ -39,6 +39,7 @@ import {
   TEN_ETH,
   TEN_POINT_FIVE_ETH,
   TWENTY_ETH,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -75,9 +76,12 @@ describe('CollectionOffersV1', () => {
     testERC721 = await deployTestERC271();
     weth = await deployWETH();
 
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -94,6 +98,7 @@ describe('CollectionOffersV1', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 

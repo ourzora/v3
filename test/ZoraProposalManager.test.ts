@@ -5,6 +5,7 @@ import { SimpleModule, ZoraProposalManager } from '../typechain';
 import { Signer } from 'ethers';
 import {
   cancelModule,
+  deployProtocolFeeSettings,
   deploySimpleModule,
   deployZoraProposalManager,
   proposeModule,
@@ -28,7 +29,12 @@ describe('ZoraProposalManager', () => {
     registrar = signers[1];
     otherUser = signers[2];
 
-    manager = await deployZoraProposalManager(await registrar.getAddress());
+    const feeSettings = await deployProtocolFeeSettings();
+    manager = await deployZoraProposalManager(
+      await registrar.getAddress(),
+      feeSettings.address
+    );
+    await feeSettings.init(manager.address);
     module = await deploySimpleModule();
   });
 

@@ -5,6 +5,7 @@ export async function deployRoyaltyRegistryV1(
   _,
   hre: HardhatRuntimeEnvironment
 ) {
+  // @ts-ignore
   const [deployer] = await hre.ethers.getSigners();
   const { chainId } = await deployer.provider.getNetwork();
 
@@ -15,6 +16,7 @@ export async function deployRoyaltyRegistryV1(
     `Deploying CollectionRoyaltyRegistryV1 from address ${await deployer.getAddress()}`
   );
 
+  // @ts-ignore
   const RoyaltyRegistryFactory = await hre.ethers.getContractFactory(
     'CollectionRoyaltyRegistryV1'
   );

@@ -16,6 +16,7 @@ import {
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployOffersV1,
+  deployProtocolFeeSettings,
   deployRoyaltyEngine,
   deployWETH,
   deployZoraModuleApprovalsManager,
@@ -59,9 +60,12 @@ describe('OffersV1', () => {
 
     weth = await deployWETH();
 
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -78,6 +82,7 @@ describe('OffersV1', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 

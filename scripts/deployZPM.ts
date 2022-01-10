@@ -3,7 +3,10 @@ import * as fs from 'fs-extra';
 import assert from 'assert';
 
 export async function deployZPM(
-  { registrarAddress }: { registrarAddress: string },
+  {
+    registrarAddress,
+    moduleFeeTokenAddress,
+  }: { registrarAddress: string; moduleFeeTokenAddress: string },
   hre: HardhatRuntimeEnvironment
 ) {
   const [deployer] = await hre.ethers.getSigners();
@@ -24,7 +27,10 @@ export async function deployZPM(
     'ZoraProposalManager',
     deployer
   );
-  const proposalManager = await ZPMFactory.deploy(registrarAddress);
+  const proposalManager = await ZPMFactory.deploy(
+    registrarAddress,
+    moduleFeeTokenAddress
+  );
   console.log(
     `Deploying ZPM with tx ${proposalManager.deployTransaction.hash} to address ${proposalManager.address}`
   );

@@ -33,6 +33,7 @@ import {
   TWO_ETH,
   TENTH_ETH,
   THOUSANDTH_ETH,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -66,9 +67,12 @@ describe('ReserveAuctionV1', () => {
     zoraV1Market = zoraProtocol.market;
     royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
+    const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+      await deployer.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -84,6 +88,7 @@ describe('ReserveAuctionV1', () => {
       zoraV1.address,
       zoraV1Market.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 

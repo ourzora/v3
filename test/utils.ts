@@ -21,6 +21,7 @@ import {
   CollectionRoyaltyRegistryV1,
   RoyaltyEngineV1,
   RoyaltyEngineV1__factory,
+  ZoraProtocolFeeSettings,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -51,11 +52,17 @@ export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 export const toRoundedNumber = (bn: BigNumber) =>
   bn.div(THOUSANDTH_ETH).toNumber();
 
-export const deployZoraProposalManager = async (registrar: string) => {
+export const deployZoraProposalManager = async (
+  registrar: string,
+  feeSettings: string
+) => {
   const ZoraProposalManagerFactory = await ethers.getContractFactory(
     'ZoraProposalManager'
   );
-  const proposalManager = await ZoraProposalManagerFactory.deploy(registrar);
+  const proposalManager = await ZoraProposalManagerFactory.deploy(
+    registrar,
+    feeSettings
+  );
   await proposalManager.deployed();
   return proposalManager as ZoraProposalManager;
 };
@@ -218,12 +225,21 @@ export const deployWETH = async () => {
   return weth as WETH;
 };
 
+export const deployProtocolFeeSettings = async () => {
+  const FeeSettingsFactory = await ethers.getContractFactory(
+    'ZoraProtocolFeeSettings'
+  );
+  const feeSettings = await FeeSettingsFactory.deploy();
+  return feeSettings as ZoraProtocolFeeSettings;
+};
+
 export const deployReserveAuctionV1 = async (
   erc20TransferHelper: string,
   erc721TransferHelper: string,
   zoraV1Media: string,
   zoraV1Market: string,
   royaltyRegistry: string,
+  protocolFeeSettings: string,
   weth: string
 ) => {
   const ReserveAuctionV1Factory = await ethers.getContractFactory(
@@ -235,6 +251,7 @@ export const deployReserveAuctionV1 = async (
     zoraV1Media,
     zoraV1Market,
     royaltyRegistry,
+    protocolFeeSettings,
     weth
   );
   await reserveAuction.deployed();
@@ -346,6 +363,7 @@ export async function deployAsksV1(
   erc20Helper: string,
   erc721Helper: string,
   royaltyRegistry: string,
+  protocolFeeSettings: string,
   weth: string
 ) {
   const AsksV1Factory = await ethers.getContractFactory('AsksV1');
@@ -353,6 +371,7 @@ export async function deployAsksV1(
     erc20Helper,
     erc721Helper,
     royaltyRegistry,
+    protocolFeeSettings,
     weth
   );
   await asks.deployed();
@@ -363,6 +382,7 @@ export async function deployOffersV1(
   erc20Helper: string,
   erc721Helper: string,
   royaltyRegistry: string,
+  protocolFeeSettings: string,
   weth: string
 ) {
   const OffersV1Factory = await ethers.getContractFactory('OffersV1');
@@ -370,6 +390,7 @@ export async function deployOffersV1(
     erc20Helper,
     erc721Helper,
     royaltyRegistry,
+    protocolFeeSettings,
     weth
   );
   await offers.deployed();
@@ -380,6 +401,7 @@ export async function deployCollectionOffersV1(
   erc20Helper: string,
   erc721Helper: string,
   royaltyRegistry: string,
+  protocolFeeSettings: string,
   weth: string
 ) {
   const CollectionOffersV1Factory = await ethers.getContractFactory(
@@ -389,6 +411,7 @@ export async function deployCollectionOffersV1(
     erc20Helper,
     erc721Helper,
     royaltyRegistry,
+    protocolFeeSettings,
     weth
   );
   await collectionOffers.deployed();

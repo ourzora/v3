@@ -9,6 +9,7 @@ import {
 import { Signer } from 'ethers';
 import {
   cancelModule,
+  deployProtocolFeeSettings,
   deploySimpleModule,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
@@ -34,9 +35,12 @@ describe('ZoraModuleApprovalsManager', () => {
     registrar = signers[1];
     otherUser = signers[2];
 
+    const feeSettings = await deployProtocolFeeSettings();
     proposalManager = await deployZoraProposalManager(
-      await registrar.getAddress()
+      await registrar.getAddress(),
+      feeSettings.address
     );
+    await feeSettings.init(proposalManager.address);
     manager = await deployZoraModuleApprovalsManager(proposalManager.address);
     module = await deploySimpleModule();
     await proposeModule(proposalManager, module.address);

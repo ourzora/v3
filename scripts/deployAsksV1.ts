@@ -4,11 +4,12 @@ import assert from 'assert';
 
 export interface Args {
   royaltyRegistry: string;
+  protocolFeeSettings: string;
   weth: string;
 }
 
 export async function deployAsksV1(
-  { royaltyRegistry, weth }: Args,
+  { royaltyRegistry, protocolFeeSettings, weth }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
   const [deployer] = await hre.ethers.getSigners();
@@ -32,6 +33,7 @@ export async function deployAsksV1(
   const asks = await AsksFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
+    protocolFeeSettings,
     royaltyRegistry,
     weth
   );
