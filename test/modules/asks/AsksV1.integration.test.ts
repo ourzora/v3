@@ -21,7 +21,7 @@ import {
   deployAsksV1,
   deployRoyaltyEngine,
   deployTestEIP2981ERC721,
-  deployTestERC271,
+  deployTestERC721,
   deployWETH,
   deployZoraModuleManager,
   mintERC2981Token,
@@ -60,7 +60,7 @@ describe('AsksV1 integration', () => {
     sellerFundsRecipient = signers[2];
     otherUser = signers[3];
     finder = signers[4];
-    testERC721 = await deployTestERC271();
+    testERC721 = await deployTestERC721();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
@@ -71,8 +71,7 @@ describe('AsksV1 integration', () => {
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(moduleManager.address);
-
+    await feeSettings.init(moduleManager.address, testERC721.address);
     erc20TransferHelper = await deployERC20TransferHelper(
       moduleManager.address
     );

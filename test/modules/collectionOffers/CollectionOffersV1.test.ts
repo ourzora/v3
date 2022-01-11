@@ -17,7 +17,7 @@ import {
   deployERC721TransferHelper,
   deployCollectionOffersV1,
   deployRoyaltyEngine,
-  deployTestERC271,
+  deployTestERC721,
   deployWETH,
   deployZoraModuleManager,
   deployZoraProtocol,
@@ -71,7 +71,7 @@ describe('CollectionOffersV1', () => {
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
 
-    testERC721 = await deployTestERC271();
+    testERC721 = await deployTestERC721();
     weth = await deployWETH();
 
     const feeSettings = await deployProtocolFeeSettings();
@@ -79,7 +79,7 @@ describe('CollectionOffersV1', () => {
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(moduleManager.address);
+    await feeSettings.init(moduleManager.address, testERC721.address);
 
     erc20TransferHelper = await deployERC20TransferHelper(
       moduleManager.address
