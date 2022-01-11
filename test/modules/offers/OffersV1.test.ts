@@ -9,6 +9,7 @@ import {
   OffersV1,
   WETH,
   RoyaltyEngineV1,
+  TestERC721,
 } from '../../../typechain';
 
 import {
@@ -18,6 +19,7 @@ import {
   deployOffersV1,
   deployProtocolFeeSettings,
   deployRoyaltyEngine,
+  deployTestERC721,
   deployWETH,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
@@ -47,6 +49,7 @@ describe('OffersV1', () => {
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
   let royaltyEngine: RoyaltyEngineV1;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -59,13 +62,14 @@ describe('OffersV1', () => {
     zoraV1 = zoraProtocol.media;
 
     weth = await deployWETH();
+    testERC721 = await deployTestERC721();
 
     const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
+    await feeSettings.init(proposalManager.address, testERC721.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );

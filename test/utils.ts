@@ -187,7 +187,7 @@ export const deployBadERC721 = async () => {
   return badERC721 as BadERC721;
 };
 
-export const deployTestERC271 = async () => {
+export const deployTestERC721 = async () => {
   const TestERC721Factory = await ethers.getContractFactory('TestERC721');
   const testERC721 = await TestERC721Factory.deploy();
   return testERC721 as TestERC721;

@@ -8,6 +8,7 @@ import {
   ERC721TransferHelper,
   ReserveAuctionV1,
   RoyaltyEngineV1,
+  TestERC721,
   WETH,
 } from '../../../typechain';
 import {
@@ -34,6 +35,7 @@ import {
   TENTH_ETH,
   THOUSANDTH_ETH,
   deployProtocolFeeSettings,
+  deployTestERC721,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -52,6 +54,7 @@ describe('ReserveAuctionV1', () => {
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
   let royaltyEngine: RoyaltyEngineV1;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     await ethers.provider.send('hardhat_reset', []);
@@ -67,12 +70,13 @@ describe('ReserveAuctionV1', () => {
     zoraV1Market = zoraProtocol.market;
     royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
+    testERC721 = await deployTestERC721();
     const feeSettings = await deployProtocolFeeSettings();
     const proposalManager = await deployZoraProposalManager(
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
+    await feeSettings.init(proposalManager.address, testERC721.address);
     const approvalManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );

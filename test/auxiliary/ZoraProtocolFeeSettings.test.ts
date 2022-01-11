@@ -2,8 +2,13 @@ import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import { BigNumber, Signer } from 'ethers';
-import { WETH, ZoraProtocolFeeSettings } from '../../typechain';
-import { deployProtocolFeeSettings, deployWETH, revert } from '../utils';
+import { TestERC721, WETH, ZoraProtocolFeeSettings } from '../../typechain';
+import {
+  deployProtocolFeeSettings,
+  deployTestERC721,
+  deployWETH,
+  revert,
+} from '../utils';
 chai.use(asPromised);
 
 describe('ZoraProtocolFeeSettings', () => {
@@ -14,6 +19,7 @@ describe('ZoraProtocolFeeSettings', () => {
   let otherUser: Signer;
   let feeSettings: ZoraProtocolFeeSettings;
   let testModuleAddress: string;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     await ethers.provider.send('hardhat_reset', []);
@@ -26,33 +32,42 @@ describe('ZoraProtocolFeeSettings', () => {
     testModuleAddress = await signers[4].getAddress();
     weth = await deployWETH();
     feeSettings = await deployProtocolFeeSettings();
+    testERC721 = await deployTestERC721();
   });
 
   describe('#init', () => {
     it('should revert if not called by the owner', async () => {
       await expect(
-        feeSettings.connect(otherUser).init(await otherUser.getAddress())
+        feeSettings
+          .connect(otherUser)
+          .init(await otherUser.getAddress(), testERC721.address)
       ).eventually.rejectedWith(revert`init only owner`);
     });
 
     it('should revert if already initialized', async () => {
-      await feeSettings.init(await minter.getAddress());
+      await feeSettings.init(await minter.getAddress(), testERC721.address);
 
       await expect(
-        feeSettings.init(await minter.getAddress())
+        feeSettings.init(await minter.getAddress(), testERC721.address)
       ).eventually.rejectedWith(revert`init already initialized`);
     });
 
     it('should set the minter address', async () => {
-      await feeSettings.init(await minter.getAddress());
+      await feeSettings.init(await minter.getAddress(), testERC721.address);
 
       expect(await feeSettings.minter()).to.eq(await minter.getAddress());
+    });
+
+    it('should set the metadata address', async () => {
+      await feeSettings.init(await minter.getAddress(), testERC721.address);
+
+      expect(await feeSettings.metadata()).to.eq(await testERC721.address);
     });
   });
 
   describe('#mint', () => {
     beforeEach(async () => {
-      feeSettings.init(await minter.getAddress());
+      feeSettings.init(await minter.getAddress(), testERC721.address);
     });
     it('should revert if not called by the minter', async () => {
       await expect(
@@ -91,8 +106,8 @@ describe('ZoraProtocolFeeSettings', () => {
       );
 
       expect(await feeSettings.owner()).to.eq(await otherUser.getAddress());
-      expect(events.length).to.eq(2);
-      const logDescription = feeSettings.interface.parseLog(events[1]);
+      expect(events.length).to.eq(1);
+      const logDescription = feeSettings.interface.parseLog(events[0]);
       expect(logDescription.args.newOwner).to.eq(await otherUser.getAddress());
     });
 
@@ -103,9 +118,33 @@ describe('ZoraProtocolFeeSettings', () => {
     });
   });
 
+  describe('#setMetadata', () => {
+    it('should allow the owner to set a new metadata address', async () => {
+      const block = await ethers.provider.getBlockNumber();
+      await feeSettings.setMetadata(await otherUser.getAddress());
+      const events = await feeSettings.queryFilter(
+        feeSettings.filters.MetadataUpdated(null),
+        block
+      );
+
+      expect(await feeSettings.metadata()).to.eq(await otherUser.getAddress());
+      expect(events.length).to.eq(1);
+      const logDescription = feeSettings.interface.parseLog(events[0]);
+      expect(logDescription.args.newMetadata).to.eq(
+        await otherUser.getAddress()
+      );
+    });
+
+    it('should revert if the caller is not owner', async () => {
+      await expect(
+        feeSettings.connect(otherUser).setMetadata(await otherUser.getAddress())
+      ).to.eventually.rejectedWith(revert`setMetadata onlyOwner`);
+    });
+  });
+
   describe('#setFeeParams', async () => {
     beforeEach(async () => {
-      feeSettings.init(await minter.getAddress());
+      feeSettings.init(await minter.getAddress(), testERC721.address);
     });
 
     it('should allow a fee to be set', async () => {

@@ -2,6 +2,7 @@ import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
+  TestERC721,
   TestModuleV1,
   WETH,
   ZoraModuleApprovalsManager,
@@ -13,6 +14,7 @@ import {
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployProtocolFeeSettings,
+  deployTestERC721,
   deployTestModule,
   deployWETH,
   deployZoraModuleApprovalsManager,
@@ -34,6 +36,7 @@ describe('ERC20TransferHelper', () => {
   let deployer: Signer;
   let registrar: Signer;
   let otherUser: Signer;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -42,6 +45,7 @@ describe('ERC20TransferHelper', () => {
     registrar = signers[1];
     otherUser = signers[2];
     weth = await deployWETH();
+    testERC721 = await deployTestERC721();
 
     await weth.connect(otherUser).deposit({ value: ONE_ETH });
 
@@ -50,7 +54,7 @@ describe('ERC20TransferHelper', () => {
       await registrar.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
+    await feeSettings.init(proposalManager.address, testERC721.address);
     approvalsManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );

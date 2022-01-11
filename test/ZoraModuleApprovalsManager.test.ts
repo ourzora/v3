@@ -3,6 +3,7 @@ import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
   SimpleModule,
+  TestERC721,
   ZoraModuleApprovalsManager,
   ZoraProposalManager,
 } from '../typechain';
@@ -11,6 +12,7 @@ import {
   cancelModule,
   deployProtocolFeeSettings,
   deploySimpleModule,
+  deployTestERC721,
   deployZoraModuleApprovalsManager,
   deployZoraProposalManager,
   proposeModule,
@@ -27,6 +29,7 @@ describe('ZoraModuleApprovalsManager', () => {
   let deployer: Signer;
   let registrar: Signer;
   let otherUser: Signer;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -35,12 +38,14 @@ describe('ZoraModuleApprovalsManager', () => {
     registrar = signers[1];
     otherUser = signers[2];
 
+    testERC721 = await deployTestERC721();
+
     const feeSettings = await deployProtocolFeeSettings();
     proposalManager = await deployZoraProposalManager(
       await registrar.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
+    await feeSettings.init(proposalManager.address, testERC721.address);
     manager = await deployZoraModuleApprovalsManager(proposalManager.address);
     module = await deploySimpleModule();
     await proposeModule(proposalManager, module.address);

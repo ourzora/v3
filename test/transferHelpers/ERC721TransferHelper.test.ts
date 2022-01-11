@@ -14,7 +14,7 @@ import {
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployProtocolFeeSettings,
-  deployTestERC271,
+  deployTestERC721,
   deployTestModule,
   deployWETH,
   deployZoraModuleApprovalsManager,
@@ -49,7 +49,8 @@ describe('ERC721TransferHelper', () => {
       await registrar.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
+    nft = await deployTestERC721();
+    await feeSettings.init(proposalManager.address, nft.address);
     approvalsManager = await deployZoraModuleApprovalsManager(
       proposalManager.address
     );
@@ -61,7 +62,6 @@ describe('ERC721TransferHelper', () => {
       approvalsManager.address
     );
 
-    nft = await deployTestERC271();
     await nft.mint(await otherUser.getAddress(), 1);
     await nft.connect(otherUser).approve(erc721Helper.address, 1);
 
