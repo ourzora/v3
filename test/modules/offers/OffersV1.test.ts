@@ -19,13 +19,11 @@ import {
   deployProtocolFeeSettings,
   deployRoyaltyEngine,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   deployZoraProtocol,
   mintZoraNFT,
   ONE_ETH,
   ONE_HALF_ETH,
-  proposeModule,
   registerModule,
   revert,
   TENTH_ETH,
@@ -61,20 +59,17 @@ describe('OffersV1', () => {
     weth = await deployWETH();
 
     const feeSettings = await deployProtocolFeeSettings();
-    const proposalManager = await deployZoraProposalManager(
+    const moduleManager = await deployZoraModuleManager(
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address);
 
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
 
@@ -86,11 +81,10 @@ describe('OffersV1', () => {
       weth.address
     );
 
-    await proposeModule(proposalManager, offers.address);
-    await registerModule(proposalManager, offers.address);
+    await registerModule(moduleManager, offers.address);
 
-    await approvalManager.setApprovalForModule(offers.address, true);
-    await approvalManager
+    await moduleManager.setApprovalForModule(offers.address, true);
+    await moduleManager
       .connect(buyer)
       .setApprovalForModule(offers.address, true);
 

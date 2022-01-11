@@ -5,35 +5,26 @@ import {
   TestERC1155,
   TestModuleV1,
   TestModuleV2,
-  WETH,
-  ZoraModuleApprovalsManager,
-  ZoraProposalManager,
+  ZoraModuleManager,
 } from '../../typechain';
 import { Signer } from 'ethers';
 import {
-  cancelModule,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployERC1155TransferHelper,
   deployTestERC1155,
   deployTestModule,
-  deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
-  ONE_ETH,
-  proposeModule,
+  deployZoraModuleManager,
   registerModule,
   revert,
   deployTestModuleV2,
   deployProtocolFeeSettings,
 } from '../utils';
-
 chai.use(asPromised);
 
 describe('ERC1155TransferHelper', () => {
   let tokens: TestERC1155;
-  let proposalManager: ZoraProposalManager;
-  let approvalsManager: ZoraModuleApprovalsManager;
+  let moduleManager: ZoraModuleManager;
   let moduleV1: TestModuleV1;
   let moduleV2: TestModuleV2;
   let deployer: Signer;
@@ -48,24 +39,20 @@ describe('ERC1155TransferHelper', () => {
     otherUser = signers[2];
 
     const feeSettings = await deployProtocolFeeSettings();
-    proposalManager = await deployZoraProposalManager(
+
+    moduleManager = await deployZoraModuleManager(
       await registrar.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
-    approvalsManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address);
 
     const erc1155Helper = await deployERC1155TransferHelper(
-      approvalsManager.address
+      moduleManager.address
     );
     const erc721Helper = await deployERC721TransferHelper(
-      approvalsManager.address
+      moduleManager.address
     );
-    const erc20Helper = await deployERC20TransferHelper(
-      approvalsManager.address
-    );
+    const erc20Helper = await deployERC20TransferHelper(moduleManager.address);
 
     tokens = await deployTestERC1155();
     await tokens.mintBatch(
@@ -83,15 +70,12 @@ describe('ERC1155TransferHelper', () => {
     );
     moduleV2 = await deployTestModuleV2(erc1155Helper.address);
 
-    await proposeModule(proposalManager, moduleV2.address);
-    await proposeModule(proposalManager, moduleV1.address);
-
-    await registerModule(proposalManager.connect(registrar), moduleV2.address);
-    await registerModule(proposalManager.connect(registrar), moduleV1.address);
+    await registerModule(moduleManager.connect(registrar), moduleV2.address);
+    await registerModule(moduleManager.connect(registrar), moduleV1.address);
   });
 
   it('should allow single token transfers when the user has approved the module', async () => {
-    await approvalsManager
+    await moduleManager
       .connect(otherUser)
       .setApprovalForModule(moduleV2.address, true);
 
@@ -108,7 +92,7 @@ describe('ERC1155TransferHelper', () => {
   });
 
   it('should allow multi token transfers when the user has approved the module', async () => {
-    await approvalsManager
+    await moduleManager
       .connect(otherUser)
       .setApprovalForModule(moduleV2.address, true);
 
