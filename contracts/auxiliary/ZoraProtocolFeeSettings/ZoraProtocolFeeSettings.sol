@@ -3,6 +3,10 @@ pragma solidity 0.8.10;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
+interface IERC721TokenURI {
+    function tokenURI(uint256 tokenId) external view returns (string memory);
+}
+
 /// @title ZoraProtocolFeeSettings
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows an optional fee percentage and recipient to be set for individual ZORA modules
@@ -12,10 +16,12 @@ contract ZoraProtocolFeeSettings is ERC721 {
         address feeRecipient;
     }
 
+    address public metadata;
     address public owner;
     address public minter;
     mapping(address => FeeSetting) public moduleFeeSetting;
 
+    event MetadataUpdated(address indexed newMetadata);
     event OwnerUpdated(address indexed newOwner);
     event ProtocolFeeUpdated(address indexed module, address feeRecipient, uint16 feeBps);
 
@@ -33,11 +39,12 @@ contract ZoraProtocolFeeSettings is ERC721 {
 
     /// @notice Initialize the Protocol Fee Settings
     /// @param _minter The address that can mint new NFTs (expected ZoraProposalManager address)
-    function init(address _minter) external {
+    function init(address _minter, address _metadata) external {
         require(msg.sender == owner, "init only owner");
         require(minter == address(0), "init already initialized");
 
         minter = _minter;
+        metadata = _metadata;
     }
 
     /// @notice Mint a new protocol fee setting for a module
@@ -75,6 +82,11 @@ contract ZoraProtocolFeeSettings is ERC721 {
         _setOwner(_owner);
     }
 
+    function setMetadata(address _metadata) external {
+        require(msg.sender == owner, "setMetadata onlyOwner");
+        _setMetadata(_metadata);
+    }
+
     /// @notice Computes the fee for a given uint256 amount
     /// @param _module The module to compute the fee for
     /// @param _amount The amount to compute the fee for
@@ -100,5 +112,18 @@ contract ZoraProtocolFeeSettings is ERC721 {
         owner = _owner;
 
         emit OwnerUpdated(_owner);
+    }
+
+    function _setMetadata(address _metadata) public {
+        metadata = _metadata;
+
+        emit MetadataUpdated(_metadata);
+    }
+
+    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+        require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
+        require(metadata != address(0), "Corruptions: no metadata address");
+
+        return IERC721TokenURI(metadata).tokenURI(tokenId);
     }
 }
