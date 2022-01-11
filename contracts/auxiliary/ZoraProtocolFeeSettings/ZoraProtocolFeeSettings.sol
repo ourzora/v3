@@ -2,10 +2,7 @@
 pragma solidity 0.8.10;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-
-interface IERC721TokenURI {
-    function tokenURI(uint256 tokenId) external view returns (string memory);
-}
+import {IFeeTokenURI} from "./IFeeTokenURI.sol";
 
 /// @title ZoraProtocolFeeSettings
 /// @author tbtstl <t@zora.co>
@@ -16,7 +13,7 @@ contract ZoraProtocolFeeSettings is ERC721 {
         address feeRecipient;
     }
 
-    address public metadata;
+    IFeeTokenURI public metadata;
     address public owner;
     address public minter;
     mapping(address => FeeSetting) public moduleFeeSetting;
@@ -82,7 +79,7 @@ contract ZoraProtocolFeeSettings is ERC721 {
         _setOwner(_owner);
     }
 
-    function setMetadata(address _metadata) external {
+    function setMetadata(IFeeTokenURI _metadata) external {
         require(msg.sender == owner, "setMetadata onlyOwner");
         _setMetadata(_metadata);
     }
@@ -114,7 +111,7 @@ contract ZoraProtocolFeeSettings is ERC721 {
         emit OwnerUpdated(_owner);
     }
 
-    function _setMetadata(address _metadata) public {
+    function _setMetadata(IFeeTokenURI _metadata) public {
         metadata = _metadata;
 
         emit MetadataUpdated(_metadata);
@@ -122,8 +119,11 @@ contract ZoraProtocolFeeSettings is ERC721 {
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-        require(metadata != address(0), "Corruptions: no metadata address");
+        require(metadata != address(0), "ERC721Metadata: no metadata address");
 
-        return IERC721TokenURI(metadata).tokenURI(tokenId);
+        address moduleAddress = tokenIdToModule(tokenId);
+        FeeSetting memory moduleFeeSetting = moduleFeeSetting[moduleAddress];
+
+        return metadata.tokenURIForFeeSchedule(tokenId, ownerOf(tokenId), moduleAddress, moduleFeeSetting.feeBps, moduleFeeSetting.feeRecipient);
     }
 }
