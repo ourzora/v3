@@ -122,7 +122,7 @@ contract ZoraProtocolFeeSettings is ERC721 {
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(_exists(tokenId), "ERC721Metadata: URI query for nonexistent token");
-        require(metadata != address(0), "Corruptions: no metadata address");
+        require(metadata != address(0), "ERC721Metadata: no metadata address");
 
         return IERC721TokenURI(metadata).tokenURI(tokenId);
     }
