@@ -7,6 +7,25 @@ import {ZoraProtocolFeeSettings} from "./auxiliary/ZoraProtocolFeeSettings/ZoraP
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to add & access modules on ZORA V3, plus utilize the ZORA transfer helpers
 contract ZoraModuleManager {
+    /// @notice The EIP-712 type for a signed approval
+    /// @dev keccak256("SignedApproval(address module,address user,bool approved,uint256 deadline,uint256 nonce)")
+    bytes32 private constant SIGNED_APPROVAL_TYPEHASH = 0x8413132cc7aa5bd2ce1a1b142a3f09e2baeda86addf4f9a5dacd4679f56e7cec;
+
+    /// @notice the EIP-712 domain separator
+    bytes32 private immutable EIP_712_DOMAIN_SEPARATOR =
+        keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("ZORA")),
+                keccak256(bytes("3")),
+                _chainID(),
+                address(this)
+            )
+        );
+
+    /// @notice The signature nonces for 3rd party module approvals
+    mapping(address => uint256) public sigNonces;
+
     /// @notice The registrar address that can register modules
     address public registrar;
 
@@ -52,11 +71,7 @@ contract ZoraModuleManager {
     /// @param _module The module to approve
     /// @param _approved A boolean, whether or not to approve a module
     function setApprovalForModule(address _module, bool _approved) public {
-        require(moduleRegistered[_module], "ZMM::must be registered module");
-
-        userApprovals[msg.sender][_module] = _approved;
-
-        emit ModuleApprovalSet(msg.sender, _module, _approved);
+        _setApprovalForModule(_module, msg.sender, _approved);
     }
 
     /// @notice Sets approvals for multiple modules at once
@@ -64,8 +79,34 @@ contract ZoraModuleManager {
     /// @param _approved A boolean, whether or not to approve the modules
     function setBatchApprovalForModules(address[] memory _modules, bool _approved) public {
         for (uint256 i = 0; i < _modules.length; i++) {
-            setApprovalForModule(_modules[i], _approved);
+            _setApprovalForModule(_modules[i], msg.sender, _approved);
         }
+    }
+
+    function setApprovalForModuleBySig(
+        address _module,
+        address _user,
+        bool _approved,
+        uint256 _deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) public {
+        require(_deadline == 0 || _deadline >= block.timestamp, "ZMM::setApprovalForModuleBySig deadline expired");
+
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                EIP_712_DOMAIN_SEPARATOR,
+                keccak256(abi.encode(SIGNED_APPROVAL_TYPEHASH, _module, _user, _approved, _deadline, sigNonces[_user]++))
+            )
+        );
+
+        address recoveredAddress = ecrecover(digest, v, r, s);
+
+        require(recoveredAddress == _user, "ZMM::setApprovalForModuleBySig invalid signature");
+
+        _setApprovalForModule(_module, _user, _approved);
     }
 
     /// @notice Registers a module
@@ -86,5 +127,23 @@ contract ZoraModuleManager {
         registrar = _registrar;
 
         emit RegistrarChanged(_registrar);
+    }
+
+    function _chainID() private view returns (uint256 id) {
+        assembly {
+            id := chainid()
+        }
+    }
+
+    function _setApprovalForModule(
+        address _module,
+        address _user,
+        bool _approved
+    ) private {
+        require(moduleRegistered[_module], "ZMM::must be registered module");
+
+        userApprovals[_user][_module] = _approved;
+
+        emit ModuleApprovalSet(msg.sender, _module, _approved);
     }
 }

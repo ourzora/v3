@@ -101,6 +101,30 @@ describe('ZoraModuleManager', () => {
     });
   });
 
+  xdescribe('#setApprovalForModuleBySig', () => {
+    const domain = [
+      { name: 'name', type: 'string' },
+      { name: 'version', type: 'string' },
+      { name: 'chainId', type: 'uint256' },
+      { name: 'verifyingContract', type: 'address' },
+    ];
+    const approval = [
+      { name: 'module', type: 'address' },
+      { name: 'user', type: 'address' },
+      { name: 'approved', type: 'bool' },
+    ];
+    let domainData: any;
+
+    beforeEach(async () => {
+      domainData = {
+        name: 'ZORA',
+        version: '3',
+        chainId: (await ethers.provider.getNetwork()).chainId,
+        verifyingContract: manager.address,
+      };
+    });
+  });
+
   describe('#setBatchApprovalForModules', () => {
     it('should approve an array of modules', async () => {
       const modules = [
