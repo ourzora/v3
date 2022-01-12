@@ -40,6 +40,28 @@ contract ZoraModuleManager {
         moduleFeeToken = ZoraProtocolFeeSettings(_feeToken);
     }
 
+    /**
+     ┌─┐                                                         
+     ║"│                                                         
+     └┬┘                                                         
+     ┌┼┐                                                         
+      │                                       ┌─────────────────┐
+     ┌┴┐                                      │ZoraModuleManager│
+    User                                      └────────┬────────┘
+     │ isModuleApproved(address _user, address _module)│         
+     │ ────────────────────────────────────────────────>         
+     │                                                 │         
+     │                 return <boolean>                │         
+     │ <────────────────────────────────────────────────         
+    User                                      ┌────────┴────────┐
+     ┌─┐                                      │ZoraModuleManager│
+     ║"│                                      └─────────────────┘
+     └┬┘                                                         
+     ┌┼┐                                                         
+      │                                                          
+     ┌┴┐                                                         
+    */
+
     /// @notice Returns true if the user has approved a given module, false otherwise
     /// @param _user The user to check approvals for
     /// @param _module The module to check approvals for
@@ -47,6 +69,50 @@ contract ZoraModuleManager {
     function isModuleApproved(address _user, address _module) external view returns (bool) {
         return userApprovals[_user][_module];
     }
+
+    /**
+            ┌─┐                                                                                                              
+            ║"│                                                                                                              
+            └┬┘                                                                                                              
+            ┌┼┐                                                                                                              
+             │                                            ┌─────────────────┐                                                
+            ┌┴┐                                           │ZoraModuleManager│                                                
+            User                                          └────────┬────────┘                                                
+            │ setApprovalForModule(address _module, bool _approved)│                                                         
+            │ ─────────────────────────────────────────────────────>                                                         
+            │                                                      │                                                         
+            │                                                      │────┐                                                    
+            │                                                      │    │ moduleRegistered[_module]                          
+            │                                                      │<───┘                                                    
+            │                                                      │                                                         
+            │                                                      │────┐                                                    
+            │                                                      │    │ return <boolean>                                   
+            │                                                      │<───┘                                                    
+            │                                                      │                                                         
+            │                                                      │                                                         
+    ╔══════╤╪══════════════════════════════════════════════════════╪════════════════════════════════════════════════════════╗
+    ║ ALT  ││ true                                                 │                                                        ║
+    ╟──────┘│                                                      │                                                        ║
+    ║       │                                                      │────┐                                                   ║
+    ║       │                                                      │    │ userApprovals[msg.sender][_module] = _approved    ║
+    ║       │                                                      │<───┘                                                   ║
+    ║       │                                                      │                                                        ║
+    ║       │                                                      │────┐                                                   ║
+    ║       │                                                      │    │ emit ModuleApprovalSet                            ║
+    ║       │                                                      │<───┘                                                   ║
+    ╠═══════╪══════════════════════════════════════════════════════╪════════════════════════════════════════════════════════╣
+    ║ [false]                                                      │                                                        ║
+    ║       │                        revert                        │                                                        ║
+    ║       │ <─────────────────────────────────────────────────────                                                        ║
+    ╚═══════╪══════════════════════════════════════════════════════╪════════════════════════════════════════════════════════╝
+            User                                          ┌────────┴────────┐                                                
+            ┌─┐                                           │ZoraModuleManager│                                                
+            ║"│                                           └─────────────────┘                                                
+            └┬┘                                                                                                              
+            ┌┼┐                                                                                                              
+             │                                                                                                               
+            ┌┴┐                                                                                                              
+   */
 
     /// @notice Allows a user to set the approval for a given module
     /// @param _module The module to approve
@@ -59,6 +125,29 @@ contract ZoraModuleManager {
         emit ModuleApprovalSet(msg.sender, _module, _approved);
     }
 
+    /**
+       ┌─┐                                                                                                                                                  
+       ║"│                                                                                                                                                  
+       └┬┘                                                                                                                                                  
+       ┌┼┐                                                                                                                                                  
+        │                                                            ┌─────────────────┐                                                                    
+       ┌┴┐                                                           │ZoraModuleManager│                                                                    
+      User                                                           └────────┬────────┘                                                                    
+       │ setBatchApprovalForModules(address[] memory _modules, bool _approved)│                                                                             
+       │ ─────────────────────────────────────────────────────────────────────>                                                                             
+       │                                                                      │                                                                             
+       │                                                                      │────┐                                                                        
+       │                                                                      │    │ for 0.._modules.length { setApprovalForModule(_modules[i], _approved) }
+       │                                                                      │<───┘                                                                        
+      User                                                           ┌────────┴────────┐                                                                    
+       ┌─┐                                                           │ZoraModuleManager│                                                                    
+       ║"│                                                           └─────────────────┘                                                                    
+       └┬┘                                                                                                                                                  
+       ┌┼┐                                                                                                                                                  
+        │                                                                                                                                                   
+       ┌┴┐                                                                                                                                                  
+    */
+
     /// @notice Sets approvals for multiple modules at once
     /// @param _modules The list of module addresses to set approvals for
     /// @param _approved A boolean, whether or not to approve the modules
@@ -67,6 +156,37 @@ contract ZoraModuleManager {
             setApprovalForModule(_modules[i], _approved);
         }
     }
+
+    /**
+                                                        ┌─┐      
+                                                        ║"│      
+                                                        └┬┘      
+                                                        ┌┼┐      
+   ┌─────────────────┐                                   │       
+   │ZoraModuleManager│                                  ┌┴┐      
+   └────────┬────────┘                             ZoraRegistrar 
+            │      registerModule(address _module)       │       
+            │<───────────────────────────────────────────│       
+            │                                            │       
+            ────┐                                        │       
+                │ moduleRegistered[_module] = true       │       
+            <───┘                                        │       
+            │                                            │       
+            ────┐                                        │       
+                │ moduleFeeToken.mint(registrar, _module)│       
+            <───┘                                        │       
+            │                                            │       
+            ────┐                                        │       
+                │ emit ModuleRegistered                  │       
+            <───┘                                        │       
+    ┌────────┴────────┐                             ZoraRegistrar 
+    │ZoraModuleManager│                                  ┌─┐      
+    └─────────────────┘                                  ║"│      
+                                                         └┬┘      
+                                                         ┌┼┐      
+                                                          │       
+                                                         ┌┴┐      
+    */
 
     /// @notice Registers a module
     /// @param _module The address of the module
@@ -78,6 +198,33 @@ contract ZoraModuleManager {
 
         emit ModuleRegistered(_module);
     }
+
+    /**
+                                              ┌─┐      
+                                              ║"│      
+                                              └┬┘      
+                                              ┌┼┐      
+    ┌─────────────────┐                        │       
+    │ZoraModuleManager│                       ┌┴┐      
+    └────────┬────────┘                  ZoraRegistrar 
+             │setRegistrar(address _registrar) │       
+             │<────────────────────────────────│       
+             │                                 │       
+             ────┐                             │       
+                 │ registrar = _registrar      │       
+             <───┘                             │       
+             │                                 │       
+             ────┐                             │       
+                 │ emit RegistrarChanged       │       
+             <───┘                             │       
+    ┌────────┴────────┐                  ZoraRegistrar 
+    │ZoraModuleManager│                       ┌─┐      
+    └─────────────────┘                       ║"│      
+                                              └┬┘      
+                                              ┌┼┐      
+                                               │       
+                                              ┌┴┐      
+    */
 
     /// @notice Sets the registrar for the ZORA Module Manager
     /// @param _registrar the address of the new registrar
