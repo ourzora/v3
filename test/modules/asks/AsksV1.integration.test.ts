@@ -12,7 +12,6 @@ import {
   TestERC721,
   WETH,
   RoyaltyEngineV1,
-  ZoraModuleManager,
 } from '../../../typechain';
 import {
   approveNFTTransfer,
@@ -47,7 +46,6 @@ describe('AsksV1 integration', () => {
   let deployer: Signer;
   let buyerA: Signer;
   let sellerFundsRecipient: Signer;
-  let otherUser: Signer;
   let finder: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
@@ -58,7 +56,6 @@ describe('AsksV1 integration', () => {
     deployer = signers[0];
     buyerA = signers[1];
     sellerFundsRecipient = signers[2];
-    otherUser = signers[3];
     finder = signers[4];
     testERC721 = await deployTestERC271();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
@@ -112,7 +109,7 @@ describe('AsksV1 integration', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
         await asks
@@ -143,7 +140,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await sellerFundsRecipient.getBalance();
 
-        // 15% creator fee + 10% finders fee
+        // 1 ETH * 15% creator fee -> 0.85 ETH * 1000 bps finders fee -> 0.765 ETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765))),
           10
@@ -155,7 +152,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await finder.getBalance();
 
-        // 50% creator fee -> 0.5 ETH * 10% ask fee -> 0.05 ETH
+        // 1 ETH * 15% creator fee -> 0.85 ETH * 1000 bps finders fee -> 0.085 ETH finder
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
           10
@@ -167,7 +164,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await deployer.getBalance();
 
-        // 15% creator fee -> 1ETH * 15% = 0.15 ETH
+        // 1 ETH * 15% creator fee -> 0.15 ETH creator
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(150))),
           10
@@ -190,7 +187,7 @@ describe('AsksV1 integration', () => {
           ONE_ETH,
           weth.address,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
         await asks
@@ -222,8 +219,7 @@ describe('AsksV1 integration', () => {
           await sellerFundsRecipient.getAddress()
         );
 
-        // TODO: rephrase & fix numbers here to reflect no listing fee
-        // 15% creator fee + 10% finders fee -> 1 WETH * 15% * 20%  = .765WETH
+        // 1 WETH * 15% creator fee -> 0.85 WETH * 1000 bps finders fee -> 0.765 WETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.eq(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765)))
         );
@@ -234,10 +230,10 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
-        // 50% creator fee -> 0.5 ETH * 10% ask fee -> 0.05 ETH
+        // 1 WETH * 15% creator fee -> 0.85 WETH * 1000 bps finders fee -> 0.085 WETH finder
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(85))),
-          10
+          1000
         );
       });
 
@@ -246,7 +242,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
-        // 15% creator fee -> 1 WETH * 15% = .15WETH
+        // 1 WETH * 15% creator fee -> 0.15 WETH creator
         expect(toRoundedNumber(afterBalance)).to.eq(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(150)))
         );
@@ -276,7 +272,7 @@ describe('AsksV1 integration', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
         await asks
@@ -308,7 +304,8 @@ describe('AsksV1 integration', () => {
         const beforeBalance = await sellerFundsRecipient.getBalance();
         await run();
         const afterBalance = await sellerFundsRecipient.getBalance();
-        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 10% fees -> .45 ETH
+
+        // 1 ETH * 50% creator fee -> 0.5 ETH * 1000 bps finders fee -> 0.45 ETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
           10
@@ -320,7 +317,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await finder.getBalance();
 
-        // 50% creator fee -> 0.5 ETH * 10% ask fee -> 0.05 ETH
+        // 1 ETH * 50% creator fee -> 0.5 ETH * 1000 bps finders fee -> 0.05 ETH finder
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
           10
@@ -332,7 +329,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await deployer.getBalance();
 
-        // 50% creator fee -> 1ETH * 50% = 0.5 ETH
+        // 1 ETH * 50% creator fee -> 0.5 ETH royalty recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(5))),
           10
@@ -355,7 +352,7 @@ describe('AsksV1 integration', () => {
           ONE_ETH,
           weth.address,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
         await asks
@@ -389,7 +386,7 @@ describe('AsksV1 integration', () => {
           await sellerFundsRecipient.getAddress()
         );
 
-        // 50% creator fee -> 1ETH * 50% = 0.5 ETH * 10% fees -> .45 ETH
+        // 1 WETH * 50% creator fee -> 0.5 WETH * 1000 bps finders fee -> 0.45 WETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
           10
@@ -401,7 +398,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
-        // 50% creator fee -> 0.5 ETH * 10% ask fee -> 0.05 ETH
+        // 1 WETH * 50% creator fee -> 0.5 WETH * 1000 bps finders fee -> 0.05 WETH finder
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(50))),
           10
@@ -413,7 +410,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
-        // 50% creator fee -> 1 WETH * 50% = .5WETH
+        // 1 WETH * 50% creator fee -> 0.5 WETH royalty recipient
         expect(toRoundedNumber(afterBalance)).to.eq(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(5)))
         );
@@ -443,7 +440,7 @@ describe('AsksV1 integration', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
         await asks
@@ -474,7 +471,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await sellerFundsRecipient.getBalance();
 
-        // 10% fees -> 0.9 ETH
+        // 1 ETH * 1000 bps finders fee -> 0.9 ETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9))),
           10
@@ -486,7 +483,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await finder.getBalance();
 
-        // 50% creator fee -> 0.5 ETH * 10% ask fee -> 0.05 ETH
+        // 1 ETH * 1000 bps finders fee -> 0.1 ETH finder
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(TENTH_ETH)),
           10
@@ -509,7 +506,7 @@ describe('AsksV1 integration', () => {
           ONE_ETH,
           weth.address,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
         await asks
@@ -542,7 +539,7 @@ describe('AsksV1 integration', () => {
           await sellerFundsRecipient.getAddress()
         );
 
-        // 10% fees -> 0.9 ETH
+        // 1 WETH * 1000 bps finders fee -> 0.9 WETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(9))),
           10
@@ -554,7 +551,7 @@ describe('AsksV1 integration', () => {
         await run();
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
-        // 50% creator fee -> 0.5 ETH * 10% ask fee -> 0.05 ETH
+        // 1 WETH * 1000 bps finders fee -> 0.1 WETH finder
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
           toRoundedNumber(beforeBalance.add(TENTH_ETH)),
           10
