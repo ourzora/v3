@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as fs from 'fs-extra';
 import assert from 'assert';
 
-export async function deployZPM(
+export async function deployZMM(
   {
     registrarAddress,
     moduleFeeTokenAddress,
@@ -16,27 +16,26 @@ export async function deployZPM(
   const addressBook = JSON.parse(await fs.readFileSync(addressPath));
 
   assert(
-    !addressBook.ZoraProposalManager,
-    `ZoraProposalManager already present at ${addressPath}`
+    !addressBook.ZoraModuleManager,
+    `ZoraModuleManager already present at ${addressPath}`
   );
 
   console.log(
-    `Deploying ZPM from address ${await deployer.getAddress()} with registrar ${registrarAddress}`
+    `Deploying ZMM from address ${await deployer.getAddress()} with registrar ${registrarAddress}`
   );
-  const ZPMFactory = await hre.ethers.getContractFactory(
-    'ZoraProposalManager',
+  const ZMMFactory = await hre.ethers.getContractFactory(
+    'ZoraModuleManager',
     deployer
   );
-  const proposalManager = await ZPMFactory.deploy(
+  const moduleManager = await ZMMFactory.deploy(
     registrarAddress,
-    // @ts-ignore
     moduleFeeTokenAddress
   );
   console.log(
-    `Deploying ZPM with tx ${proposalManager.deployTransaction.hash} to address ${proposalManager.address}`
+    `Deploying ZMM with tx ${moduleManager.deployTransaction.hash} to address ${moduleManager.address}`
   );
-  await proposalManager.deployed();
-  addressBook.ZoraProposalManager = proposalManager.address;
+  await moduleManager.deployed();
+  addressBook.ZoraModuleManager = moduleManager.address;
   await fs.writeFile(addressPath, JSON.stringify(addressBook, null, 2));
-  console.log(`Deployed ZPM.`);
+  console.log(`Deployed ZMM.`);
 }

@@ -6,11 +6,9 @@ import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-dependency-compiler';
 import dotenv from 'dotenv';
-import { deployZPM } from './scripts/deployZPM';
-import { deployZMAM } from './scripts/deployZMAM';
+import { deployZMM } from './scripts/deployZMM';
 import { deployTransferHelper } from './scripts/deployTransferHelper';
 import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
-import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
@@ -18,18 +16,14 @@ import { deployProtocolFeeSettingsV1 } from './scripts/deployProtocolFeeSettings
 
 const env = dotenv.config().parsed;
 
-task('deployZPM', 'Deploy Zora Proposal Manager')
+task('deployZMM', 'Deploy Zora Module Manager')
   .addParam(
     'registrarAddress',
     'Address to use for registering proposals',
     undefined,
     types.string
   )
-  .setAction(deployZPM);
-
-task('deployZMAM', 'Deploy Zora Module Approvals Manager').setAction(
-  deployZMAM
-);
+  .setAction(deployZMM);
 
 task('deployTransferHelper', 'Deploy A Transfer Helper')
   .addParam(
@@ -67,15 +61,6 @@ task('deployReserveAuctionV1', 'Deploy Reserve Auction V1')
   )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployReserveAuctionV1);
-
-task('proposeModule', 'Propose a new module')
-  .addParam(
-    'moduleAddress',
-    'Address of the module to approve',
-    undefined,
-    types.string
-  )
-  .setAction(proposeModule);
 
 task('deployAsksV1', 'Deploy Asks V1')
   .addParam(
@@ -129,7 +114,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 2000,
       },
     },
   },

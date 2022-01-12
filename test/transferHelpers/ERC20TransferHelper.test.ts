@@ -1,34 +1,24 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
-import {
-  TestModuleV1,
-  WETH,
-  ZoraModuleApprovalsManager,
-  ZoraProposalManager,
-} from '../../typechain';
+import { TestModuleV1, WETH, ZoraModuleManager } from '../../typechain';
 import { Signer } from 'ethers';
 import {
-  cancelModule,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployProtocolFeeSettings,
   deployTestModule,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   ONE_ETH,
-  proposeModule,
   registerModule,
   revert,
 } from '../utils';
-
 chai.use(asPromised);
 
 describe('ERC20TransferHelper', () => {
   let weth: WETH;
-  let proposalManager: ZoraProposalManager;
-  let approvalsManager: ZoraModuleApprovalsManager;
+  let moduleManager: ZoraModuleManager;
   let module: TestModuleV1;
   let badModule: TestModuleV1;
   let deployer: Signer;
@@ -46,21 +36,16 @@ describe('ERC20TransferHelper', () => {
     await weth.connect(otherUser).deposit({ value: ONE_ETH });
 
     const feeSettings = await deployProtocolFeeSettings();
-    proposalManager = await deployZoraProposalManager(
+    moduleManager = await deployZoraModuleManager(
       await registrar.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
-    approvalsManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address);
 
     const erc721Helper = await deployERC721TransferHelper(
-      approvalsManager.address
+      moduleManager.address
     );
-    const erc20Helper = await deployERC20TransferHelper(
-      approvalsManager.address
-    );
+    const erc20Helper = await deployERC20TransferHelper(moduleManager.address);
 
     await weth.connect(otherUser).approve(erc20Helper.address, ONE_ETH);
     module = await deployTestModule(erc20Helper.address, erc721Helper.address);
@@ -68,13 +53,12 @@ describe('ERC20TransferHelper', () => {
       erc20Helper.address,
       erc721Helper.address
     );
-    await proposeModule(proposalManager, module.address);
-    await proposeModule(proposalManager, badModule.address);
-    await registerModule(proposalManager.connect(registrar), module.address);
+
+    await registerModule(moduleManager.connect(registrar), module.address);
   });
 
   it('should allow transfers when the user has approved the module', async () => {
-    await approvalsManager
+    await moduleManager
       .connect(otherUser)
       .setApprovalForModule(module.address, true);
 

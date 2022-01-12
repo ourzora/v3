@@ -12,6 +12,7 @@ import {
   TestERC721,
   WETH,
   RoyaltyEngineV1,
+  ZoraModuleManager,
 } from '../../../typechain';
 import {
   approveNFTTransfer,
@@ -22,13 +23,11 @@ import {
   deployTestEIP2981ERC721,
   deployTestERC271,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   mintERC2981Token,
   mintERC721Token,
   mintZoraNFT,
   ONE_ETH,
-  proposeModule,
   registerModule,
   TENTH_ETH,
   THOUSANDTH_ETH,
@@ -68,19 +67,17 @@ describe('AsksV1 integration', () => {
     royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
     const feeSettings = await deployProtocolFeeSettings();
-    const proposalManager = await deployZoraProposalManager(
+    const moduleManager = await deployZoraModuleManager(
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(proposalManager.address);
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address);
+
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     asks = await deployAsksV1(
       erc20TransferHelper.address,
@@ -89,12 +86,10 @@ describe('AsksV1 integration', () => {
       feeSettings.address,
       weth.address
     );
+    await registerModule(moduleManager, asks.address);
 
-    await proposeModule(proposalManager, asks.address);
-    await registerModule(proposalManager, asks.address);
-
-    await approvalManager.setApprovalForModule(asks.address, true);
-    await approvalManager
+    await moduleManager.setApprovalForModule(asks.address, true);
+    await moduleManager
       .connect(buyerA)
       .setApprovalForModule(asks.address, true);
   });

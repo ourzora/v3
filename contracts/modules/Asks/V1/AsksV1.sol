@@ -7,11 +7,12 @@ import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelpe
 import {UniversalExchangeEventV1} from "../../../common/UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
 import {FeePayoutSupportV1} from "../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
+import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
 
 /// @title Asks V1
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those asks
-contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1 {
+contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
     /// @notice The ZORA ERC-721 Transfer Helper
@@ -48,7 +49,11 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         address _royaltyEngine,
         address _protocolFeeSettings,
         address _wethAddress
-    ) IncomingTransferSupportV1(_erc20TransferHelper) FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress) {
+    )
+        IncomingTransferSupportV1(_erc20TransferHelper)
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress)
+        ModuleNamingSupportV1("Asks: v1.0")
+    {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 

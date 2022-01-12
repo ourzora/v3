@@ -6,8 +6,6 @@ import {
   TestERC721,
   TestModuleV1,
   WETH,
-  ZoraProposalManager,
-  ZoraModuleApprovalsManager,
   ERC20TransferHelper,
   ERC721TransferHelper,
   SimpleModule,
@@ -20,6 +18,7 @@ import {
   RoyaltyEngineV1,
   RoyaltyEngineV1__factory,
   ZoraProtocolFeeSettings,
+  ZoraModuleManager,
 } from '../typechain';
 import { BigNumber, BigNumberish, Contract } from 'ethers';
 import {
@@ -50,86 +49,53 @@ export const THOUSANDTH_ETH = ethers.utils.parseEther('0.001');
 export const toRoundedNumber = (bn: BigNumber) =>
   bn.div(THOUSANDTH_ETH).toNumber();
 
-export const deployZoraProposalManager = async (
+export const deployZoraModuleManager = async (
   registrar: string,
   feeSettings: string
 ) => {
-  const ZoraProposalManagerFactory = await ethers.getContractFactory(
-    'ZoraProposalManager'
+  const ZoraModuleManager = await ethers.getContractFactory(
+    'ZoraModuleManager'
   );
-  const proposalManager = await ZoraProposalManagerFactory.deploy(
-    registrar,
-    feeSettings
-  );
-  await proposalManager.deployed();
-  return proposalManager as ZoraProposalManager;
-};
-
-export const proposeModule = async (
-  manager: ZoraProposalManager,
-  moduleAddr: string
-) => {
-  return manager.proposeModule(moduleAddr);
+  const moduleManager = await ZoraModuleManager.deploy(registrar, feeSettings);
+  await moduleManager.deployed();
+  return moduleManager as ZoraModuleManager;
 };
 
 export const registerModule = async (
-  manager: ZoraProposalManager,
+  manager: ZoraModuleManager,
   moduleAddress: string
 ) => {
   return manager.registerModule(moduleAddress);
 };
 
-export const cancelModule = async (
-  manager: ZoraProposalManager,
-  moduleAddress: string
-) => {
-  return manager.cancelProposal(moduleAddress);
-};
-
-export const deployZoraModuleApprovalsManager = async (
-  proposalManagerAddr: string
-) => {
-  const ZoraModuleApprovalsManager = await ethers.getContractFactory(
-    'ZoraModuleApprovalsManager'
-  );
-  const approvalsManager = await ZoraModuleApprovalsManager.deploy(
-    proposalManagerAddr
-  );
-  await approvalsManager.deployed();
-
-  return approvalsManager as ZoraModuleApprovalsManager;
-};
-
-export const deployERC20TransferHelper = async (approvalsManager: string) => {
+export const deployERC20TransferHelper = async (moduleManager: string) => {
   const ERC20TransferHelperFactory = await ethers.getContractFactory(
     'ERC20TransferHelper'
   );
-  const transferHelper = await ERC20TransferHelperFactory.deploy(
-    approvalsManager
-  );
+  const transferHelper = await ERC20TransferHelperFactory.deploy(moduleManager);
   await transferHelper.deployed();
 
   return transferHelper as ERC20TransferHelper;
 };
 
-export const deployERC721TransferHelper = async (approvalsManager: string) => {
+export const deployERC721TransferHelper = async (moduleManager: string) => {
   const ERC721TransferHelperFactory = await ethers.getContractFactory(
     'ERC721TransferHelper'
   );
   const transferHelper = await ERC721TransferHelperFactory.deploy(
-    approvalsManager
+    moduleManager
   );
   await transferHelper.deployed();
 
   return transferHelper as ERC721TransferHelper;
 };
 
-export const deployERC1155TransferHelper = async (approvalsManager: string) => {
+export const deployERC1155TransferHelper = async (moduleManager: string) => {
   const ERC1155TransferHelperFactory = await ethers.getContractFactory(
     'ERC1155TransferHelper'
   );
   const transferHelper = await ERC1155TransferHelperFactory.deploy(
-    approvalsManager
+    moduleManager
   );
   await transferHelper.deployed();
 

@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {ZoraModuleApprovalsManager} from "../ZoraModuleApprovalsManager.sol";
+import {ZoraModuleManager} from "../ZoraModuleManager.sol";
 
 /// @title Base Transfer Helper
 /// @author tbtstl <t@zora.co>
 /// @notice This contract provides shared utility for ZORA transfer helpers
 contract BaseTransferHelper {
-    ZoraModuleApprovalsManager immutable approvalsManager;
+    /// @notice The ZORA Module Manager
+    ZoraModuleManager immutable ZMM;
 
-    /// @param _approvalsManager The ZORA Module Approvals Manager to use as a reference for transfer permissions
-    constructor(address _approvalsManager) {
-        require(_approvalsManager != address(0), "must set approvals manager to non-zero address");
+    /// @param _moduleManager The ZORA Module Manager referred to for transfer permissions
+    constructor(address _moduleManager) {
+        require(_moduleManager != address(0), "must set module manager to non-zero address");
 
-        approvalsManager = ZoraModuleApprovalsManager(_approvalsManager);
+        ZMM = ZoraModuleManager(_moduleManager);
     }
 
     /// @notice Ensures a user has approved the module they're calling
@@ -26,6 +27,6 @@ contract BaseTransferHelper {
     /// @notice If a user has approved the module they're calling
     /// @param _user The address of the user
     function isModuleApproved(address _user) public view returns (bool) {
-        return approvalsManager.isModuleApproved(_user, msg.sender);
+        return ZMM.isModuleApproved(_user, msg.sender);
     }
 }
