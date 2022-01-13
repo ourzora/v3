@@ -33,8 +33,8 @@ export async function deployAsksV1(_, hre: HardhatRuntimeEnvironment) {
   const asks = await AsksFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
-    addressBook.ZoraProtocolFeeSettings,
     addressBook.RoyaltyEngineV1,
+    addressBook.ZoraProtocolFeeSettings,
     addressBook.WETH
   );
   console.log(
