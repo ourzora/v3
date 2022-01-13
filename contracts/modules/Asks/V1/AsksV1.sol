@@ -26,8 +26,8 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         address seller;
         address sellerFundsRecipient;
         address askCurrency;
+        uint16 findersFeeBps;
         uint256 askPrice;
-        uint256 findersFeePercentage;
     }
 
     event AskCreated(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
@@ -63,14 +63,14 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _askPrice The price of the sale
     /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
     /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
+    /// @param _findersFeeBps The bps of the sale amount to be sent to the referrer of the sale
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _askPrice,
         address _askCurrency,
         address _sellerFundsRecipient,
-        uint256 _findersFeePercentage
+        uint16 _findersFeeBps
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
@@ -82,16 +82,15 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             _cancelAsk(_tokenContract, _tokenId);
         }
 
-        require(_findersFeePercentage <= 100, "createAsk finders fee percentage must be less than or equal to 100");
+        require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
         require(_sellerFundsRecipient != address(0), "createAsk must specify sellerFundsRecipient");
 
-        // Create an ask
         askForNFT[_tokenContract][_tokenId] = Ask({
             seller: tokenOwner,
             sellerFundsRecipient: _sellerFundsRecipient,
             askCurrency: _askCurrency,
-            askPrice: _askPrice,
-            findersFeePercentage: _findersFeePercentage
+            findersFeeBps: _findersFeeBps,
+            askPrice: _askPrice
         });
 
         emit AskCreated(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
@@ -153,10 +152,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         remainingProfit = _handleProtocolFeePayout(remainingProfit, ask.askCurrency);
 
         if (_finder != address(0)) {
-            uint256 finderFee = (remainingProfit * ask.findersFeePercentage) / 100;
-            _handleOutgoingTransfer(_finder, finderFee, ask.askCurrency, USE_ALL_GAS_FLAG);
+            uint256 findersFee = (remainingProfit * ask.findersFeeBps) / 10000;
+            _handleOutgoingTransfer(_finder, findersFee, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-            remainingProfit = remainingProfit - finderFee;
+            remainingProfit = remainingProfit - findersFee;
         }
 
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);

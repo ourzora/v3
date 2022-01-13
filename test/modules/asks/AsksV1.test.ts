@@ -104,7 +104,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
 
       const ask = await asks.askForNFT(zoraV1.address, 0);
@@ -130,7 +130,7 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
       const ask = await asks.askForNFT(zoraV1.address, 0);
@@ -145,7 +145,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
 
       const beforeAskSeller = (await asks.askForNFT(zoraV1.address, 0)).seller;
@@ -169,7 +169,7 @@ describe('AsksV1', () => {
           TWO_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
       const afterAskSeller = (await asks.askForNFT(zoraV1.address, 0)).seller;
@@ -184,7 +184,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
 
       const events = await asks.queryFilter(
@@ -210,7 +210,7 @@ describe('AsksV1', () => {
             ONE_ETH,
             ethers.constants.AddressZero,
             ethers.constants.AddressZero,
-            10
+            1000
           )
       ).eventually.rejectedWith('createAsk must be token owner or operator');
     });
@@ -231,7 +231,7 @@ describe('AsksV1', () => {
             TWO_ETH,
             ethers.constants.AddressZero,
             await sellerFundsRecipient.getAddress(),
-            10
+            1000
           )
       ).eventually.rejectedWith(
         'createAsk must approve ERC721TransferHelper as operator'
@@ -246,12 +246,12 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
-          10
+          1000
         )
       ).eventually.rejectedWith('createAsk must specify sellerFundsRecipient');
     });
 
-    it('should revert if the finders fee percentage is greater than 100', async () => {
+    it('should revert if the finders fee bps is greater than 10000', async () => {
       await expect(
         asks.createAsk(
           zoraV1.address,
@@ -259,10 +259,10 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          101
+          10001
         )
       ).eventually.rejectedWith(
-        'createAsk finders fee percentage must be less than or equal to 100'
+        'createAsk finders fee bps must be less than or equal to 10000'
       );
     });
   });
@@ -275,7 +275,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
     });
 
@@ -340,7 +340,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
     });
 
@@ -414,7 +414,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
     });
 
@@ -452,7 +452,7 @@ describe('AsksV1', () => {
         toRoundedNumber(minterBeforeBalance.add(ONE_ETH.div(2)))
       );
 
-      // 0.5ETH creator fee + 1 ETH bid * 10% finder fee -> .05 ETH profit
+      // 0.5ETH creator fee + 1 ETH bid * 1000 bps finders fee -> .05 ETH profit
       expect(toRoundedNumber(finderAfterBalance)).to.eq(
         toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(50)))
       );
