@@ -114,7 +114,7 @@ contract ZoraProtocolFeeSettings is ERC721 {
         emit OwnerUpdated(_owner);
     }
 
-    function _setMetadata(address _metadata) public {
+    function _setMetadata(address _metadata) private {
         metadata = _metadata;
 
         emit MetadataUpdated(_metadata);
