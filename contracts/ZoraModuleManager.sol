@@ -104,7 +104,7 @@ contract ZoraModuleManager {
 
         address recoveredAddress = ecrecover(digest, v, r, s);
 
-        require(recoveredAddress == _user, "ZMM::setApprovalForModuleBySig invalid signature");
+        require(recoveredAddress != address(0) && recoveredAddress == _user, "ZMM::setApprovalForModuleBySig invalid signature");
 
         _setApprovalForModule(_module, _user, _approved);
     }
