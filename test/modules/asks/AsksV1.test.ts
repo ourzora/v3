@@ -248,7 +248,7 @@ describe('AsksV1', () => {
           ethers.constants.AddressZero,
           1000
         )
-      ).eventually.rejectedWith('createAsk must specify sellerFundsRecipient');
+      ).eventually.rejectedWith('createAsk must specify _sellerFundsRecipient');
     });
 
     it('should revert if the finders fee bps is greater than 10000', async () => {
