@@ -3,6 +3,7 @@ import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
 import {
   TestERC1155,
+  TestERC721,
   TestModuleV1,
   TestModuleV2,
   ZoraModuleManager,
@@ -19,12 +20,14 @@ import {
   revert,
   deployTestModuleV2,
   deployProtocolFeeSettings,
+  deployTestERC721,
 } from '../utils';
 chai.use(asPromised);
 
 describe('ERC1155TransferHelper', () => {
   let tokens: TestERC1155;
   let moduleManager: ZoraModuleManager;
+  let testERC721: TestERC721;
   let moduleV1: TestModuleV1;
   let moduleV2: TestModuleV2;
   let deployer: Signer;
@@ -44,7 +47,8 @@ describe('ERC1155TransferHelper', () => {
       await registrar.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(moduleManager.address);
+    testERC721 = await deployTestERC721();
+    await feeSettings.init(moduleManager.address, testERC721.address);
 
     const erc1155Helper = await deployERC1155TransferHelper(
       moduleManager.address

@@ -7,7 +7,7 @@ import {
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployProtocolFeeSettings,
-  deployTestERC271,
+  deployTestERC721,
   deployTestModule,
   deployZoraModuleManager,
   registerModule,
@@ -36,14 +36,14 @@ describe('ERC721TransferHelper', () => {
       await registrar.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(moduleManager.address);
+    nft = await deployTestERC721();
+    await feeSettings.init(moduleManager.address, nft.address);
 
     const erc721Helper = await deployERC721TransferHelper(
       moduleManager.address
     );
     const erc20Helper = await deployERC20TransferHelper(moduleManager.address);
 
-    nft = await deployTestERC271();
     await nft.mint(await otherUser.getAddress(), 1);
     await nft.connect(otherUser).approve(erc721Helper.address, 1);
 
