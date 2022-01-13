@@ -1,7 +1,7 @@
 import chai, { expect } from 'chai';
 import asPromised from 'chai-as-promised';
 import { ethers } from 'hardhat';
-import { Signer } from 'ethers';
+import { Signer, Wallet } from 'ethers';
 import { SimpleModule, TestERC721, ZoraModuleManager } from '../typechain';
 import {
   deployProtocolFeeSettings,
@@ -11,6 +11,10 @@ import {
   registerModule,
   revert,
 } from './utils';
+import { fromRpcSig } from 'ethereumjs-util';
+import * as events from 'events';
+
+const sigUtil = require('eth-sig-util');
 
 chai.use(asPromised);
 
@@ -101,6 +105,167 @@ describe('ZoraModuleManager', () => {
       await expect(
         manager.setApprovalForModule(m.address, true)
       ).eventually.rejectedWith(revert`ZMM::must be registered module`);
+    });
+  });
+
+  describe('#setApprovalForModuleBySig', () => {
+    const domain = [
+      { name: 'name', type: 'string' },
+      { name: 'version', type: 'string' },
+      { name: 'chainId', type: 'uint256' },
+      { name: 'verifyingContract', type: 'address' },
+    ];
+    const approval = [
+      { name: 'module', type: 'address' },
+      { name: 'user', type: 'address' },
+      { name: 'approved', type: 'bool' },
+      { name: 'deadline', type: 'uint256' },
+      { name: 'nonce', type: 'uint256' },
+    ];
+    let domainData: any;
+
+    beforeEach(async () => {
+      domainData = {
+        name: 'ZORA',
+        version: '3',
+        chainId: (await ethers.provider.getNetwork()).chainId,
+        verifyingContract: manager.address,
+      };
+    });
+
+    it('should set approval for a module', async () => {
+      await registerModule(manager.connect(registrar), module.address);
+      // otherUser private key from hardhat
+      const sig = sigUtil.signTypedData(
+        Buffer.from(
+          '5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+          'hex'
+        ),
+        {
+          data: {
+            types: {
+              EIP712Domain: domain,
+              SignedApproval: approval,
+            },
+            primaryType: 'SignedApproval',
+            domain: domainData,
+            message: {
+              module: module.address,
+              user: await otherUser.getAddress(),
+              approved: true,
+              deadline: 0,
+              nonce: 0,
+            },
+          },
+        }
+      );
+
+      const res = fromRpcSig(sig);
+
+      await manager.setApprovalForModuleBySig(
+        module.address,
+        await otherUser.getAddress(),
+        true,
+        0,
+        res.v,
+        res.r,
+        res.s
+      );
+
+      expect(
+        await manager.isModuleApproved(
+          await otherUser.getAddress(),
+          module.address
+        )
+      ).to.eq(true);
+    });
+
+    it('should revert if the deadline has expired', async () => {
+      await registerModule(manager.connect(registrar), module.address);
+      // otherUser private key from hardhat
+      const sig = sigUtil.signTypedData(
+        Buffer.from(
+          '5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+          'hex'
+        ),
+        {
+          data: {
+            types: {
+              EIP712Domain: domain,
+              SignedApproval: approval,
+            },
+            primaryType: 'SignedApproval',
+            domain: domainData,
+            message: {
+              module: module.address,
+              user: await otherUser.getAddress(),
+              approved: true,
+              deadline: 1,
+              nonce: 0,
+            },
+          },
+        }
+      );
+
+      const res = fromRpcSig(sig);
+
+      await expect(
+        manager.setApprovalForModuleBySig(
+          module.address,
+          await otherUser.getAddress(),
+          true,
+          1,
+          res.v,
+          res.r,
+          res.s
+        )
+      ).eventually.rejectedWith(
+        revert`ZMM::setApprovalForModuleBySig deadline expired`
+      );
+    });
+
+    it('should revert for an invalid signature', async () => {
+      await registerModule(manager.connect(registrar), module.address);
+      // otherUser private key from hardhat
+      const sig = sigUtil.signTypedData(
+        Buffer.from(
+          '5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+          'hex'
+        ),
+        {
+          data: {
+            types: {
+              EIP712Domain: domain,
+              SignedApproval: approval,
+            },
+            primaryType: 'SignedApproval',
+            domain: domainData,
+            message: {
+              module: module.address,
+              user: await deployer.getAddress(),
+              approved: true,
+              deadline: 0,
+              nonce: 0,
+            },
+          },
+        }
+      );
+
+      const res = fromRpcSig(sig);
+
+      await expect(
+        manager.setApprovalForModuleBySig(
+          module.address,
+          await deployer.getAddress(),
+          true,
+          0,
+          res.v,
+          res.r,
+          res.s
+        )
+      ).eventually.rejectedWith(
+        revert`ZMM::setApprovalForModuleBySig invalid signature`
+      );
     });
   });
 
