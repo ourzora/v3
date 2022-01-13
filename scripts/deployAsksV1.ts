@@ -34,8 +34,8 @@ export async function deployAsksV1(_, hre: HardhatRuntimeEnvironment) {
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
     addressBook.ZoraProtocolFeeSettings,
-    addressBook.royaltyRegistry,
-    addressBook.weth
+    addressBook.RoyaltyEngineV1,
+    addressBook.WETH
   );
   console.log(
     `Deploying AsksV1 with tx ${asks.deployTransaction.hash} to address ${asks.address}`
