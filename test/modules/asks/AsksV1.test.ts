@@ -9,6 +9,7 @@ import {
   AsksV1,
   WETH,
   RoyaltyEngineV1,
+  TestERC721,
 } from '../../../typechain';
 import {
   approveNFTTransfer,
@@ -27,6 +28,7 @@ import {
   TWO_ETH,
   deployZoraProtocol,
   deployProtocolFeeSettings,
+  deployTestERC721,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -44,6 +46,7 @@ describe('AsksV1', () => {
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
   let royaltyEngine: RoyaltyEngineV1;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -56,13 +59,13 @@ describe('AsksV1', () => {
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
     weth = await deployWETH();
+    testERC721 = await deployTestERC721();
     const feeSettings = await deployProtocolFeeSettings();
     const moduleManager = await deployZoraModuleManager(
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(moduleManager.address);
-
+    await feeSettings.init(moduleManager.address, testERC721.address);
     erc20TransferHelper = await deployERC20TransferHelper(
       moduleManager.address
     );

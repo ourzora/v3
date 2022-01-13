@@ -20,7 +20,7 @@ import {
   deployReserveAuctionV1,
   deployRoyaltyEngine,
   deployTestEIP2981ERC721,
-  deployTestERC271,
+  deployTestERC721,
   deployWETH,
   deployZoraModuleManager,
   deployZoraProtocol,
@@ -69,7 +69,7 @@ describe('ReserveAuctionV1 integration', () => {
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
     zoraV1Market = zoraProtocol.market;
-    testERC721 = await deployTestERC271();
+    testERC721 = await deployTestERC721();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
@@ -78,8 +78,7 @@ describe('ReserveAuctionV1 integration', () => {
       await deployer.getAddress(),
       feeSettings.address
     );
-    await feeSettings.init(moduleManager.address);
-
+    await feeSettings.init(moduleManager.address, testERC721.address);
     erc20TransferHelper = await deployERC20TransferHelper(
       moduleManager.address
     );
