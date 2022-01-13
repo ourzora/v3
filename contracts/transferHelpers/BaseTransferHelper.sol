@@ -8,7 +8,7 @@ import {ZoraModuleManager} from "../ZoraModuleManager.sol";
 /// @notice This contract provides shared utility for ZORA transfer helpers
 contract BaseTransferHelper {
     /// @notice The ZORA Module Manager
-    ZoraModuleManager immutable ZMM;
+    ZoraModuleManager public immutable ZMM;
 
     /// @param _moduleManager The ZORA Module Manager referred to for transfer permissions
     constructor(address _moduleManager) {

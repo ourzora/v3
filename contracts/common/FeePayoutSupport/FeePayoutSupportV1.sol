@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import {IRoyaltyEngineV1} from "@manifoldxyz/royalty-registry-solidity/contracts/IRoyaltyEngineV1.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC165Checker} from "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import {ZoraProtocolFeeSettings} from "../../auxiliary/ZoraProtocolFeeSettings/ZoraProtocolFeeSettings.sol";
 import {OutgoingTransferSupportV1} from "../OutgoingTransferSupport/V1/OutgoingTransferSupportV1.sol";
 
@@ -10,21 +11,38 @@ import {OutgoingTransferSupportV1} from "../OutgoingTransferSupport/V1/OutgoingT
 /// @author tbtstl <t@zora.co>
 /// @notice This contract extension supports paying out protocol fees and royalties
 contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
-    IRoyaltyEngineV1 immutable royaltyEngine;
+    IRoyaltyEngineV1 royaltyEngine;
     ZoraProtocolFeeSettings immutable protocolFeeSettings;
+    address public immutable registrar;
 
     event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
 
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
     /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
     /// @param _wethAddress WETH address
+    /// @param _registrarAddress The Registrar address, who can update the royalty engine address
     constructor(
         address _royaltyEngine,
         address _protocolFeeSettings,
-        address _wethAddress
+        address _wethAddress,
+        address _registrarAddress
     ) OutgoingTransferSupportV1(_wethAddress) {
         royaltyEngine = IRoyaltyEngineV1(_royaltyEngine);
         protocolFeeSettings = ZoraProtocolFeeSettings(_protocolFeeSettings);
+        registrar = _registrarAddress;
+    }
+
+    /// @notice Update the address of the Royalty Engine, in case of unexpected update on Manifold's Proxy
+    /// @dev emergency use only – requires a frozen RoyaltyEngineV1 at commit 4ae77a73a8a73a79d628352d206fadae7f8e0f74
+    ///  to be deployed elsewhere, or a contract matching that ABI
+    /// @param _royaltyEngine The address for the new royalty engine
+    function setRoyaltyEngineAddress(address _royaltyEngine) public {
+        require(msg.sender == registrar, "setRoyaltyEngineAddress only registrar");
+        require(
+            ERC165Checker.supportsInterface(_royaltyEngine, type(IRoyaltyEngineV1).interfaceId),
+            "setRoyaltyEngineAddress must match IRoyaltyEngineV1 interface"
+        );
+        royaltyEngine = IRoyaltyEngineV1(_royaltyEngine);
     }
 
     /// @notice Pays out protocol fee to protocol fee recipient

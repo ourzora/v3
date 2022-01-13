@@ -81,7 +81,10 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         address _royaltyEngine,
         address _protocolFeeSettings,
         address _wethAddress
-    ) IncomingTransferSupportV1(_erc20TransferHelper) FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress) {
+    )
+        IncomingTransferSupportV1(_erc20TransferHelper)
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc20TransferHelper).ZMM().registrar())
+    {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
         zoraV1Media = _zoraV1Media;
         zoraV1Market = _zoraV1Market;

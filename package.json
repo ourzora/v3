@@ -46,7 +46,7 @@
     "typescript": "^4.3.4"
   },
   "dependencies": {
-    "@manifoldxyz/royalty-registry-solidity": "^1.0.4",
+    "@manifoldxyz/royalty-registry-solidity": "1.0.4",
     "@openzeppelin/contracts": "^4.3.2",
     "@rari-capital/solmate": "^5.9.0",
     "@zoralabs/core": "^1.0.5"
