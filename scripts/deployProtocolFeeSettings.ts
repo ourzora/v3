@@ -1,7 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as fs from 'fs-extra';
 
-export async function deployProtocolFeeSettingsV1(
+export async function deployProtocolFeeSettings(
+  _,
   hre: HardhatRuntimeEnvironment
 ) {
   const [deployer] = await hre.ethers.getSigners();

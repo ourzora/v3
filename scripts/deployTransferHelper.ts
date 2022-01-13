@@ -21,8 +21,8 @@ export async function deployTransferHelper(
     `unknown transfer type ${transferType}`
   );
   assert(
-    addressBook.ZoraModuleApprovalsManager,
-    `Could not find ZoraModuleApprovalsManager at ${addressPath}, deploy it first!`
+    addressBook.ZoraModuleManager,
+    `Could not find ZoraModuleManager at ${addressPath}, deploy it first!`
   );
   assert(
     !addressBook[`${transferType}TransferHelper`],
@@ -36,7 +36,7 @@ export async function deployTransferHelper(
     `${transferType}TransferHelper`,
     deployer
   );
-  const helper = await Factory.deploy(addressBook.ZoraModuleApprovalsManager);
+  const helper = await Factory.deploy(addressBook.ZoraModuleManager);
   console.log(
     `Deploying transfer helper with tx ${helper.deployTransaction.hash} to address ${helper.address}`
   );

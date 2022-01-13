@@ -5,7 +5,6 @@ import assert from 'assert';
 export async function deployZMM(
   {
     registrarAddress,
-    moduleFeeTokenAddress,
   }: { registrarAddress: string; moduleFeeTokenAddress: string },
   hre: HardhatRuntimeEnvironment
 ) {
@@ -19,6 +18,10 @@ export async function deployZMM(
     !addressBook.ZoraModuleManager,
     `ZoraModuleManager already present at ${addressPath}`
   );
+  assert(
+    !!addressBook.ZoraProtocolFeeSettings,
+    `ZoraProtocolFeeSettings not found at ${addressPath}`
+  );
 
   console.log(
     `Deploying ZMM from address ${await deployer.getAddress()} with registrar ${registrarAddress}`
@@ -29,7 +32,7 @@ export async function deployZMM(
   );
   const moduleManager = await ZMMFactory.deploy(
     registrarAddress,
-    moduleFeeTokenAddress
+    addressBook.ZoraProtocolFeeSettings
   );
   console.log(
     `Deploying ZMM with tx ${moduleManager.deployTransaction.hash} to address ${moduleManager.address}`
