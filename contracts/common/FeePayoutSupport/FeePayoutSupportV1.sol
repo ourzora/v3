@@ -15,7 +15,7 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     ZoraProtocolFeeSettings immutable protocolFeeSettings;
     address public immutable registrar;
 
-    event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId);
+    event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId, address indexed recipient, uint256 amount);
 
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
     /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
@@ -51,10 +51,15 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     /// @return remaining funds after paying protocol fee
     function _handleProtocolFeePayout(uint256 _amount, address _payoutCurrency) internal returns (uint256) {
         uint256 protocolFee = protocolFeeSettings.getFeeAmount(address(this), _amount);
-        (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
-        _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 0);
 
-        return _amount - protocolFee;
+        if (protocolFee != 0) {
+            (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
+            _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 0);
+
+            return _amount - protocolFee;
+        } else {
+            return _amount;
+        }
     }
 
     /// @notice Pays out royalties for given NFTs
@@ -73,21 +78,15 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     ) internal returns (uint256, bool) {
         // If no gas limit was provided or provided gas limit greater than gas left, just pass the remaining gas.
         uint256 gas = (_gasLimit == 0 || _gasLimit > gasleft()) ? gasleft() : _gasLimit;
-        uint256 remainingFunds;
-        bool success;
 
         // External call ensuring contract doesn't run out of gas paying royalties
-        try this._handleRoyaltyEnginePayout{gas: gas}(_tokenContract, _tokenId, _amount, _payoutCurrency) returns (uint256 _remainingFunds) {
-            remainingFunds = _remainingFunds;
-            success = true;
-
-            emit RoyaltyPayout(_tokenContract, _tokenId);
+        try this._handleRoyaltyEnginePayout{gas: gas}(_tokenContract, _tokenId, _amount, _payoutCurrency) returns (uint256 remainingFunds) {
+            // Return remaining amount if royalties payout succeeded
+            return (remainingFunds, true);
         } catch {
-            remainingFunds = _amount;
-            success = false;
+            // Return initial amount if royalties payout failed
+            return (_amount, false);
         }
-
-        return (remainingFunds, success);
     }
 
     /// @notice Pays out royalties for NFTs based on the information returned by the royalty engine
@@ -111,7 +110,10 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
         for (uint256 i = 0; i < recipients.length; i++) {
             // Ensure that we aren't somehow paying out more than we have
             require(remainingAmount >= amounts[i], "insolvent");
+            // Payout each royalty recipient
             _handleOutgoingTransfer(recipients[i], amounts[i], _payoutCurrency, 0);
+
+            emit RoyaltyPayout(_tokenContract, _tokenId, recipients[i], amounts[i]);
 
             remainingAmount -= amounts[i];
         }
