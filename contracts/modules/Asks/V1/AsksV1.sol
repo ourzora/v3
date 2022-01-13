@@ -51,7 +51,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         address _wethAddress
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
-        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress)
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc20TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Asks: v1.0")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
