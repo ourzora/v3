@@ -58,6 +58,8 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @notice Emitted when an ask is filled
     /// @param tokenContract The ERC-721 token address of the filled ask
     /// @param tokenId The ERC-721 token ID of the filled ask
+    /// @param buyer The buyer address of the filled ask
+    /// @param finder The finder address of the filled ask
     /// @param ask The metadata of the filled ask
     event AskFilled(address indexed tokenContract, uint256 indexed tokenId, address indexed buyer, address finder, Ask ask);
 
