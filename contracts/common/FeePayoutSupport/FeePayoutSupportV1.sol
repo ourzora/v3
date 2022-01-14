@@ -15,6 +15,11 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     ZoraProtocolFeeSettings immutable protocolFeeSettings;
     address public immutable registrar;
 
+    /// @notice Emitted when royalties are paid
+    /// @param tokenContract The ERC-721 token address of the royalty payout
+    /// @param tokenId The ERC-721 token ID of the royalty payout
+    /// @param recipient The recipient address of the royalty
+    /// @param amount The amount paid to the recipient
     event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId, address indexed recipient, uint256 amount);
 
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
