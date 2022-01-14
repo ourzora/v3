@@ -107,7 +107,6 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await sellerFundsRecipient.getAddress(),
           1000
         );
 
@@ -134,18 +133,6 @@ describe('AsksV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should pay the funds recipient', async () => {
-        const beforeBalance = await sellerFundsRecipient.getBalance();
-        await run();
-        const afterBalance = await sellerFundsRecipient.getBalance();
-
-        // 1 ETH * 15% creator fee -> 0.85 ETH * 1000 bps finders fee -> 0.765 ETH funds recipient
-        expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765))),
-          10
-        );
-      });
-
       it('should pay the finder', async () => {
         const beforeBalance = await finder.getBalance();
         await run();
@@ -164,8 +151,10 @@ describe('AsksV1 integration', () => {
         const afterBalance = await deployer.getBalance();
 
         // 1 ETH * 15% creator fee -> 0.15 ETH creator
+        // 0.85 ETH * 1000 bps finders fee -> 0.765 ETH remaining
+        // 0.15 ETH + 0.765 ETH -> 0.915 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(150))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(915))),
           10
         );
       });
@@ -180,14 +169,7 @@ describe('AsksV1 integration', () => {
       });
 
       async function run() {
-        await asks.createAsk(
-          zoraV1.address,
-          0,
-          ONE_ETH,
-          weth.address,
-          await sellerFundsRecipient.getAddress(),
-          1000
-        );
+        await asks.createAsk(zoraV1.address, 0, ONE_ETH, weth.address, 1000);
 
         await asks
           .connect(buyerA)
@@ -209,21 +191,6 @@ describe('AsksV1 integration', () => {
         );
       });
 
-      it('should pay the funds recipient', async () => {
-        const beforeBalance = await weth.balanceOf(
-          await sellerFundsRecipient.getAddress()
-        );
-        await run();
-        const afterBalance = await weth.balanceOf(
-          await sellerFundsRecipient.getAddress()
-        );
-
-        // 1 WETH * 15% creator fee -> 0.85 WETH * 1000 bps finders fee -> 0.765 WETH funds recipient
-        expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(765)))
-        );
-      });
-
       it('should pay the finder', async () => {
         const beforeBalance = await weth.balanceOf(await finder.getAddress());
         await run();
@@ -242,8 +209,10 @@ describe('AsksV1 integration', () => {
         const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
         // 1 WETH * 15% creator fee -> 0.15 WETH creator
+        // 0.85 WETH * 1000 bps finders fee -> 0.765 WETH remaining
+        // 0.15 WETH + 0.765 WETH -> 0.915 WETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(150)))
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(915)))
         );
       });
     });
@@ -270,7 +239,6 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await sellerFundsRecipient.getAddress(),
           1000
         );
 
@@ -299,18 +267,6 @@ describe('AsksV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should pay the funds recipient', async () => {
-        const beforeBalance = await sellerFundsRecipient.getBalance();
-        await run();
-        const afterBalance = await sellerFundsRecipient.getBalance();
-
-        // 1 ETH * 50% creator fee -> 0.5 ETH * 1000 bps finders fee -> 0.45 ETH funds recipient
-        expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
-          10
-        );
-      });
-
       it('should pay the finder', async () => {
         const beforeBalance = await finder.getBalance();
         await run();
@@ -329,8 +285,10 @@ describe('AsksV1 integration', () => {
         const afterBalance = await deployer.getBalance();
 
         // 1 ETH * 50% creator fee -> 0.5 ETH royalty recipient
+        // 0.5 ETH * 1000 bps finders fee -> 0.45 ETH remaining
+        // 0.5 ETH + 0.45 ETH -> 0.95 ETH
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(5))),
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(950))),
           10
         );
       });
@@ -350,7 +308,6 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await sellerFundsRecipient.getAddress(),
           1000
         );
 
@@ -376,22 +333,6 @@ describe('AsksV1 integration', () => {
         );
       });
 
-      it('should pay the funds recipient', async () => {
-        const beforeBalance = await weth.balanceOf(
-          await sellerFundsRecipient.getAddress()
-        );
-        await run();
-        const afterBalance = await weth.balanceOf(
-          await sellerFundsRecipient.getAddress()
-        );
-
-        // 1 WETH * 50% creator fee -> 0.5 WETH * 1000 bps finders fee -> 0.45 WETH funds recipient
-        expect(toRoundedNumber(afterBalance)).to.be.approximately(
-          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(450))),
-          10
-        );
-      });
-
       it('should pay the finder', async () => {
         const beforeBalance = await weth.balanceOf(await finder.getAddress());
         await run();
@@ -410,8 +351,10 @@ describe('AsksV1 integration', () => {
         const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
         // 1 WETH * 50% creator fee -> 0.5 WETH royalty recipient
+        // 0.5 WETH * 1000 bps finders fee -> 0.45 WETH remaining
+        // 0.5 WETH + 0.45 WETH -> 0.95 WETH
         expect(toRoundedNumber(afterBalance)).to.eq(
-          toRoundedNumber(beforeBalance.add(TENTH_ETH.mul(5)))
+          toRoundedNumber(beforeBalance.add(THOUSANDTH_ETH.mul(950)))
         );
       });
     });
@@ -438,7 +381,6 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          await sellerFundsRecipient.getAddress(),
           1000
         );
 
@@ -465,10 +407,10 @@ describe('AsksV1 integration', () => {
         ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
       });
 
-      it('should pay the funds recipient', async () => {
-        const beforeBalance = await sellerFundsRecipient.getBalance();
+      it('should pay the seller', async () => {
+        const beforeBalance = await deployer.getBalance();
         await run();
-        const afterBalance = await sellerFundsRecipient.getBalance();
+        const afterBalance = await deployer.getBalance();
 
         // 1 ETH * 1000 bps finders fee -> 0.9 ETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -504,7 +446,6 @@ describe('AsksV1 integration', () => {
           0,
           ONE_ETH,
           weth.address,
-          await sellerFundsRecipient.getAddress(),
           1000
         );
 
@@ -529,14 +470,10 @@ describe('AsksV1 integration', () => {
         );
       });
 
-      it('should pay the funds recipient', async () => {
-        const beforeBalance = await weth.balanceOf(
-          await sellerFundsRecipient.getAddress()
-        );
+      it('should pay the seller', async () => {
+        const beforeBalance = await weth.balanceOf(await deployer.getAddress());
         await run();
-        const afterBalance = await weth.balanceOf(
-          await sellerFundsRecipient.getAddress()
-        );
+        const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
         // 1 WETH * 1000 bps finders fee -> 0.9 WETH funds recipient
         expect(toRoundedNumber(afterBalance)).to.be.approximately(

@@ -24,7 +24,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
     struct Ask {
         address seller;
-        address sellerFundsRecipient;
         address askCurrency;
         uint16 findersFeeBps;
         uint256 askPrice;
@@ -62,14 +61,12 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param _tokenId The ERC-721 token ID for the token to be sold
     /// @param _askPrice The price of the sale
     /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
-    /// @param _sellerFundsRecipient The address to send funds to once the token is sold
     /// @param _findersFeeBps The bps of the sale amount to be sent to the referrer of the sale
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _askPrice,
         address _askCurrency,
-        address _sellerFundsRecipient,
         uint16 _findersFeeBps
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
@@ -78,19 +75,12 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         require(erc721TransferHelper.isModuleApproved(msg.sender), "createAsk must approve AsksV1 module");
         require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "createAsk must approve ERC721TransferHelper as operator");
         require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
-        require(_sellerFundsRecipient != address(0), "createAsk must specify _sellerFundsRecipient");
 
         if (askForNFT[_tokenContract][_tokenId].seller != address(0)) {
             _cancelAsk(_tokenContract, _tokenId);
         }
 
-        askForNFT[_tokenContract][_tokenId] = Ask({
-            seller: tokenOwner,
-            sellerFundsRecipient: _sellerFundsRecipient,
-            askCurrency: _askCurrency,
-            findersFeeBps: _findersFeeBps,
-            askPrice: _askPrice
-        });
+        askForNFT[_tokenContract][_tokenId] = Ask({seller: tokenOwner, askCurrency: _askCurrency, findersFeeBps: _findersFeeBps, askPrice: _askPrice});
 
         emit AskCreated(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
     }
@@ -157,7 +147,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             remainingProfit = remainingProfit - findersFee;
         }
 
-        _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(ask.seller, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer
         erc721TransferHelper.transferFrom(_tokenContract, ask.seller, msg.sender, _tokenId);
