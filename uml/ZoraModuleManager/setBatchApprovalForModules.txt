@@ -1,0 +1,15 @@
+@startuml
+actor Caller
+participant ZoraModuleManager
+
+Caller -> ZoraModuleManager : setBatchApprovalForModule()
+
+loop for each module
+
+    ZoraModuleManager -> ZoraModuleManager : set approval for module
+    ZoraModuleManager -> ZoraModuleManager : emit ModuleApprovalSet()
+
+end
+
+@enduml
+

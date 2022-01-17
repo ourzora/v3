@@ -1,0 +1,10 @@
+@startuml
+actor Caller
+participant AsksV1
+
+Caller -> AsksV1 : setAskPrice()
+AsksV1 -> AsksV1 : update ask price
+AsksV1 -> AsksV1 : emit AskPriceUpdated()
+
+@enduml
+

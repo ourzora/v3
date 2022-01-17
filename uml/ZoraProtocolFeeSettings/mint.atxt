@@ -1,0 +1,25 @@
+        ,-.                                                                 
+        `-'                                                                 
+        /|\                                                                 
+         |             ,-----------------------.                            
+        / \            |ZoraProtocolFeeSettings|                            
+      Minter           `-----------+-----------'                            
+        |          mint()          |                                        
+        | ------------------------>|                                        
+        |                          |                                        
+        |                          ----.                                    
+        |                              | derive token ID from module address
+        |                          <---'                                    
+        |                          |                                        
+        |                          ----.                                    
+        |                              | mint token to given address        
+        |                          <---'                                    
+        |                          |                                        
+        |     return token ID      |                                        
+        | <------------------------|                                        
+      Minter           ,-----------+-----------.                            
+        ,-.            |ZoraProtocolFeeSettings|                            
+        `-'            `-----------------------'                            
+        /|\                                                                 
+         |                                                                  
+        / \                                                                 

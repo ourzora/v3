@@ -1,0 +1,11 @@
+@startuml
+actor Registrar
+participant ZoraModuleManager
+
+Registrar -> ZoraModuleManager : setRegistrar()
+
+ZoraModuleManager -> ZoraModuleManager : set registrar
+ZoraModuleManager -> ZoraModuleManager : emit RegistrarChanged()
+
+@enduml
+

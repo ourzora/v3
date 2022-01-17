@@ -82,6 +82,39 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
+
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |             ,------.
+    //        / \            |AsksV1|
+    //      Caller           `--+---'
+    //        |   createAsk()   |
+    //        | ---------------->
+    //        |                 |
+    //        |                 |
+    //        |    ____________________________________________________________
+    //        |    ! ALT  /  Ask already exists for this token?                !
+    //        |    !_____/      |                                              !
+    //        |    !            |----.                                         !
+    //        |    !            |    | _cancelAsk(_tokenContract, _tokenId)    !
+    //        |    !            |<---'                                         !
+    //        |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //        |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //        |                 |
+    //        |                 |----.
+    //        |                 |    | create ask
+    //        |                 |<---'
+    //        |                 |
+    //        |                 |----.
+    //        |                 |    | emit AskCreated()
+    //        |                 |<---'
+    //      Caller           ,--+---.
+    //        ,-.            |AsksV1|
+    //        `-'            `------'
+    //        /|\
+    //         |
+    //        / \
     /// @notice Creates the ask for a given NFT
     /// @param _tokenContract The address of the ERC-721 token to be sold
     /// @param _tokenId The ID of the ERC-721 token to be sold
@@ -120,6 +153,28 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         emit AskCreated(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
     }
 
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |             ,------.
+    //        / \            |AsksV1|
+    //      Caller           `--+---'
+    //        |  setAskPrice()  |
+    //        | ---------------->
+    //        |                 |
+    //        |                 |----.
+    //        |                 |    | update ask price
+    //        |                 |<---'
+    //        |                 |
+    //        |                 |----.
+    //        |                 |    | emit AskPriceUpdated()
+    //        |                 |<---'
+    //      Caller           ,--+---.
+    //        ,-.            |AsksV1|
+    //        `-'            `------'
+    //        /|\
+    //         |
+    //        / \
     /// @notice Updates the ask price for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ID of the ERC-721 token
@@ -141,6 +196,28 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         emit AskPriceUpdated(_tokenContract, _tokenId, ask);
     }
 
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |             ,------.
+    //        / \            |AsksV1|
+    //      Caller           `--+---'
+    //        |   cancelAsk()   |
+    //        | ---------------->
+    //        |                 |
+    //        |                 |----.
+    //        |                 |    | emit AskCanceled()
+    //        |                 |<---'
+    //        |                 |
+    //        |                 |----.
+    //        |                 |    | delete ask
+    //        |                 |<---'
+    //      Caller           ,--+---.
+    //        ,-.            |AsksV1|
+    //        `-'            `------'
+    //        /|\
+    //         |
+    //        / \
     /// @notice Cancels the ask for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ID of the ERC-721 token
@@ -153,10 +230,64 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         _cancelAsk(_tokenContract, _tokenId);
     }
 
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |             ,------.                           ,--------------------.
+    //        / \            |AsksV1|                           |ERC721TransferHelper|
+    //      Caller           `--+---'                           `---------+----------'
+    //        |    fillAsk()    |                                         |
+    //        | ---------------->                                         |
+    //        |                 |                                         |
+    //        |                 |----.                                    |
+    //        |                 |    | validate received funds            |
+    //        |                 |<---'                                    |
+    //        |                 |                                         |
+    //        |                 |----.                                    |
+    //        |                 |    | handle royalty payouts             |
+    //        |                 |<---'                                    |
+    //        |                 |                                         |
+    //        |                 |                                         |
+    //        |    _________________________________________________      |
+    //        |    ! ALT  /  finders fee configured for this ask?   !     |
+    //        |    !_____/      |                                   !     |
+    //        |    !            |----.                              !     |
+    //        |    !            |    | handle finders fee payout    !     |
+    //        |    !            |<---'                              !     |
+    //        |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!     |
+    //        |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!     |
+    //        |                 |                                         |
+    //        |                 |----.
+    //        |                 |    | handle seller funds recipient payout
+    //        |                 |<---'
+    //        |                 |                                         |
+    //        |                 |              transferFrom()             |
+    //        |                 | ---------------------------------------->
+    //        |                 |                                         |
+    //        |                 |                                         |----.
+    //        |                 |                                         |    | transfer NFT from seller to buyer
+    //        |                 |                                         |<---'
+    //        |                 |                                         |
+    //        |                 |----.                                    |
+    //        |                 |    | emit ExchangeExecuted()            |
+    //        |                 |<---'                                    |
+    //        |                 |                                         |
+    //        |                 |----.                                    |
+    //        |                 |    | emit AskFilled()                   |
+    //        |                 |<---'                                    |
+    //        |                 |                                         |
+    //        |                 |----.                                    |
+    //        |                 |    | delete ask from contract           |
+    //        |                 |<---'                                    |
+    //      Caller           ,--+---.                           ,---------+----------.
+    //        ,-.            |AsksV1|                           |ERC721TransferHelper|
+    //        `-'            `------'                           `--------------------'
+    //        /|\
+    //         |
+    //        / \
     /// @notice Fills the ask for a given NFT, transferring the ERC-20/ETH to the seller and NFT to the buyer
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ID of the ERC-721 token
-    /// @param _finder The address of the referrer for this ask
     function fillAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -183,7 +314,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             remainingProfit = remainingProfit - findersFee;
         }
 
-        // Transfer remaining ERC-20/ETH to seller
+        // Transfer remaining ETH/ERC-20 to seller
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer

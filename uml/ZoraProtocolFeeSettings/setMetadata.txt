@@ -1,0 +1,10 @@
+@startuml
+actor Owner
+participant ZoraProtocolFeeSettings
+
+Owner -> ZoraProtocolFeeSettings : setMetadata()
+
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : set metadata
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : emit MetadataUpdated()
+
+@enduml

@@ -47,6 +47,31 @@ contract ZoraProtocolFeeSettings is ERC721 {
         metadata = _metadata;
     }
 
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |             ,-----------------------.
+    //        / \            |ZoraProtocolFeeSettings|
+    //      Minter           `-----------+-----------'
+    //        |          mint()          |
+    //        | ------------------------>|
+    //        |                          |
+    //        |                          ----.
+    //        |                              | derive token ID from module address
+    //        |                          <---'
+    //        |                          |
+    //        |                          ----.
+    //        |                              | mint token to given address
+    //        |                          <---'
+    //        |                          |
+    //        |     return token ID      |
+    //        | <------------------------|
+    //      Minter           ,-----------+-----------.
+    //        ,-.            |ZoraProtocolFeeSettings|
+    //        `-'            `-----------------------'
+    //        /|\
+    //         |
+    //        / \
     /// @notice Mint a new protocol fee setting for a module
     /// @param _to, the address to send the protocol fee setting token to
     /// @param _module, the module for which the minted token will represent
@@ -58,6 +83,28 @@ contract ZoraProtocolFeeSettings is ERC721 {
         return tokenId;
     }
 
+    //          ,-.
+    //          `-'
+    //          /|\
+    //           |                ,-----------------------.
+    //          / \               |ZoraProtocolFeeSettings|
+    //      ModuleOwner           `-----------+-----------'
+    //           |      setFeeParams()        |
+    //           |--------------------------->|
+    //           |                            |
+    //           |                            ----.
+    //           |                                | set fee parameters
+    //           |                            <---'
+    //           |                            |
+    //           |                            ----.
+    //           |                                | emit ProtocolFeeUpdated()
+    //           |                            <---'
+    //      ModuleOwner           ,-----------+-----------.
+    //          ,-.               |ZoraProtocolFeeSettings|
+    //          `-'               `-----------------------'
+    //          /|\
+    //           |
+    //          / \
     /// @notice Sets fee parameters for ZORA protocol.
     /// @param _module The module to apply the fee settings to
     /// @param _feeRecipient The fee recipient address to send fees to
@@ -75,6 +122,28 @@ contract ZoraProtocolFeeSettings is ERC721 {
         emit ProtocolFeeUpdated(_module, _feeRecipient, _feeBps);
     }
 
+    //       ,-.
+    //       `-'
+    //       /|\
+    //        |             ,-----------------------.
+    //       / \            |ZoraProtocolFeeSettings|
+    //      Owner           `-----------+-----------'
+    //        |       setOwner()        |
+    //        |------------------------>|
+    //        |                         |
+    //        |                         ----.
+    //        |                             | set owner
+    //        |                         <---'
+    //        |                         |
+    //        |                         ----.
+    //        |                             | emit OwnerUpdated()
+    //        |                         <---'
+    //      Owner           ,-----------+-----------.
+    //       ,-.            |ZoraProtocolFeeSettings|
+    //       `-'            `-----------------------'
+    //       /|\
+    //        |
+    //       / \
     /// @notice Sets the owner of the contract
     /// @param _owner the new owner
     function setOwner(address _owner) external {
@@ -82,6 +151,28 @@ contract ZoraProtocolFeeSettings is ERC721 {
         _setOwner(_owner);
     }
 
+    //       ,-.
+    //       `-'
+    //       /|\
+    //        |             ,-----------------------.
+    //       / \            |ZoraProtocolFeeSettings|
+    //      Owner           `-----------+-----------'
+    //        |     setMetadata()       |
+    //        |------------------------>|
+    //        |                         |
+    //        |                         ----.
+    //        |                             | set metadata
+    //        |                         <---'
+    //        |                         |
+    //        |                         ----.
+    //        |                             | emit MetadataUpdated()
+    //        |                         <---'
+    //      Owner           ,-----------+-----------.
+    //       ,-.            |ZoraProtocolFeeSettings|
+    //       `-'            `-----------------------'
+    //       /|\
+    //        |
+    //       / \
     function setMetadata(address _metadata) external {
         require(msg.sender == owner, "setMetadata onlyOwner");
         _setMetadata(_metadata);

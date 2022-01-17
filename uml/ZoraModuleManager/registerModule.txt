@@ -1,0 +1,14 @@
+@startuml
+actor Registrar
+participant ZoraModuleManager
+participant ZoraProtocolFeeSettings
+
+Registrar -> ZoraModuleManager : registerModule()
+
+ZoraModuleManager -> ZoraModuleManager : register module
+ZoraModuleManager -> ZoraProtocolFeeSettings : mint()
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : mint token to registrar
+ZoraModuleManager -> ZoraModuleManager : emit ModuleRegistered()
+
+@enduml
+

@@ -1,0 +1,29 @@
+         ,-.                                                                                    
+         `-'                                                                                    
+         /|\                                                                                    
+          |               ,-----------------.          ,-----------------------.                
+         / \              |ZoraModuleManager|          |ZoraProtocolFeeSettings|                
+      Registrar           `--------+--------'          `-----------+-----------'                
+          |   registerModule()     |                               |                            
+          |----------------------->|                               |                            
+          |                        |                               |                            
+          |                        ----.                           |                            
+          |                            | register module           |                            
+          |                        <---'                           |                            
+          |                        |                               |                            
+          |                        |            mint()             |                            
+          |                        |------------------------------>|                            
+          |                        |                               |                            
+          |                        |                               ----.                        
+          |                        |                                   | mint token to registrar
+          |                        |                               <---'                        
+          |                        |                               |                            
+          |                        ----.                           |                            
+          |                            | emit ModuleRegistered()   |                            
+          |                        <---'                           |                            
+      Registrar           ,--------+--------.          ,-----------+-----------.                
+         ,-.              |ZoraModuleManager|          |ZoraProtocolFeeSettings|                
+         `-'              `-----------------'          `-----------------------'                
+         /|\                                                                                    
+          |                                                                                     
+         / \                                                                                    
