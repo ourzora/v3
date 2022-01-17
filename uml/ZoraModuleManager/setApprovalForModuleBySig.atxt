@@ -1,0 +1,26 @@
+        ,-.                                                                    
+        `-'                                                                    
+        /|\                                                                    
+         |                  ,-----------------.                                
+        / \                 |ZoraModuleManager|                                
+      Caller                `--------+--------'                                
+        | setApprovalForModuleBySig()|                                         
+        | --------------------------->                                         
+        |                            |                                         
+        |                            |----.                                    
+        |                            |    | recover user address from signature
+        |                            |<---'                                    
+        |                            |                                         
+        |                            |----.                                    
+        |                            |    | set approval for module            
+        |                            |<---'                                    
+        |                            |                                         
+        |                            |----.                                    
+        |                            |    | emit ModuleApprovalSet()           
+        |                            |<---'                                    
+      Caller                ,--------+--------.                                
+        ,-.                 |ZoraModuleManager|                                
+        `-'                 `-----------------'                                
+        /|\                                                                    
+         |                                                                     
+        / \                                                                    

@@ -1,0 +1,22 @@
+        ,-.                                                    
+        `-'                                                    
+        /|\                                                    
+         |             ,-----------------.                     
+        / \            |ZoraModuleManager|                     
+      Caller           `--------+--------'                     
+        | setApprovalForModule()|                              
+        | ---------------------->                              
+        |                       |                              
+        |                       |----.                         
+        |                       |    | set approval for module 
+        |                       |<---'                         
+        |                       |                              
+        |                       |----.                         
+        |                       |    | emit ModuleApprovalSet()
+        |                       |<---'                         
+      Caller           ,--------+--------.                     
+        ,-.            |ZoraModuleManager|                     
+        `-'            `-----------------'                     
+        /|\                                                    
+         |                                                     
+        / \                                                    

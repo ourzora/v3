@@ -1,0 +1,11 @@
+@startuml
+actor Owner
+participant ZoraProtocolFeeSettings
+
+Owner -> ZoraProtocolFeeSettings : setOwner()
+
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : set owner
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : emit OwnerUpdated()
+
+@enduml
+

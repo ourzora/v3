@@ -67,6 +67,28 @@ contract ZoraModuleManager {
         return userApprovals[_user][_module];
     }
 
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |             ,-----------------.
+    //        / \            |ZoraModuleManager|
+    //      Caller           `--------+--------'
+    //        | setApprovalForModule()|
+    //        | ---------------------->
+    //        |                       |
+    //        |                       |----.
+    //        |                       |    | set approval for module
+    //        |                       |<---'
+    //        |                       |
+    //        |                       |----.
+    //        |                       |    | emit ModuleApprovalSet()
+    //        |                       |<---'
+    //      Caller           ,--------+--------.
+    //        ,-.            |ZoraModuleManager|
+    //        `-'            `-----------------'
+    //        /|\
+    //         |
+    //        / \
     /// @notice Allows a user to set the approval for a given module
     /// @param _module The module to approve
     /// @param _approved A boolean, whether or not to approve a module
@@ -74,6 +96,33 @@ contract ZoraModuleManager {
         _setApprovalForModule(_module, msg.sender, _approved);
     }
 
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |                  ,-----------------.
+    //        / \                 |ZoraModuleManager|
+    //      Caller                `--------+--------'
+    //        | setBatchApprovalForModule()|
+    //        | --------------------------->
+    //        |                            |
+    //        |                            |
+    //        |         _____________________________________________________
+    //        |         ! LOOP  /  for each module                           !
+    //        |         !______/           |                                 !
+    //        |         !                  |----.                            !
+    //        |         !                  |    | set approval for module    !
+    //        |         !                  |<---'                            !
+    //        |         !                  |                                 !
+    //        |         !                  |----.                            !
+    //        |         !                  |    | emit ModuleApprovalSet()   !
+    //        |         !                  |<---'                            !
+    //        |         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //      Caller                ,--------+--------.
+    //        ,-.                 |ZoraModuleManager|
+    //        `-'                 `-----------------'
+    //        /|\
+    //         |
+    //        / \
     /// @notice Sets approvals for multiple modules at once
     /// @param _modules The list of module addresses to set approvals for
     /// @param _approved A boolean, whether or not to approve the modules
@@ -83,14 +132,48 @@ contract ZoraModuleManager {
         }
     }
 
+    //        ,-.
+    //        `-'
+    //        /|\
+    //         |                  ,-----------------.
+    //        / \                 |ZoraModuleManager|
+    //      Caller                `--------+--------'
+    //        | setApprovalForModuleBySig()|
+    //        | --------------------------->
+    //        |                            |
+    //        |                            |----.
+    //        |                            |    | recover user address from signature
+    //        |                            |<---'
+    //        |                            |
+    //        |                            |----.
+    //        |                            |    | set approval for module
+    //        |                            |<---'
+    //        |                            |
+    //        |                            |----.
+    //        |                            |    | emit ModuleApprovalSet()
+    //        |                            |<---'
+    //      Caller                ,--------+--------.
+    //        ,-.                 |ZoraModuleManager|
+    //        `-'                 `-----------------'
+    //        /|\
+    //         |
+    //        / \
+    /// @notice Sets approval for a module given an EIP-712 signature
+    /// @param _module The module to approve
+    /// @param _user The user to approve the module for
+    /// @param _approved A boolean, whether or not to approve a module
+    /// @param _deadline The deadline at which point the given signature expires
+    /// @param _v The 129th byte and chain ID of the signature
+    /// @param _r The first 64 bytes of the signature
+    /// @param _s Bytes 64-128 of the signature
     function setApprovalForModuleBySig(
         address _module,
         address _user,
         bool _approved,
         uint256 _deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
     ) public {
         require(_deadline == 0 || _deadline >= block.timestamp, "ZMM::setApprovalForModuleBySig deadline expired");
 
@@ -102,13 +185,42 @@ contract ZoraModuleManager {
             )
         );
 
-        address recoveredAddress = ecrecover(digest, v, r, s);
+        address recoveredAddress = ecrecover(digest, _v, _r, _s);
 
         require(recoveredAddress != address(0) && recoveredAddress == _user, "ZMM::setApprovalForModuleBySig invalid signature");
 
         _setApprovalForModule(_module, _user, _approved);
     }
 
+    //         ,-.
+    //         `-'
+    //         /|\
+    //          |               ,-----------------.          ,-----------------------.
+    //         / \              |ZoraModuleManager|          |ZoraProtocolFeeSettings|
+    //      Registrar           `--------+--------'          `-----------+-----------'
+    //          |   registerModule()     |                               |
+    //          |----------------------->|                               |
+    //          |                        |                               |
+    //          |                        ----.                           |
+    //          |                            | register module           |
+    //          |                        <---'                           |
+    //          |                        |                               |
+    //          |                        |            mint()             |
+    //          |                        |------------------------------>|
+    //          |                        |                               |
+    //          |                        |                               ----.
+    //          |                        |                                   | mint token to registrar
+    //          |                        |                               <---'
+    //          |                        |                               |
+    //          |                        ----.                           |
+    //          |                            | emit ModuleRegistered()   |
+    //          |                        <---'                           |
+    //      Registrar           ,--------+--------.          ,-----------+-----------.
+    //         ,-.              |ZoraModuleManager|          |ZoraProtocolFeeSettings|
+    //         `-'              `-----------------'          `-----------------------'
+    //         /|\
+    //          |
+    //         / \
     /// @notice Registers a module
     /// @param _module The address of the module
     function registerModule(address _module) public onlyRegistrar {
@@ -120,6 +232,28 @@ contract ZoraModuleManager {
         emit ModuleRegistered(_module);
     }
 
+    //         ,-.
+    //         `-'
+    //         /|\
+    //          |               ,-----------------.
+    //         / \              |ZoraModuleManager|
+    //      Registrar           `--------+--------'
+    //          |    setRegistrar()      |
+    //          |----------------------->|
+    //          |                        |
+    //          |                        ----.
+    //          |                            | set registrar
+    //          |                        <---'
+    //          |                        |
+    //          |                        ----.
+    //          |                            | emit RegistrarChanged()
+    //          |                        <---'
+    //      Registrar           ,--------+--------.
+    //         ,-.              |ZoraModuleManager|
+    //         `-'              `-----------------'
+    //         /|\
+    //          |
+    //         / \
     /// @notice Sets the registrar for the ZORA Module Manager
     /// @param _registrar the address of the new registrar
     function setRegistrar(address _registrar) public onlyRegistrar {
