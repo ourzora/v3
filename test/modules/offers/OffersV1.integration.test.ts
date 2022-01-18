@@ -121,7 +121,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             { value: ONE_ETH }
           );
       }
@@ -142,7 +142,7 @@ describe('OffersV1 integration', () => {
 
         await offers
           .connect(buyer)
-          .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
+          .setNFTOfferAmount(zoraV1.address, 0, 1, TWO_ETH, { value: ONE_ETH });
 
         const afterBalance = await buyer.getBalance();
 
@@ -156,7 +156,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await buyer.getBalance();
         await run();
 
-        await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
+        await offers
+          .connect(buyer)
+          .setNFTOfferAmount(zoraV1.address, 0, 1, ONE_HALF_ETH);
 
         const afterBalance = await buyer.getBalance();
 
@@ -170,7 +172,7 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await buyer.getBalance();
         await run();
         const middleBalance = await buyer.getBalance();
-        await offers.connect(buyer).cancelNFTOffer(1);
+        await offers.connect(buyer).cancelNFTOffer(zoraV1.address, 0, 1);
         const afterBalance = await buyer.getBalance();
 
         expect(toRoundedNumber(middleBalance)).to.be.approximately(
@@ -186,7 +188,12 @@ describe('OffersV1 integration', () => {
       it('should pay the finder', async () => {
         const beforeBalance = await finder.getBalance();
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          zoraV1.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await finder.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -198,7 +205,12 @@ describe('OffersV1 integration', () => {
       it('should transfer funds from accepted offer to seller', async () => {
         const beforeBalance = await deployer.getBalance();
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          zoraV1.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await deployer.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -211,7 +223,12 @@ describe('OffersV1 integration', () => {
 
       it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          zoraV1.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
 
         expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
       });
@@ -226,7 +243,7 @@ describe('OffersV1 integration', () => {
       async function run() {
         await offers
           .connect(buyer)
-          .createNFTOffer(zoraV1.address, 0, ONE_ETH, weth.address, 10, {
+          .createNFTOffer(zoraV1.address, 0, ONE_ETH, weth.address, 1000, {
             value: ONE_ETH,
           });
       }
@@ -246,7 +263,7 @@ describe('OffersV1 integration', () => {
         await run();
         await offers
           .connect(buyer)
-          .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
+          .setNFTOfferAmount(zoraV1.address, 0, 1, TWO_ETH, { value: ONE_ETH });
 
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -259,7 +276,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await weth.balanceOf(await buyer.getAddress());
         await run();
 
-        await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
+        await offers
+          .connect(buyer)
+          .setNFTOfferAmount(zoraV1.address, 0, 1, ONE_HALF_ETH);
 
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
 
@@ -273,7 +292,7 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await weth.balanceOf(await buyer.getAddress());
         await run();
         const middleBalance = await weth.balanceOf(await buyer.getAddress());
-        await offers.connect(buyer).cancelNFTOffer(1);
+        await offers.connect(buyer).cancelNFTOffer(zoraV1.address, 0, 1);
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
 
         expect(toRoundedNumber(middleBalance)).to.be.approximately(
@@ -289,7 +308,12 @@ describe('OffersV1 integration', () => {
       it('should pay the finder', async () => {
         const beforeBalance = await weth.balanceOf(await finder.getAddress());
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          zoraV1.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -301,7 +325,12 @@ describe('OffersV1 integration', () => {
       it('should transfer funds from accepted offer to seller', async () => {
         const beforeBalance = await weth.balanceOf(await deployer.getAddress());
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          zoraV1.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -314,7 +343,12 @@ describe('OffersV1 integration', () => {
 
       it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          zoraV1.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
 
         expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
       });
@@ -344,7 +378,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             { value: ONE_ETH }
           );
       }
@@ -365,7 +399,9 @@ describe('OffersV1 integration', () => {
 
         await offers
           .connect(buyer)
-          .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
+          .setNFTOfferAmount(testEIP2981ERC721.address, 0, 1, TWO_ETH, {
+            value: ONE_ETH,
+          });
 
         const afterBalance = await buyer.getBalance();
 
@@ -379,7 +415,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await buyer.getBalance();
         await run();
 
-        await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
+        await offers
+          .connect(buyer)
+          .setNFTOfferAmount(testEIP2981ERC721.address, 0, 1, ONE_HALF_ETH);
 
         const afterBalance = await buyer.getBalance();
 
@@ -393,7 +431,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await buyer.getBalance();
         await run();
         const middleBalance = await buyer.getBalance();
-        await offers.connect(buyer).cancelNFTOffer(1);
+        await offers
+          .connect(buyer)
+          .cancelNFTOffer(testEIP2981ERC721.address, 0, 1);
         const afterBalance = await buyer.getBalance();
 
         expect(toRoundedNumber(middleBalance)).to.be.approximately(
@@ -409,7 +449,12 @@ describe('OffersV1 integration', () => {
       it('should pay the finder', async () => {
         const beforeBalance = await finder.getBalance();
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testEIP2981ERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await finder.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -421,7 +466,12 @@ describe('OffersV1 integration', () => {
       it('should transfer funds from accepted offer to seller', async () => {
         const beforeBalance = await deployer.getBalance();
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testEIP2981ERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await deployer.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -434,7 +484,12 @@ describe('OffersV1 integration', () => {
 
       it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testEIP2981ERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
 
         expect(await testEIP2981ERC721.ownerOf(0)).to.eq(
           await buyer.getAddress()
@@ -456,7 +511,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             weth.address,
-            10,
+            1000,
             {
               value: ONE_ETH,
             }
@@ -478,7 +533,9 @@ describe('OffersV1 integration', () => {
         await run();
         await offers
           .connect(buyer)
-          .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
+          .setNFTOfferAmount(testEIP2981ERC721.address, 0, 1, TWO_ETH, {
+            value: ONE_ETH,
+          });
 
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -491,7 +548,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await weth.balanceOf(await buyer.getAddress());
         await run();
 
-        await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
+        await offers
+          .connect(buyer)
+          .setNFTOfferAmount(testEIP2981ERC721.address, 0, 1, ONE_HALF_ETH);
 
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
 
@@ -505,7 +564,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await weth.balanceOf(await buyer.getAddress());
         await run();
         const middleBalance = await weth.balanceOf(await buyer.getAddress());
-        await offers.connect(buyer).cancelNFTOffer(1);
+        await offers
+          .connect(buyer)
+          .cancelNFTOffer(testEIP2981ERC721.address, 0, 1);
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
 
         expect(toRoundedNumber(middleBalance)).to.be.approximately(
@@ -521,7 +582,12 @@ describe('OffersV1 integration', () => {
       it('should pay the finder', async () => {
         const beforeBalance = await weth.balanceOf(await finder.getAddress());
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testEIP2981ERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -533,7 +599,12 @@ describe('OffersV1 integration', () => {
       it('should transfer funds from accepted offer to seller', async () => {
         const beforeBalance = await weth.balanceOf(await deployer.getAddress());
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testEIP2981ERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -546,7 +617,12 @@ describe('OffersV1 integration', () => {
 
       it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testEIP2981ERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
 
         expect(await testEIP2981ERC721.ownerOf(0)).to.eq(
           await buyer.getAddress()
@@ -578,7 +654,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             { value: ONE_ETH }
           );
       }
@@ -599,7 +675,9 @@ describe('OffersV1 integration', () => {
 
         await offers
           .connect(buyer)
-          .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
+          .setNFTOfferAmount(testERC721.address, 0, 1, TWO_ETH, {
+            value: ONE_ETH,
+          });
 
         const afterBalance = await buyer.getBalance();
 
@@ -613,7 +691,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await buyer.getBalance();
         await run();
 
-        await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
+        await offers
+          .connect(buyer)
+          .setNFTOfferAmount(testERC721.address, 0, 1, ONE_HALF_ETH);
 
         const afterBalance = await buyer.getBalance();
 
@@ -627,7 +707,7 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await buyer.getBalance();
         await run();
         const middleBalance = await buyer.getBalance();
-        await offers.connect(buyer).cancelNFTOffer(1);
+        await offers.connect(buyer).cancelNFTOffer(testERC721.address, 0, 1);
         const afterBalance = await buyer.getBalance();
 
         expect(toRoundedNumber(middleBalance)).to.be.approximately(
@@ -643,7 +723,12 @@ describe('OffersV1 integration', () => {
       it('should pay the finder', async () => {
         const beforeBalance = await finder.getBalance();
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await finder.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -655,7 +740,12 @@ describe('OffersV1 integration', () => {
       it('should transfer funds from accepted offer to seller', async () => {
         const beforeBalance = await deployer.getBalance();
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await deployer.getBalance();
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -668,7 +758,12 @@ describe('OffersV1 integration', () => {
 
       it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
 
         expect(await testERC721.ownerOf(0)).to.eq(await buyer.getAddress());
       });
@@ -683,7 +778,7 @@ describe('OffersV1 integration', () => {
       async function run() {
         await offers
           .connect(buyer)
-          .createNFTOffer(testERC721.address, 0, ONE_ETH, weth.address, 10, {
+          .createNFTOffer(testERC721.address, 0, ONE_ETH, weth.address, 1000, {
             value: ONE_ETH,
           });
       }
@@ -703,7 +798,9 @@ describe('OffersV1 integration', () => {
         await run();
         await offers
           .connect(buyer)
-          .setNFTOfferAmount(1, TWO_ETH, { value: ONE_ETH });
+          .setNFTOfferAmount(testERC721.address, 0, 1, TWO_ETH, {
+            value: ONE_ETH,
+          });
 
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -716,7 +813,9 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await weth.balanceOf(await buyer.getAddress());
         await run();
 
-        await offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH);
+        await offers
+          .connect(buyer)
+          .setNFTOfferAmount(testERC721.address, 0, 1, ONE_HALF_ETH);
 
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
 
@@ -730,7 +829,7 @@ describe('OffersV1 integration', () => {
         const beforeBalance = await weth.balanceOf(await buyer.getAddress());
         await run();
         const middleBalance = await weth.balanceOf(await buyer.getAddress());
-        await offers.connect(buyer).cancelNFTOffer(1);
+        await offers.connect(buyer).cancelNFTOffer(testERC721.address, 0, 1);
         const afterBalance = await weth.balanceOf(await buyer.getAddress());
 
         expect(toRoundedNumber(middleBalance)).to.be.approximately(
@@ -746,7 +845,12 @@ describe('OffersV1 integration', () => {
       it('should pay the finder', async () => {
         const beforeBalance = await weth.balanceOf(await finder.getAddress());
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await weth.balanceOf(await finder.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -758,7 +862,12 @@ describe('OffersV1 integration', () => {
       it('should transfer funds from accepted offer to seller', async () => {
         const beforeBalance = await weth.balanceOf(await deployer.getAddress());
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
         const afterBalance = await weth.balanceOf(await deployer.getAddress());
 
         expect(toRoundedNumber(afterBalance)).to.be.approximately(
@@ -771,7 +880,12 @@ describe('OffersV1 integration', () => {
 
       it('should transfer NFT to buyer after accepted offer', async () => {
         await run();
-        await offers.fillNFTOffer(1, await finder.getAddress());
+        await offers.fillNFTOffer(
+          testERC721.address,
+          0,
+          1,
+          await finder.getAddress()
+        );
 
         expect(await testERC721.ownerOf(0)).to.eq(await buyer.getAddress());
       });

@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 /// ------------ IMPORTS ------------
 
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -11,49 +10,74 @@ import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelpe
 import {UniversalExchangeEventV1} from "../../../common/UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
 import {FeePayoutSupportV1} from "../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
+import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
 
 /// @title Offers V1
 /// @author kulkarohan <rohan@zora.co>
-/// @notice This module allows buyers to make offers on any ERC-721 token
-contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1 {
-    using Counters for Counters.Counter;
-
+/// @notice This module allows buyers to place ETH/ERC-20 offers for any ERC-721 token
+contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+    /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
+
+    /// @notice The number of offers placed
+    uint256 public offerCount;
 
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
-    /// @notice The total number of offers
-    Counters.Counter public offerCounter;
-
-    /// @notice An individual offer
+    /// @notice The metadata of an offer
+    /// @param buyer The address of the buyer placing the offer
+    /// @param currency The address of the ERC-20, or address(0) for ETH, denominating the offer
+    /// @param findersFeeBps The fee to the referrer of the offer
+    /// @param amount The amount offered
     struct Offer {
         address buyer;
         address currency;
-        address tokenContract;
-        uint256 tokenId;
+        uint16 findersFeeBps;
         uint256 amount;
-        uint256 findersFeePercentage;
     }
 
-    /// ------------ PUBLIC STORAGE ------------
+    /// ------------ STORAGE ------------
 
-    /// @notice A mapping of IDs to their respective offer
-    mapping(uint256 => Offer) public offers;
+    /// @notice The metadata for a given offer
+    /// @dev ERC-721 token address => ERC-721 token ID => Offer ID => Offer
+    mapping(address => mapping(uint256 => mapping(uint256 => Offer))) public offers;
 
     /// @notice The offers for a given NFT
-    /// @dev NFT address => NFT ID => offer IDs
+    /// @dev ERC-721 token address => ERC-721 token ID => offer IDs
     mapping(address => mapping(uint256 => uint256[])) public offersForNFT;
 
     /// ------------ EVENTS ------------
 
-    event NFTOfferCreated(uint256 indexed id, Offer offer);
+    /// @notice Emitted when an offer is created
+    /// @param tokenContract The ERC-721 token address of the created offer
+    /// @param tokenId The ERC-721 token ID of the created offer
+    /// @param id The ID of the created offer
+    /// @param offer The metadata of the created offer
+    event NFTOfferCreated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
-    event NFTOfferAmountUpdated(uint256 indexed id, Offer offer);
+    /// @notice Emitted when an offer is updated
+    /// @param tokenContract The ERC-721 token address of the updated offer
+    /// @param tokenId The ERC-721 token ID of the updated offer
+    /// @param id The ID of the updated offer
+    /// @param offer The metadata of the updated offer
+    event NFTOfferAmountUpdated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
-    event NFTOfferCanceled(uint256 indexed id, Offer offer);
+    /// @notice Emitted when an offer is canceled
+    /// @param tokenContract The ERC-721 token address of the canceled offer
+    /// @param tokenId The ERC-721 token ID of the canceled offer
+    /// @param id The ID of the canceled offer
+    /// @param offer The metadata of the canceled offer
+    event NFTOfferCanceled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
-    event NFTOfferFilled(uint256 indexed id, address indexed seller, address indexed finder, Offer offer);
+    /// @notice Emitted when an offer is filled
+    /// @param tokenContract The ERC-721 token address of the filled offer
+    /// @param tokenId The ERC-721 token ID of the filled offer
+    /// @param id The ID of the filled offer
+    /// @param seller The address of the seller who filled the offer
+    /// @param finder The address of the finder who referred the offer
+    /// @param offer The metadata of the filled offer
+    event NFTOfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address seller, address finder, Offer offer);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -71,124 +95,140 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
         FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+        ModuleNamingSupportV1("Offers: v1.0")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ BUYER FUNCTIONS ------------
+    /// ------------ NFT BUYER FUNCTIONS ------------
 
-    /// @notice Places an offer on a NFT
-    /// @param _tokenContract The address of the ERC-721 token contract to place the offer
-    /// @param _tokenId The ID of the ERC-721 token to place the offer
-    /// @param _amount The price of the offer
-    /// @param _currency The address of the ERC-20 token to place an offer in, or address(0) for ETH
-    /// @param _findersFeePercentage The percentage of the sale amount to be sent to the referrer of the sale
-    /// @return The ID of the created NFT offer
+    /// @notice Creates an offer for a NFT
+    /// @param _tokenContract The address of the ERC-721 token to be purchased
+    /// @param _tokenId The ID of the ERC-721 token to be purchased
+    /// @param _amount The amount to offer
+    /// @param _currency The address of the ERC-20 token being offered, or address(0) for ETH
+    /// @param _findersFeeBps The bps of the offer amount (post-royalties) to be sent to the referrer of the sale
+    /// @return The ID of the created offer
     function createNFTOffer(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _amount,
         address _currency,
-        uint256 _findersFeePercentage
+        uint16 _findersFeeBps
     ) external payable nonReentrant returns (uint256) {
-        require(IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender, "createNFTOffer cannot make offer on owned NFT");
-        require(_findersFeePercentage <= 100, "createNFTOffer finders fee percentage must be less than 100");
+        require(IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender, "createNFTOffer cannot place offer on own NFT");
+        require(_findersFeeBps <= 10000, "createNFTOffer finders fee bps must be less than or equal to 10000");
 
         // Ensure offered payment is valid and take custody of payment
         _handleIncomingTransfer(_amount, _currency);
 
-        offerCounter.increment();
-        uint256 offerId = offerCounter.current();
+        offerCount++;
 
-        offers[offerId] = Offer({
-            buyer: msg.sender,
-            currency: _currency,
-            tokenContract: _tokenContract,
-            tokenId: _tokenId,
-            amount: _amount,
-            findersFeePercentage: _findersFeePercentage
-        });
+        offers[_tokenContract][_tokenId][offerCount] = Offer({buyer: msg.sender, currency: _currency, findersFeeBps: _findersFeeBps, amount: _amount});
 
-        offersForNFT[_tokenContract][_tokenId].push(offerId);
+        offersForNFT[_tokenContract][_tokenId].push(offerCount);
 
-        emit NFTOfferCreated(offerId, offers[offerId]);
+        emit NFTOfferCreated(_tokenContract, _tokenId, offerCount, offers[_tokenContract][_tokenId][offerCount]);
 
-        return offerId;
+        return offerCount;
     }
 
-    /// @notice Updates the price of a NFT offer
-    /// @param _offerId The ID of the NFT offer
-    /// @param _newAmount The new offer price
-    function setNFTOfferAmount(uint256 _offerId, uint256 _newAmount) external payable nonReentrant {
-        Offer storage offer = offers[_offerId];
+    /// @notice Updates the amount of an offer
+    /// @param _tokenContract The ERC-721 token address of the offer
+    /// @param _tokenId The ERC-721 token ID of the offer
+    /// @param _offerId The ID of the offer
+    /// @param _amount The new offer amount
+    function setNFTOfferAmount(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _offerId,
+        uint256 _amount
+    ) external payable nonReentrant {
+        Offer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
-        require(offer.buyer == msg.sender, "setNFTOfferAmount offer must be active and caller must be original buyer");
-        require((_newAmount > 0) && (_newAmount != offer.amount), "setNFTOfferAmount _newAmount must be greater than 0 and not equal to previous offer");
+        require(offer.buyer == msg.sender, "setNFTOfferAmount must be buyer");
+        require((_amount != 0) && (_amount != offer.amount), "setNFTOfferAmount _amount cannot be 0 or previous amount");
 
-        uint256 prevOffer = offer.amount;
-
-        if (_newAmount > prevOffer) {
-            uint256 increaseAmount = _newAmount - prevOffer;
+        uint256 prevAmount = offer.amount;
+        if (_amount > prevAmount) {
+            uint256 increaseAmount = _amount - prevAmount;
             _handleIncomingTransfer(increaseAmount, offer.currency);
 
             offer.amount += increaseAmount;
-        } else if (_newAmount < prevOffer) {
-            uint256 decreaseAmount = prevOffer - _newAmount;
+        } else if (_amount < prevAmount) {
+            uint256 decreaseAmount = prevAmount - _amount;
             _handleOutgoingTransfer(offer.buyer, decreaseAmount, offer.currency, USE_ALL_GAS_FLAG);
 
             offer.amount -= decreaseAmount;
         }
 
-        emit NFTOfferAmountUpdated(_offerId, offer);
+        emit NFTOfferAmountUpdated(_tokenContract, _tokenId, _offerId, offer);
     }
 
-    /// @notice Cancels a NFT offer
-    /// @param _offerId The ID of the NFT offer
-    function cancelNFTOffer(uint256 _offerId) external nonReentrant {
-        Offer storage offer = offers[_offerId];
+    /// @notice Cancels and refunds the offer for an NFT
+    /// @param _tokenContract The ERC-721 token address of the offer
+    /// @param _tokenId The ERC-721 token ID of the offer
+    /// @param _offerId The ID of the offer
+    function cancelNFTOffer(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _offerId
+    ) external nonReentrant {
+        Offer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
-        require(offer.buyer == msg.sender, "cancelNFTOffer offer must be active and caller must be original buyer");
+        require(offer.buyer == msg.sender, "cancelNFTOffer must be buyer");
 
         _handleOutgoingTransfer(offer.buyer, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
 
-        emit NFTOfferCanceled(_offerId, offer);
+        emit NFTOfferCanceled(_tokenContract, _tokenId, _offerId, offer);
 
-        delete offers[_offerId];
+        delete offers[_tokenContract][_tokenId][offerCount];
     }
 
-    /// ------------ SELLER FUNCTIONS ------------
+    /// ------------ NFT SELLER FUNCTIONS ------------
 
-    /// @notice Fills a NFT offer
-    /// @param _offerId The ID of the NFT offer
-    /// @param _finder The address of the referrer for this offer
-    function fillNFTOffer(uint256 _offerId, address _finder) external nonReentrant {
-        Offer storage offer = offers[_offerId];
+    /// @notice Fills the offer for an NFT, transferring the ETH/ERC-20 to the seller and NFT to the buyer
+    /// @param _tokenContract The ERC-721 token address of the offer
+    /// @param _tokenId The ERC-721 token ID of the offer
+    /// @param _offerId The ID of the offer
+    /// @param _finder The address of the offer referrer
+    function fillNFTOffer(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _offerId,
+        address _finder
+    ) external nonReentrant {
+        Offer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
         require(offer.buyer != address(0), "fillNFTOffer must be active offer");
-        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenId), "fillNFTOffer must own token associated with offer");
+        require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "fillNFTOffer must be token owner");
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
+
+        // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, offer.currency);
 
+        // Payout optional finder fee
         if (_finder != address(0)) {
-            uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;
+            uint256 finderFee = (remainingProfit * offer.findersFeeBps) / 10000;
             _handleOutgoingTransfer(_finder, finderFee, offer.currency, USE_ALL_GAS_FLAG);
 
             remainingProfit -= finderFee;
         }
 
-        // Transfer sale proceeds to seller
+        // Transfer remaining ETH/ERC-20 to seller
         _handleOutgoingTransfer(msg.sender, remainingProfit, offer.currency, USE_ALL_GAS_FLAG);
-        // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(offer.tokenContract, msg.sender, offer.buyer, offer.tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenId, amount: 1});
+        // Transfer NFT to buyer
+        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.buyer, _tokenId);
+
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.currency, tokenId: 0, amount: offer.amount});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
-        emit NFTOfferFilled(_offerId, msg.sender, _finder, offer);
+        emit NFTOfferFilled(_tokenContract, _tokenId, _offerId, msg.sender, _finder, offer);
 
-        delete offers[_offerId];
+        delete offers[_tokenContract][_tokenId][offerCount];
     }
 }
