@@ -59,7 +59,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     /// @param tokenContract The ERC-721 token address of the filled ask
     /// @param tokenId The ERC-721 token ID of the filled ask
     /// @param buyer The buyer address of the filled ask
-    /// @param finder The finder address of the filled ask
+    /// @param finder The address of finder who referred the ask
     /// @param ask The metadata of the filled ask
     event AskFilled(address indexed tokenContract, uint256 indexed tokenId, address indexed buyer, address finder, Ask ask);
 
@@ -81,7 +81,6 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
-
 
     //        ,-.
     //        `-'
@@ -285,9 +284,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     //        /|\
     //         |
     //        / \
-    /// @notice Fills the ask for a given NFT, transferring the ERC-20/ETH to the seller and NFT to the buyer
+    /// @notice Fills the ask for a given NFT, transferring the ETH/ERC-20 to the seller and NFT to the buyer
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ID of the ERC-721 token
+    /// @param _finder The address of the ask referrer
     function fillAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -297,7 +297,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         require(ask.seller != address(0), "fillAsk must be active ask");
 
-        // Ensure ERC-20/ETH payment from buyer is valid and take custody
+        // Ensure ETH/ERC-20 payment from buyer is valid and take custody
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
