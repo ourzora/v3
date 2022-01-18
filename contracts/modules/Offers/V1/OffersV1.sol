@@ -28,24 +28,20 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @notice The metadata of an offer
     /// @param buyer The address of the buyer placing the offer
     /// @param currency The address of the ERC-20, or address(0) for ETH, denominating the offer
-    /// @param tokenContract The address of the ERC-721 token to be purchased
     /// @param findersFeeBps The fee to the referrer of the offer
-    /// @param tokenId The ID of the ERC-721 token to be purchased
     /// @param amount The amount offered
     struct Offer {
         address buyer;
         address currency;
-        address tokenContract;
         uint16 findersFeeBps;
-        uint256 tokenId;
         uint256 amount;
     }
 
     /// ------------ STORAGE ------------
 
     /// @notice The metadata for a given offer
-    /// @dev Offer ID => Offer
-    mapping(uint256 => Offer) public offers;
+    /// @dev ERC-721 token address => ERC-721 token ID => Offer ID => Offer
+    mapping(address => mapping(uint256 => mapping(uint256 => Offer))) public offers;
 
     /// @notice The offers for a given NFT
     /// @dev ERC-721 token address => ERC-721 token ID => offer IDs
@@ -120,27 +116,27 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         offerCount++;
 
-        offers[offerCount] = Offer({
-            buyer: msg.sender,
-            currency: _currency,
-            tokenContract: _tokenContract,
-            findersFeeBps: _findersFeeBps,
-            tokenId: _tokenId,
-            amount: _amount
-        });
+        offers[_tokenContract][_tokenId][offerCount] = Offer({buyer: msg.sender, currency: _currency, findersFeeBps: _findersFeeBps, amount: _amount});
 
         offersForNFT[_tokenContract][_tokenId].push(offerCount);
 
-        emit NFTOfferCreated(offerCount, offers[offerCount]);
+        emit NFTOfferCreated(offerCount, offers[_tokenContract][_tokenId][offerCount]);
 
         return offerCount;
     }
 
     /// @notice Updates the amount of an offer
+    /// @param _tokenContract The ERC-721 token address of the offer
+    /// @param _tokenId The ERC-721 token ID of the offer
     /// @param _offerId The ID of the offer
     /// @param _amount The new offer amount
-    function setNFTOfferAmount(uint256 _offerId, uint256 _amount) external payable nonReentrant {
-        Offer storage offer = offers[_offerId];
+    function setNFTOfferAmount(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _offerId,
+        uint256 _amount
+    ) external payable nonReentrant {
+        Offer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
         require(offer.buyer == msg.sender, "setNFTOfferAmount must be buyer");
         require((_amount != 0) && (_amount != offer.amount), "setNFTOfferAmount _amount cannot be 0 or previous amount");
@@ -162,9 +158,15 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     }
 
     /// @notice Cancels and refunds the offer for an NFT
+    /// @param _tokenContract The ERC-721 token address of the offer
+    /// @param _tokenId The ERC-721 token ID of the offer
     /// @param _offerId The ID of the offer
-    function cancelNFTOffer(uint256 _offerId) external nonReentrant {
-        Offer storage offer = offers[_offerId];
+    function cancelNFTOffer(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _offerId
+    ) external nonReentrant {
+        Offer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
         require(offer.buyer == msg.sender, "cancelNFTOffer must be buyer");
 
@@ -172,22 +174,29 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         emit NFTOfferCanceled(_offerId, offer);
 
-        delete offers[_offerId];
+        delete offers[_tokenContract][_tokenId][offerCount];
     }
 
     /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Fills the offer for an NFT, transferring the ETH/ERC-20 to the seller and NFT to the buyer
+    /// @param _tokenContract The ERC-721 token address of the offer
+    /// @param _tokenId The ERC-721 token ID of the offer
     /// @param _offerId The ID of the offer
     /// @param _finder The address of the offer referrer
-    function fillNFTOffer(uint256 _offerId, address _finder) external nonReentrant {
-        Offer storage offer = offers[_offerId];
+    function fillNFTOffer(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _offerId,
+        address _finder
+    ) external nonReentrant {
+        Offer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
         require(offer.buyer != address(0), "fillNFTOffer must be active offer");
-        require(msg.sender == IERC721(offer.tokenContract).ownerOf(offer.tokenId), "fillNFTOffer must be token owner");
+        require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "fillNFTOffer must be token owner");
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, offer.currency);
@@ -204,14 +213,14 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         _handleOutgoingTransfer(msg.sender, remainingProfit, offer.currency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(offer.tokenContract, msg.sender, offer.buyer, offer.tokenId);
+        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.buyer, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.tokenContract, tokenId: offer.tokenId, amount: 1});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.currency, tokenId: 0, amount: offer.amount});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
         emit NFTOfferFilled(_offerId, msg.sender, _finder, offer);
 
-        delete offers[_offerId];
+        delete offers[_tokenContract][_tokenId][offerCount];
     }
 }
