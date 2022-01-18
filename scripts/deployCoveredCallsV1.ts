@@ -2,16 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as fs from 'fs-extra';
 import assert from 'assert';
 
-export interface Args {
-  royaltyRegistry: string;
-  weth: string;
-}
-
-export async function deployCoveredCallsV1(
-  { royaltyRegistry, weth }: Args,
-  hre: HardhatRuntimeEnvironment
-) {
-  // @ts-ignore
+export async function deployCoveredCallsV1(_, hre: HardhatRuntimeEnvironment) {
   const [deployer] = await hre.ethers.getSigners();
   const { chainId } = await deployer.provider.getNetwork();
 
@@ -26,20 +17,29 @@ export async function deployCoveredCallsV1(
     addressBook.ERC721TransferHelper,
     `missing ERC721TransferHelper in ${addressPath}`
   );
+  assert(
+    addressBook.ZoraProtocolFeeSettings,
+    `missing ZoraProtocolFeeSettings in ${addressPath}`
+  );
+  assert(addressBook.WETH, `missing WETH in ${addressPath}`);
+  assert(
+    addressBook.RoyaltyEngineV1,
+    `missing RoyaltyEngineV1 in ${addressPath}`
+  );
 
   console.log(
     `Deploying CoveredCallsV1 from address ${await deployer.getAddress()}`
   );
 
-  // @ts-ignore
   const CollectionOffersFactory = await hre.ethers.getContractFactory(
     'CoveredCallsV1'
   );
   const CoveredCalls = await CollectionOffersFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
-    royaltyRegistry,
-    weth
+    addressBook.RoyaltyEngineV1,
+    addressBook.ZoraProtocolFeeSettings,
+    addressBook.WETH
   );
   console.log(
     `Deploying CoveredCallsV1 with tx ${CoveredCalls.deployTransaction.hash} to address ${CoveredCalls.address}`

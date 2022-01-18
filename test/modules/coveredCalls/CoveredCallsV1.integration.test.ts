@@ -20,16 +20,15 @@ import {
   deployCoveredCallsV1,
   deployRoyaltyEngine,
   deployTestEIP2981ERC721,
-  deployTestERC271,
+  deployTestERC721,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
+  deployProtocolFeeSettings,
   mintERC2981Token,
   mintERC721Token,
   mintZoraNFT,
   ONE_HALF_ETH,
   ONE_ETH,
-  proposeModule,
   registerModule,
   TWO_ETH,
   THOUSANDTH_ETH,
@@ -47,7 +46,6 @@ describe('CoveredCallsV1 integration', () => {
   let weth: WETH;
   let deployer: Signer;
   let buyer: Signer;
-  let sellerFundsRecipient: Signer;
   let otherUser: Signer;
   let operator: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
@@ -58,40 +56,39 @@ describe('CoveredCallsV1 integration', () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     buyer = signers[1];
-    sellerFundsRecipient = signers[2];
     otherUser = signers[3];
     operator = signers[4];
 
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
-    testERC721 = await deployTestERC271();
+    testERC721 = await deployTestERC721();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     weth = await deployWETH();
-    const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+    const feeSettings = await deployProtocolFeeSettings();
+    const moduleManager = await deployZoraModuleManager(
+      await deployer.getAddress(),
+      feeSettings.address
     );
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address, testERC721.address);
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
     calls = await deployCoveredCallsV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 
-    await proposeModule(proposalManager, calls.address);
-    await registerModule(proposalManager, calls.address);
+    await registerModule(moduleManager, calls.address);
 
-    await approvalManager.setApprovalForModule(calls.address, true);
-    await approvalManager
+    await moduleManager.setApprovalForModule(calls.address, true);
+    await moduleManager
       .connect(buyer)
       .setApprovalForModule(calls.address, true);
   });
@@ -115,8 +112,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            ethers.constants.AddressZero,
-            await sellerFundsRecipient.getAddress()
+            ethers.constants.AddressZero
           );
 
           await calls
@@ -140,9 +136,9 @@ describe('CoveredCallsV1 integration', () => {
         });
 
         it('should transfer premium amount to seller', async () => {
-          const beforeBalance = await sellerFundsRecipient.getBalance();
+          const beforeBalance = await deployer.getBalance();
           await run();
-          const afterBalance = await sellerFundsRecipient.getBalance();
+          const afterBalance = await deployer.getBalance();
 
           expect(
             toRoundedNumber(afterBalance.sub(beforeBalance))
@@ -158,8 +154,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            ethers.constants.AddressZero,
-            await sellerFundsRecipient.getAddress()
+            ethers.constants.AddressZero
           );
 
           await calls
@@ -177,15 +172,15 @@ describe('CoveredCallsV1 integration', () => {
         });
 
         it('should transfer strike amount to seller', async () => {
-          const beforeBalance = await sellerFundsRecipient.getBalance();
+          const beforeBalance = await deployer.getBalance();
           await run();
-          const afterBalance = await sellerFundsRecipient.getBalance();
+          const afterBalance = await deployer.getBalance();
 
-          // 0.5ETH premium + 0.85ETH strike (1ETH * 15% creator fee)
+          // 0.5ETH premium + 0.15ETH creator fee + 0.85ETH strike
           expect(
             toRoundedNumber(afterBalance.sub(beforeBalance))
           ).to.be.approximately(
-            toRoundedNumber(ethers.utils.parseEther('1.35')),
+            toRoundedNumber(ethers.utils.parseEther('1.5')),
             5
           );
         });
@@ -206,8 +201,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            weth.address,
-            await sellerFundsRecipient.getAddress()
+            weth.address
           );
           await calls.connect(buyer).buyCall(zoraV1.address, 0);
         }
@@ -229,11 +223,11 @@ describe('CoveredCallsV1 integration', () => {
 
         it('should transfer premium amount to seller', async () => {
           const beforeBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
           await run();
           const afterBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
 
           expect(
@@ -250,8 +244,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            weth.address,
-            await sellerFundsRecipient.getAddress()
+            weth.address
           );
           await calls.connect(buyer).buyCall(zoraV1.address, 0);
           await calls.connect(buyer).exerciseCall(zoraV1.address, 0);
@@ -264,18 +257,18 @@ describe('CoveredCallsV1 integration', () => {
 
         it('should transfer strike amount to seller', async () => {
           const beforeBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
           await run();
           const afterBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
 
           // 0.5ETH premium + 0.85ETH strike (1ETH * 15% creator fee)
           expect(
             toRoundedNumber(afterBalance.sub(beforeBalance))
           ).to.be.approximately(
-            toRoundedNumber(ethers.utils.parseEther('1.35')),
+            toRoundedNumber(ethers.utils.parseEther('1.5')),
             5
           );
         });
@@ -293,8 +286,7 @@ describe('CoveredCallsV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testEIP2981ERC721,
-        erc721TransferHelper.address,
-        '0'
+        erc721TransferHelper.address
       );
     });
 
@@ -307,8 +299,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            ethers.constants.AddressZero,
-            await sellerFundsRecipient.getAddress()
+            ethers.constants.AddressZero
           );
 
           await calls
@@ -331,9 +322,9 @@ describe('CoveredCallsV1 integration', () => {
         });
 
         it('should transfer premium amount to seller', async () => {
-          const beforeBalance = await sellerFundsRecipient.getBalance();
+          const beforeBalance = await deployer.getBalance();
           await run();
-          const afterBalance = await sellerFundsRecipient.getBalance();
+          const afterBalance = await deployer.getBalance();
 
           expect(
             toRoundedNumber(afterBalance.sub(beforeBalance))
@@ -349,8 +340,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            ethers.constants.AddressZero,
-            await sellerFundsRecipient.getAddress()
+            ethers.constants.AddressZero
           );
           await calls
             .connect(buyer)
@@ -368,14 +358,17 @@ describe('CoveredCallsV1 integration', () => {
         });
 
         it('should transfer strike amount to seller', async () => {
-          const beforeBalance = await sellerFundsRecipient.getBalance();
+          const beforeBalance = await deployer.getBalance();
           await run();
-          const afterBalance = await sellerFundsRecipient.getBalance();
+          const afterBalance = await deployer.getBalance();
 
-          // 0.5ETH premium + 0.5ETH strike (1ETH * 50% creator fee)
+          // 0.5ETH premium + 0.5ETH creator fee + 0.5ETH strike
           expect(
             toRoundedNumber(afterBalance.sub(beforeBalance))
-          ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
+          ).to.be.approximately(
+            toRoundedNumber(ethers.utils.parseEther('1.5')),
+            5
+          );
         });
       });
     });
@@ -394,8 +387,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            weth.address,
-            await sellerFundsRecipient.getAddress()
+            weth.address
           );
           await calls.connect(buyer).buyCall(testEIP2981ERC721.address, 0);
         }
@@ -416,11 +408,11 @@ describe('CoveredCallsV1 integration', () => {
 
         it('should transfer premium amount to seller', async () => {
           const beforeBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
           await run();
           const afterBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
 
           expect(
@@ -437,8 +429,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            weth.address,
-            await sellerFundsRecipient.getAddress()
+            weth.address
           );
           await calls.connect(buyer).buyCall(testEIP2981ERC721.address, 0);
           await calls.connect(buyer).exerciseCall(testEIP2981ERC721.address, 0);
@@ -453,17 +444,20 @@ describe('CoveredCallsV1 integration', () => {
 
         it('should transfer strike amount to seller', async () => {
           const beforeBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
           await run();
           const afterBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
 
-          // 0.5ETH premium + 0.5ETH strike (1ETH * 50% creator fee)
+          // 0.5ETH premium + 0.5ETH creator fee + 0.5ETH strike
           expect(
             toRoundedNumber(afterBalance.sub(beforeBalance))
-          ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
+          ).to.be.approximately(
+            toRoundedNumber(ethers.utils.parseEther('1.5')),
+            5
+          );
         });
       });
     });
@@ -475,8 +469,7 @@ describe('CoveredCallsV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testERC721,
-        erc721TransferHelper.address,
-        '0'
+        erc721TransferHelper.address
       );
       await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
         [await deployer.getAddress()],
@@ -493,8 +486,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            ethers.constants.AddressZero,
-            await sellerFundsRecipient.getAddress()
+            ethers.constants.AddressZero
           );
 
           await calls
@@ -517,9 +509,9 @@ describe('CoveredCallsV1 integration', () => {
         });
 
         it('should transfer premium amount to seller', async () => {
-          const beforeBalance = await sellerFundsRecipient.getBalance();
+          const beforeBalance = await deployer.getBalance();
           await run();
-          const afterBalance = await sellerFundsRecipient.getBalance();
+          const afterBalance = await deployer.getBalance();
 
           expect(
             toRoundedNumber(afterBalance.sub(beforeBalance))
@@ -535,8 +527,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            ethers.constants.AddressZero,
-            await sellerFundsRecipient.getAddress()
+            ethers.constants.AddressZero
           );
 
           await calls
@@ -554,9 +545,9 @@ describe('CoveredCallsV1 integration', () => {
         });
 
         it('should transfer strike amount to seller', async () => {
-          const beforeBalance = await sellerFundsRecipient.getBalance();
+          const beforeBalance = await deployer.getBalance();
           await run();
-          const afterBalance = await sellerFundsRecipient.getBalance();
+          const afterBalance = await deployer.getBalance();
 
           // 0.5ETH premium + 1ETH strike
           expect(
@@ -583,8 +574,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            weth.address,
-            await sellerFundsRecipient.getAddress()
+            weth.address
           );
           await calls.connect(buyer).buyCall(testERC721.address, 0);
         }
@@ -605,11 +595,11 @@ describe('CoveredCallsV1 integration', () => {
 
         it('should transfer premium amount to seller', async () => {
           const beforeBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
           await run();
           const afterBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
 
           expect(
@@ -626,8 +616,7 @@ describe('CoveredCallsV1 integration', () => {
             ONE_HALF_ETH,
             ONE_ETH,
             2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-            weth.address,
-            await sellerFundsRecipient.getAddress()
+            weth.address
           );
           await calls.connect(buyer).buyCall(testERC721.address, 0);
           await calls.connect(buyer).exerciseCall(testERC721.address, 0);
@@ -640,11 +629,11 @@ describe('CoveredCallsV1 integration', () => {
 
         it('should transfer strike amount to seller', async () => {
           const beforeBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
           await run();
           const afterBalance = await weth.balanceOf(
-            await sellerFundsRecipient.getAddress()
+            await deployer.getAddress()
           );
 
           // 0.5ETH premium + 1ETH strike

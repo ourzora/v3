@@ -17,16 +17,14 @@ import {
   deployCoveredCallsV1,
   deployRoyaltyEngine,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
+  deployProtocolFeeSettings,
   mintZoraNFT,
   ONE_HALF_ETH,
   ONE_ETH,
-  proposeModule,
   registerModule,
   deployZoraProtocol,
 } from '../../utils';
-import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
 
 describe('CoveredCallsV1', () => {
@@ -35,7 +33,6 @@ describe('CoveredCallsV1', () => {
   let weth: WETH;
   let deployer: Signer;
   let buyer: Signer;
-  let sellerFundsRecipient: Signer;
   let otherUser: Signer;
   let operator: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
@@ -46,39 +43,44 @@ describe('CoveredCallsV1', () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     buyer = signers[1];
-    sellerFundsRecipient = signers[2];
     otherUser = signers[3];
     operator = signers[4];
 
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
     weth = await deployWETH();
-    const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+    const feeSettings = await deployProtocolFeeSettings();
+    const moduleManager = await deployZoraModuleManager(
+      await deployer.getAddress(),
+      feeSettings.address
     );
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address, zoraV1.address);
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
     calls = await deployCoveredCallsV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 
-    await proposeModule(proposalManager, calls.address);
-    await registerModule(proposalManager, calls.address);
+    await registerModule(moduleManager, calls.address);
 
-    await approvalManager.setApprovalForModule(calls.address, true);
-    await approvalManager
+    await moduleManager.setApprovalForModule(calls.address, true);
+    await moduleManager
       .connect(buyer)
+      .setApprovalForModule(calls.address, true);
+    await moduleManager
+      .connect(operator)
+      .setApprovalForModule(calls.address, true);
+    await moduleManager
+      .connect(otherUser)
       .setApprovalForModule(calls.address, true);
 
     await mintZoraNFT(zoraV1);
@@ -93,16 +95,12 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST),
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       const call = await calls.callForNFT(zoraV1.address, 0);
 
       expect(call.seller).to.eq(await deployer.getAddress());
-      expect(call.sellerFundsRecipient).to.eq(
-        await sellerFundsRecipient.getAddress()
-      );
       expect(call.buyer).to.eq(ethers.constants.AddressZero);
       expect(call.currency).to.eq(ethers.constants.AddressZero);
       expect(call.premium.toString()).to.eq(ONE_HALF_ETH.toString());
@@ -121,16 +119,12 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       const call = await calls.callForNFT(zoraV1.address, 0);
 
       expect(call.seller).to.eq(await deployer.getAddress());
-      expect(call.sellerFundsRecipient).to.eq(
-        await sellerFundsRecipient.getAddress()
-      );
       expect(call.buyer).to.eq(ethers.constants.AddressZero);
       expect(call.currency).to.eq(ethers.constants.AddressZero);
       expect(call.premium.toString()).to.eq(ONE_HALF_ETH.toString());
@@ -145,8 +139,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await zoraV1.transferFrom(
@@ -165,8 +158,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       const call = await calls.callForNFT(zoraV1.address, 0);
@@ -182,8 +174,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       const events = await calls.queryFilter(
@@ -209,12 +200,9 @@ describe('CoveredCallsV1', () => {
           ONE_HALF_ETH,
           ONE_ETH,
           2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-          ethers.constants.AddressZero,
-          await sellerFundsRecipient.getAddress()
+          ethers.constants.AddressZero
         )
-      ).eventually.rejectedWith(
-        'createCall must be token owner or approved operator'
-      );
+      ).eventually.rejectedWith('createCall must be token owner or operator');
     });
 
     it('should revert if seller did not approve ERC721TransferHelper', async () => {
@@ -230,26 +218,11 @@ describe('CoveredCallsV1', () => {
           ONE_HALF_ETH,
           ONE_ETH,
           2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-          ethers.constants.AddressZero,
-          await sellerFundsRecipient.getAddress()
-        )
-      ).eventually.rejectedWith(
-        'createCall must approve ZORA ERC-721 Transfer Helper from _tokenContract'
-      );
-    });
-
-    it('should revert if the funds recipient is the zero address', async () => {
-      await expect(
-        calls.createCall(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-          ethers.constants.AddressZero,
           ethers.constants.AddressZero
         )
-      ).eventually.rejectedWith('createCall must specify sellerFundsRecipient');
+      ).eventually.rejectedWith(
+        'createCall must approve ERC721TransferHelper as operator'
+      );
     });
 
     it('should revert if time expiration is not future block time ', async () => {
@@ -261,12 +234,9 @@ describe('CoveredCallsV1', () => {
           ONE_HALF_ETH,
           ONE_ETH,
           invalidExpirationTime,
-          ethers.constants.AddressZero,
-          await sellerFundsRecipient.getAddress()
+          ethers.constants.AddressZero
         )
-      ).eventually.rejectedWith(
-        'createCall _expiration must be a future block'
-      );
+      ).eventually.rejectedWith('createCall _expiration must be future time');
     });
   });
 
@@ -278,8 +248,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
     });
 
@@ -336,8 +305,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await calls
@@ -372,8 +340,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238406890, // Wed Dec 6th 2040
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await expect(
@@ -388,8 +355,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2238493290, // Wed Dec 7th 2040
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
       await calls
         .connect(buyer)
@@ -409,8 +375,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2270029290,
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       const beforeBuyer = await (
@@ -435,8 +400,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2270029290,
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await calls
@@ -459,8 +423,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2270029290,
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await calls
@@ -479,8 +442,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2270029290,
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await ethers.provider.send('evm_setNextBlockTimestamp', [2270115690]);
@@ -499,8 +461,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2301651690,
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await calls
@@ -521,8 +482,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2301651690,
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await calls
@@ -543,8 +503,7 @@ describe('CoveredCallsV1', () => {
         ONE_HALF_ETH,
         ONE_ETH,
         2301651690,
-        ethers.constants.AddressZero,
-        await sellerFundsRecipient.getAddress()
+        ethers.constants.AddressZero
       );
 
       await calls

@@ -377,6 +377,7 @@ export async function deployCoveredCallsV1(
   erc20Helper: string,
   erc721Helper: string,
   royaltyRegistry: string,
+  protocolFeeSettings: string,
   weth: string
 ) {
   const CoveredCallsV1Factory = await ethers.getContractFactory(
@@ -386,6 +387,7 @@ export async function deployCoveredCallsV1(
     erc20Helper,
     erc721Helper,
     royaltyRegistry,
+    protocolFeeSettings,
     weth
   );
   await coveredCalls.deployed();
