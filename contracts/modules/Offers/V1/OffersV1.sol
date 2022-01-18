@@ -50,26 +50,34 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// ------------ EVENTS ------------
 
     /// @notice Emitted when an offer is created
+    /// @param tokenContract The ERC-721 token address of the created offer
+    /// @param tokenId The ERC-721 token ID of the created offer
     /// @param id The ID of the created offer
     /// @param offer The metadata of the created offer
-    event NFTOfferCreated(uint256 indexed id, Offer offer);
+    event NFTOfferCreated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
     /// @notice Emitted when an offer is updated
+    /// @param tokenContract The ERC-721 token address of the updated offer
+    /// @param tokenId The ERC-721 token ID of the updated offer
     /// @param id The ID of the updated offer
     /// @param offer The metadata of the updated offer
-    event NFTOfferAmountUpdated(uint256 indexed id, Offer offer);
+    event NFTOfferAmountUpdated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
     /// @notice Emitted when an offer is canceled
+    /// @param tokenContract The ERC-721 token address of the canceled offer
+    /// @param tokenId The ERC-721 token ID of the canceled offer
     /// @param id The ID of the canceled offer
     /// @param offer The metadata of the canceled offer
-    event NFTOfferCanceled(uint256 indexed id, Offer offer);
+    event NFTOfferCanceled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
     /// @notice Emitted when an offer is filled
+    /// @param tokenContract The ERC-721 token address of the filled offer
+    /// @param tokenId The ERC-721 token ID of the filled offer
     /// @param id The ID of the filled offer
     /// @param seller The address of the seller who filled the offer
     /// @param finder The address of the finder who referred the offer
     /// @param offer The metadata of the filled offer
-    event NFTOfferFilled(uint256 indexed id, address indexed seller, address indexed finder, Offer offer);
+    event NFTOfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address seller, address finder, Offer offer);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -92,7 +100,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ BUYER FUNCTIONS ------------
+    /// ------------ NFT BUYER FUNCTIONS ------------
 
     /// @notice Creates an offer for a NFT
     /// @param _tokenContract The address of the ERC-721 token to be purchased
@@ -120,7 +128,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         offersForNFT[_tokenContract][_tokenId].push(offerCount);
 
-        emit NFTOfferCreated(offerCount, offers[_tokenContract][_tokenId][offerCount]);
+        emit NFTOfferCreated(_tokenContract, _tokenId, offerCount, offers[_tokenContract][_tokenId][offerCount]);
 
         return offerCount;
     }
@@ -154,7 +162,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
             offer.amount -= decreaseAmount;
         }
 
-        emit NFTOfferAmountUpdated(_offerId, offer);
+        emit NFTOfferAmountUpdated(_tokenContract, _tokenId, _offerId, offer);
     }
 
     /// @notice Cancels and refunds the offer for an NFT
@@ -172,12 +180,12 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         _handleOutgoingTransfer(offer.buyer, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
 
-        emit NFTOfferCanceled(_offerId, offer);
+        emit NFTOfferCanceled(_tokenContract, _tokenId, _offerId, offer);
 
         delete offers[_tokenContract][_tokenId][offerCount];
     }
 
-    /// ------------ SELLER FUNCTIONS ------------
+    /// ------------ NFT SELLER FUNCTIONS ------------
 
     /// @notice Fills the offer for an NFT, transferring the ETH/ERC-20 to the seller and NFT to the buyer
     /// @param _tokenContract The ERC-721 token address of the offer
@@ -219,7 +227,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: offer.currency, tokenId: 0, amount: offer.amount});
 
         emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
-        emit NFTOfferFilled(_offerId, msg.sender, _finder, offer);
+        emit NFTOfferFilled(_tokenContract, _tokenId, _offerId, msg.sender, _finder, offer);
 
         delete offers[_tokenContract][_tokenId][offerCount];
     }
