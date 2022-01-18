@@ -80,21 +80,9 @@ task('deployOffersV1', 'Deploy Offers V1')
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployOffersV1);
 
-task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
-  .addParam(
-    'royaltyRegistry',
-    'Manifold Royalty Registry',
-    undefined,
-    types.string
-  )
-  .addParam(
-    'protocolFeeSettings',
-    'ZORA Protocol fee settings',
-    undefined,
-    types.string
-  )
-  .addParam('weth', 'WETH address', undefined, types.string)
-  .setAction(deployCollectionOffersV1);
+task('deployCollectionOffersV1', 'Deploy Collection Offers V1').setAction(
+  deployCollectionOffersV1
+);
 
 task('deployCoveredCallsV1', 'Deploy Covered Calls V1').setAction(
   deployCoveredCallsV1

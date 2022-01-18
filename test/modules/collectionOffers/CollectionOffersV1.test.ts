@@ -664,16 +664,16 @@ describe('CollectionOffersV1', () => {
       expect(beforeCeiling.prevId.toNumber()).to.eq(4);
       expect(beforeCeiling.nextId.toNumber()).to.eq(0);
 
-      // const beforeFloorId = await collectionOffers.floorOfferId(zoraV1.address);
-      // const beforeFloorAmount = await collectionOffers.floorOfferAmount(
-      //   zoraV1.address
-      // );
-      // const beforeFloor = await collectionOffers.offers(zoraV1.address, 3);
+      const beforeFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      const beforeFloorAmount = await collectionOffers.floorOfferAmount(
+        zoraV1.address
+      );
+      const beforeFloor = await collectionOffers.offers(zoraV1.address, 3);
 
-      // expect(beforeFloorId.toNumber()).to.eq(3);
-      // expect(beforeFloorAmount.toString()).to.eq(ONE_HALF_ETH.toString());
-      // expect(beforeFloor.prevId.toNumber()).to.eq(0);
-      // expect(beforeFloor.nextId.toNumber()).to.eq(1);
+      expect(beforeFloorId.toNumber()).to.eq(3);
+      expect(beforeFloorAmount.toString()).to.eq(ONE_HALF_ETH.toString());
+      expect(beforeFloor.prevId.toNumber()).to.eq(0);
+      expect(beforeFloor.nextId.toNumber()).to.eq(1);
 
       // 3 1 5 4 2
 
@@ -694,16 +694,16 @@ describe('CollectionOffersV1', () => {
       expect(afterCeiling.prevId.toNumber()).to.eq(4);
       expect(afterCeiling.nextId.toNumber()).to.eq(0);
 
-      // const afterFloorId = await collectionOffers.floorOfferId(zoraV1.address);
-      // const afterFloorAmount = await collectionOffers.floorOfferAmount(
-      //   zoraV1.address
-      // );
-      // const afterFloor = await collectionOffers.offers(zoraV1.address, 5);
+      const afterFloorId = await collectionOffers.floorOfferId(zoraV1.address);
+      const afterFloorAmount = await collectionOffers.floorOfferAmount(
+        zoraV1.address
+      );
+      const afterFloor = await collectionOffers.offers(zoraV1.address, 5);
 
-      // expect(afterFloorId.toNumber()).to.eq(5);
-      // expect(afterFloorAmount.toString()).to.eq(TENTH_ETH.toString());
-      // expect(afterFloor.prevId.toNumber()).to.eq(0);
-      // expect(afterFloor.nextId.toNumber()).to.eq(3);
+      expect(afterFloorId.toNumber()).to.eq(5);
+      expect(afterFloorAmount.toString()).to.eq(TENTH_ETH.toString());
+      expect(afterFloor.prevId.toNumber()).to.eq(0);
+      expect(afterFloor.nextId.toNumber()).to.eq(3);
     });
 
     it('should move an increased offer behind any equal offers', async () => {
@@ -843,6 +843,102 @@ describe('CollectionOffersV1', () => {
       expect(logDescription.args.offer.amount.toString()).to.eq(
         TWO_ETH.toString()
       );
+    });
+  });
+
+  describe('#setCollectionOfferFindersFee', () => {
+    it('should update the finders fee for an offer', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
+
+      const beforeFindersFeeOverride =
+        await collectionOffers.findersFeeOverrides(zoraV1.address, 1);
+      expect(beforeFindersFeeOverride).to.eq(0);
+
+      // Update finders fee to 1000 bps (10%) from 100 bps (1%)
+      await collectionOffers
+        .connect(buyer)
+        .setCollectionOfferFindersFee(zoraV1.address, 1, 1000);
+
+      const afterFindersFee = await collectionOffers.findersFeeOverrides(
+        zoraV1.address,
+        1
+      );
+      expect(afterFindersFee).to.eq(1000);
+    });
+
+    it('should revert updating the finders fee for an inactive offer', async () => {
+      await expect(
+        collectionOffers
+          .connect(buyer)
+          .setCollectionOfferFindersFee(zoraV1.address, 1, 1000)
+      ).eventually.rejectedWith(
+        revert`setCollectionOfferFindersFee msg sender must be buyer`
+      );
+    });
+
+    it('should revert updating a finders fee not created by the buyer', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
+
+      await expect(
+        collectionOffers
+          .connect(buyer2)
+          .setCollectionOfferFindersFee(zoraV1.address, 1, 1000)
+      ).eventually.rejectedWith(
+        revert`setCollectionOfferFindersFee msg sender must be buyer`
+      );
+    });
+
+    it('should revert a finders fee greater than 10000', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
+
+      await expect(
+        collectionOffers
+          .connect(buyer)
+          .setCollectionOfferFindersFee(zoraV1.address, 1, 10001)
+      ).eventually.rejectedWith(
+        revert`setCollectionOfferFindersFee must be less than or equal to 10000 bps`
+      );
+    });
+
+    it('should emit a CollectionOfferFindersFeeUpdated event', async () => {
+      await collectionOffers
+        .connect(buyer)
+        .createCollectionOffer(zoraV1.address, {
+          value: ONE_ETH,
+        });
+      const block = await ethers.provider.getBlockNumber();
+
+      await collectionOffers
+        .connect(buyer)
+        .setCollectionOfferFindersFee(zoraV1.address, 1, 1000);
+
+      const events = await collectionOffers.queryFilter(
+        collectionOffers.filters.CollectionOfferFindersFeeUpdated(
+          null,
+          null,
+          null,
+          null
+        ),
+        block
+      );
+      expect(events.length).to.eq(1);
+      const logDescription = collectionOffers.interface.parseLog(events[0]);
+      expect(logDescription.name).to.eq('CollectionOfferFindersFeeUpdated');
+      expect(logDescription.args.id.toNumber()).to.eq(1);
+      expect(logDescription.args.findersFeeBps.toString()).to.eq('1000');
+      expect(logDescription.args.offer.buyer).to.eq(await buyer.getAddress());
     });
   });
 

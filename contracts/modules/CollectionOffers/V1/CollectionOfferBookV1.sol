@@ -3,16 +3,12 @@ pragma solidity 0.8.10;
 
 /// ------------ IMPORTS ------------
 
-import {Counters} from "@openzeppelin/contracts/utils/Counters.sol";
-
 /// @title Collection Offer Book V1
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This module extension manages offers placed on ERC-721 collections
 contract CollectionOfferBookV1 {
-    using Counters for Counters.Counter;
-
-    /// @notice The total number of offers
-    Counters.Counter public offerCounter;
+    /// @notice The number of offers placed
+    uint256 public offerCount;
 
     /// @notice An individual offer
     struct Offer {
@@ -25,23 +21,33 @@ contract CollectionOfferBookV1 {
 
     /// ------------ PUBLIC STORAGE ------------
 
-    /// @notice The offer for a given collection + offer ID
-    /// @dev NFT address => offer ID => Offer
+    /// @notice The metadata for a given collection offer
+    /// @dev ERC-721 token address => ERC-721 token ID => Offer ID => Offer
     mapping(address => mapping(uint256 => Offer)) public offers;
 
     /// @notice The floor offer ID for a given collection
+    /// @dev ERC-721 token address => Floor offer ID
     mapping(address => uint256) public floorOfferId;
+
     /// @notice The floor offer amount for a given collection
+    /// @dev ERC-721 token address => Floor offer amount
     mapping(address => uint256) public floorOfferAmount;
 
     /// @notice The ceiling offer ID for a given collection
+    /// @dev ERC-721 token address => Ceiling offer ID
     mapping(address => uint256) public ceilingOfferId;
+
     /// @notice The ceiling offer amount for a given collection
+    /// @dev ERC-721 token address => Ceiling offer amount
     mapping(address => uint256) public ceilingOfferAmount;
+
+    /// @notice The finders fee bps (if overriden) for a given collection offer
+    /// @notice ERC-721 token address => Offer ID => Finders Fee BPS
+    mapping(address => mapping(uint256 => uint16)) public findersFeeOverrides;
 
     /// ------------ INTERNAL FUNCTIONS ------------
 
-    /// @notice Creates a new offer and places it at the apt location in its collection's offer book
+    /// @notice Creates and places a new offer in its collection's offer book
     /// @param _offerAmount The amount of ETH offered
     /// @param _buyer The address of the buyer
     /// @return The ID of the created collection offer
@@ -50,37 +56,36 @@ contract CollectionOfferBookV1 {
         uint256 _offerAmount,
         address _buyer
     ) internal returns (uint256) {
-        offerCounter.increment();
-        uint256 _id = offerCounter.current();
+        offerCount++;
 
         // If its the first offer for a collection, mark it as both floor and ceiling
         if (_isFirstOffer(_collection)) {
-            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: 0, nextId: 0});
+            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: 0, nextId: 0});
 
-            floorOfferId[_collection] = _id;
+            floorOfferId[_collection] = offerCount;
             floorOfferAmount[_collection] = _offerAmount;
 
-            ceilingOfferId[_collection] = _id;
+            ceilingOfferId[_collection] = offerCount;
             ceilingOfferAmount[_collection] = _offerAmount;
 
             // Else if offer is greater than current ceiling, make it the new ceiling
         } else if (_isNewCeiling(_collection, _offerAmount)) {
             uint256 prevCeilingId = ceilingOfferId[_collection];
 
-            offers[_collection][prevCeilingId].nextId = _id;
-            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: prevCeilingId, nextId: 0});
+            offers[_collection][prevCeilingId].nextId = offerCount;
+            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: prevCeilingId, nextId: 0});
 
-            ceilingOfferId[_collection] = _id;
+            ceilingOfferId[_collection] = offerCount;
             ceilingOfferAmount[_collection] = _offerAmount;
 
             // Else if offer is less than or equal to the current floor, make it the new floor
         } else if (_isNewFloor(_collection, _offerAmount)) {
             uint256 prevFloorId = floorOfferId[_collection];
 
-            offers[_collection][prevFloorId].prevId = _id;
-            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: 0, nextId: prevFloorId});
+            offers[_collection][prevFloorId].prevId = offerCount;
+            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: 0, nextId: prevFloorId});
 
-            floorOfferId[_collection] = _id;
+            floorOfferId[_collection] = offerCount;
             floorOfferAmount[_collection] = _offerAmount;
 
             // Else offer is between the floor and ceiling --
@@ -93,14 +98,14 @@ contract CollectionOfferBookV1 {
                 offer = offers[_collection][offer.nextId];
             }
 
-            offers[_collection][_id] = Offer({buyer: _buyer, amount: _offerAmount, id: _id, prevId: offer.prevId, nextId: offer.id});
+            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: offer.prevId, nextId: offer.id});
 
             // Update neighboring pointers
-            offers[_collection][offer.id].prevId = _id;
-            offers[_collection][offer.prevId].nextId = _id;
+            offers[_collection][offer.id].prevId = offerCount;
+            offers[_collection][offer.prevId].nextId = offerCount;
         }
 
-        return _id;
+        return offerCount;
     }
 
     /// @notice Updates an offer and (if needed) its location relative to other offers in the collection
