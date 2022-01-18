@@ -1,0 +1,11 @@
+@startuml
+actor ModuleOwner
+participant ZoraProtocolFeeSettings
+
+ModuleOwner -> ZoraProtocolFeeSettings : setFeeParams()
+
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : set fee parameters
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : emit ProtocolFeeUpdated()
+
+@enduml
+

@@ -5,14 +5,15 @@ import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.s
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
-import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
-import {RoyaltyPayoutSupportV1} from "../../../common/RoyaltyPayoutSupport/V1/RoyaltyPayoutSupportV1.sol";
+import {UniversalExchangeEventV1} from "../../../common/UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
+import {OutgoingTransferSupportV1} from "../../../common/OutgoingTransferSupport/V1/OutgoingTransferSupportV1.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
+import {FeePayoutSupportV1} from "../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
 
 /// @title Reserve Auction V1
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to list and bid on ERC-721 tokens with timed reserve auctions
-contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1 {
+contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1 {
     address private constant ADDRESS_ZERO = address(0);
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
@@ -78,8 +79,12 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         address _zoraV1Media,
         address _zoraV1Market,
         address _royaltyEngine,
+        address _protocolFeeSettings,
         address _wethAddress
-    ) IncomingTransferSupportV1(_erc20TransferHelper) RoyaltyPayoutSupportV1(_royaltyEngine, _wethAddress) {
+    )
+        IncomingTransferSupportV1(_erc20TransferHelper)
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+    {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
         zoraV1Media = _zoraV1Media;
         zoraV1Market = _zoraV1Market;
@@ -246,6 +251,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         require(block.timestamp >= (auction.firstBidTime + auction.duration), "settleAuction auction hasn't completed");
 
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
+        remainingProfit = _handleProtocolFeePayout(remainingProfit, auction.auctionCurrency);
 
         if (auction.finder != ADDRESS_ZERO) {
             uint256 finderFee = (remainingProfit * auction.findersFeePercentage) / 100;

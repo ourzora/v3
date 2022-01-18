@@ -1,0 +1,22 @@
+         ,-.                                                    
+         `-'                                                    
+         /|\                                                    
+          |               ,-----------------.                   
+         / \              |ZoraModuleManager|                   
+      Registrar           `--------+--------'                   
+          |    setRegistrar()      |                            
+          |----------------------->|                            
+          |                        |                            
+          |                        ----.                        
+          |                            | set registrar          
+          |                        <---'                        
+          |                        |                            
+          |                        ----.                        
+          |                            | emit RegistrarChanged()
+          |                        <---'                        
+      Registrar           ,--------+--------.                   
+         ,-.              |ZoraModuleManager|                   
+         `-'              `-----------------'                   
+         /|\                                                    
+          |                                                     
+         / \                                                    

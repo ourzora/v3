@@ -1,0 +1,12 @@
+@startuml
+actor Minter
+participant ZoraProtocolFeeSettings
+
+Minter -> ZoraProtocolFeeSettings : mint()
+
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : derive token ID from module address
+ZoraProtocolFeeSettings -> ZoraProtocolFeeSettings : mint token to given address
+ZoraProtocolFeeSettings -> Minter : return token ID
+
+@enduml
+

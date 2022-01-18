@@ -16,13 +16,13 @@ import {
   approveNFTTransfer,
   deployERC20TransferHelper,
   deployERC721TransferHelper,
+  deployProtocolFeeSettings,
   deployReserveAuctionV1,
   deployRoyaltyEngine,
   deployTestEIP2981ERC721,
-  deployTestERC271,
+  deployTestERC721,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   deployZoraProtocol,
   mintERC2981Token,
   mintERC721Token,
@@ -30,7 +30,6 @@ import {
   ONE_DAY,
   ONE_ETH,
   ONE_HALF_ETH,
-  proposeModule,
   registerModule,
   TENTH_ETH,
   THOUSANDTH_ETH,
@@ -70,21 +69,21 @@ describe('ReserveAuctionV1 integration', () => {
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
     zoraV1Market = zoraProtocol.market;
-    testERC721 = await deployTestERC271();
+    testERC721 = await deployTestERC721();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     royaltyEngine = await deployRoyaltyEngine();
     weth = await deployWETH();
-    const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+    const feeSettings = await deployProtocolFeeSettings();
+    const moduleManager = await deployZoraModuleManager(
+      await deployer.getAddress(),
+      feeSettings.address
     );
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address, testERC721.address);
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     reserveAuction = await deployReserveAuctionV1(
       erc20TransferHelper.address,
@@ -92,22 +91,23 @@ describe('ReserveAuctionV1 integration', () => {
       zoraV1.address,
       zoraV1Market.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
-    await proposeModule(proposalManager, reserveAuction.address);
-    await registerModule(proposalManager, reserveAuction.address);
 
-    await approvalManager.setApprovalForModule(reserveAuction.address, true);
-    await approvalManager
+    await registerModule(moduleManager, reserveAuction.address);
+
+    await moduleManager.setApprovalForModule(reserveAuction.address, true);
+    await moduleManager
       .connect(deployer)
       .setApprovalForModule(reserveAuction.address, true);
-    await approvalManager
+    await moduleManager
       .connect(bidderA)
       .setApprovalForModule(reserveAuction.address, true);
-    await approvalManager
+    await moduleManager
       .connect(bidderB)
       .setApprovalForModule(reserveAuction.address, true);
-    await approvalManager
+    await moduleManager
       .connect(otherUser)
       .setApprovalForModule(reserveAuction.address, true);
   });
@@ -338,8 +338,7 @@ describe('ReserveAuctionV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testEIP2981ERC721,
-        erc721TransferHelper.address,
-        0
+        erc721TransferHelper.address
       );
     });
 
@@ -580,8 +579,7 @@ describe('ReserveAuctionV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testERC721,
-        erc721TransferHelper.address,
-        0
+        erc721TransferHelper.address
       );
       await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
         [await deployer.getAddress()],

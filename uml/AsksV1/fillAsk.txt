@@ -1,0 +1,28 @@
+@startuml
+actor Caller
+participant AsksV1
+participant ERC721TransferHelper
+
+Caller -> AsksV1 : fillAsk()
+
+AsksV1 -> AsksV1 : validate received funds
+
+AsksV1 -> AsksV1 : handle royalty payouts
+
+alt finders fee configured for this ask?
+
+    AsksV1 -> AsksV1 : handle finders fee payout
+
+else noop
+
+end
+
+AsksV1 -> AsksV1 : handle seller funds recipient payout
+AsksV1 -> ERC721TransferHelper : transferFrom()
+ERC721TransferHelper -> ERC721TransferHelper : transfer NFT from seller to buyer
+AsksV1 -> AsksV1 : emit ExchangeExecuted()
+AsksV1 -> AsksV1 : emit AskFilled()
+AsksV1 -> AsksV1 : delete ask from contract
+
+@enduml
+

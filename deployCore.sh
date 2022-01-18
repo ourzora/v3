@@ -25,8 +25,7 @@ then
 fi
 
 npx hardhat compile;
-npx hardhat deployZPM --network $NETWORK --registrar-address $REGISTRAR_ADDRESS;
-npx hardhat deployZMAM --network $NETWORK;
+npx hardhat deployZMM --network $NETWORK --registrar-address $REGISTRAR_ADDRESS;
 npx hardhat deployTransferHelper --network $NETWORK --transfer-type ERC20;
 npx hardhat deployTransferHelper --network $NETWORK --transfer-type ERC721;
 

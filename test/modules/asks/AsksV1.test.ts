@@ -9,6 +9,7 @@ import {
   AsksV1,
   WETH,
   RoyaltyEngineV1,
+  TestERC721,
 } from '../../../typechain';
 import {
   approveNFTTransfer,
@@ -17,17 +18,17 @@ import {
   deployAsksV1,
   deployRoyaltyEngine,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   mintZoraNFT,
   ONE_ETH,
-  proposeModule,
   registerModule,
   revert,
   THOUSANDTH_ETH,
   toRoundedNumber,
   TWO_ETH,
   deployZoraProtocol,
+  deployProtocolFeeSettings,
+  deployTestERC721,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -37,7 +38,7 @@ describe('AsksV1', () => {
   let zoraV1: Media;
   let weth: WETH;
   let deployer: Signer;
-  let buyerA: Signer;
+  let buyer: Signer;
   let sellerFundsRecipient: Signer;
   let finder: Signer;
   let otherUser: Signer;
@@ -45,11 +46,12 @@ describe('AsksV1', () => {
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
   let royaltyEngine: RoyaltyEngineV1;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
-    buyerA = signers[1];
+    buyer = signers[1];
     sellerFundsRecipient = signers[2];
     otherUser = signers[3];
     finder = signers[4];
@@ -57,32 +59,37 @@ describe('AsksV1', () => {
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
     weth = await deployWETH();
-    const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+    testERC721 = await deployTestERC721();
+    const feeSettings = await deployProtocolFeeSettings();
+    const moduleManager = await deployZoraModuleManager(
+      await deployer.getAddress(),
+      feeSettings.address
     );
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address, testERC721.address);
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
     asks = await deployAsksV1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 
-    await proposeModule(proposalManager, asks.address);
-    await registerModule(proposalManager, asks.address);
+    await registerModule(moduleManager, asks.address);
 
-    await approvalManager.setApprovalForModule(asks.address, true);
-    await approvalManager
-      .connect(buyerA)
+    await moduleManager.setApprovalForModule(asks.address, true);
+    await moduleManager
+      .connect(operator)
+      .setApprovalForModule(asks.address, true);
+    await moduleManager.connect(buyer).setApprovalForModule(asks.address, true);
+    await moduleManager
+      .connect(otherUser)
       .setApprovalForModule(asks.address, true);
 
     await mintZoraNFT(zoraV1);
@@ -97,7 +104,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
 
       const ask = await asks.askForNFT(zoraV1.address, 0);
@@ -123,7 +130,7 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
       const ask = await asks.askForNFT(zoraV1.address, 0);
@@ -138,7 +145,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
 
       const beforeAskSeller = (await asks.askForNFT(zoraV1.address, 0)).seller;
@@ -146,27 +153,27 @@ describe('AsksV1', () => {
 
       await zoraV1.transferFrom(
         await deployer.getAddress(),
-        await buyerA.getAddress(),
+        await buyer.getAddress(),
         0
       );
 
       await zoraV1
-        .connect(buyerA)
+        .connect(buyer)
         .setApprovalForAll(erc721TransferHelper.address, true);
 
       await asks
-        .connect(buyerA)
+        .connect(buyer)
         .createAsk(
           zoraV1.address,
           0,
           TWO_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          10
+          1000
         );
 
       const afterAskSeller = (await asks.askForNFT(zoraV1.address, 0)).seller;
-      expect(afterAskSeller).to.eq(await buyerA.getAddress());
+      expect(afterAskSeller).to.eq(await buyer.getAddress());
     });
 
     it('should emit an AskCreated event', async () => {
@@ -177,7 +184,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
 
       const events = await asks.queryFilter(
@@ -203,11 +210,9 @@ describe('AsksV1', () => {
             ONE_ETH,
             ethers.constants.AddressZero,
             ethers.constants.AddressZero,
-            10
+            1000
           )
-      ).eventually.rejectedWith(
-        'createAsk must be token owner or approved operator'
-      );
+      ).eventually.rejectedWith('createAsk must be token owner or operator');
     });
 
     it('should revert if seller did not approve ERC-721 Transfer Helper', async () => {
@@ -226,10 +231,10 @@ describe('AsksV1', () => {
             TWO_ETH,
             ethers.constants.AddressZero,
             await sellerFundsRecipient.getAddress(),
-            10
+            1000
           )
       ).eventually.rejectedWith(
-        'createAsk must approve ZORA ERC-721 Transfer Helper from _tokenContract'
+        'createAsk must approve ERC721TransferHelper as operator'
       );
     });
 
@@ -241,12 +246,12 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
-          10
+          1000
         )
-      ).eventually.rejectedWith('createAsk must specify sellerFundsRecipient');
+      ).eventually.rejectedWith('createAsk must specify _sellerFundsRecipient');
     });
 
-    it('should revert if the finders fee percentage is greater than 100', async () => {
+    it('should revert if the finders fee bps is greater than 10000', async () => {
       await expect(
         asks.createAsk(
           zoraV1.address,
@@ -254,10 +259,10 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
-          101
+          10001
         )
       ).eventually.rejectedWith(
-        'createAsk finders fee percentage must be less than or equal to 100'
+        'createAsk finders fee bps must be less than or equal to 10000'
       );
     });
   });
@@ -270,7 +275,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
     });
 
@@ -303,13 +308,13 @@ describe('AsksV1', () => {
     it('should revert when the msg.sender is not the seller', async () => {
       await expect(
         asks
-          .connect(buyerA)
+          .connect(buyer)
           .setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address)
       ).eventually.rejectedWith(revert`setAskPrice must be seller`);
     });
     it('should revert if the ask has been sold', async () => {
       await asks
-        .connect(buyerA)
+        .connect(buyer)
         .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
           value: ONE_ETH,
         });
@@ -335,7 +340,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
     });
 
@@ -371,17 +376,17 @@ describe('AsksV1', () => {
       await expect(
         asks.connect(otherUser).cancelAsk(zoraV1.address, 0)
       ).eventually.rejectedWith(
-        revert`cancelAsk must be seller or invalid ask`
+        revert`cancelAsk must be token owner or operator`
       );
     });
 
     it('should cancel an ask if the ask is no longer valid', async () => {
       await zoraV1.transferFrom(
         await deployer.getAddress(),
-        await buyerA.getAddress(),
+        await buyer.getAddress(),
         0
       );
-      await asks.connect(buyerA).cancelAsk(zoraV1.address, 0);
+      await asks.connect(buyer).cancelAsk(zoraV1.address, 0);
       const ask = await asks.askForNFT(zoraV1.address, 0);
       expect(ask.seller.toString()).to.eq(
         ethers.constants.AddressZero.toString()
@@ -390,7 +395,7 @@ describe('AsksV1', () => {
 
     it('should revert if the ask has been filled already', async () => {
       await asks
-        .connect(buyerA)
+        .connect(buyer)
         .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
           value: ONE_ETH,
         });
@@ -409,7 +414,7 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
-        10
+        1000
       );
     });
 
@@ -419,17 +424,17 @@ describe('AsksV1', () => {
         [ONE_ETH.div(2)]
       );
 
-      const buyerBeforeBalance = await buyerA.getBalance();
+      const buyerBeforeBalance = await buyer.getBalance();
       const minterBeforeBalance = await deployer.getBalance();
       const sellerFundsRecipientBeforeBalance =
         await sellerFundsRecipient.getBalance();
       const finderBeforeBalance = await finder.getBalance();
       await asks
-        .connect(buyerA)
+        .connect(buyer)
         .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
           value: ONE_ETH,
         });
-      const buyerAfterBalance = await buyerA.getBalance();
+      const buyerfterBalance = await buyer.getBalance();
       const minterAfterBalance = await deployer.getBalance();
       const sellerFundsRecipientAfterBalance =
         await sellerFundsRecipient.getBalance();
@@ -438,7 +443,7 @@ describe('AsksV1', () => {
       const ask = await asks.askForNFT(zoraV1.address, 0);
       expect(ask.seller.toString()).to.eq(ethers.constants.AddressZero);
 
-      expect(toRoundedNumber(buyerAfterBalance)).to.approximately(
+      expect(toRoundedNumber(buyerfterBalance)).to.approximately(
         toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
         5
       );
@@ -447,7 +452,7 @@ describe('AsksV1', () => {
         toRoundedNumber(minterBeforeBalance.add(ONE_ETH.div(2)))
       );
 
-      // 0.5ETH creator fee + 1 ETH bid * 10% finder fee -> .05 ETH profit
+      // 0.5ETH creator fee + 1 ETH bid * 1000 bps finders fee -> .05 ETH profit
       expect(toRoundedNumber(finderAfterBalance)).to.eq(
         toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(50)))
       );
@@ -459,14 +464,14 @@ describe('AsksV1', () => {
         )
       );
 
-      expect(await zoraV1.ownerOf(0)).to.eq(await buyerA.getAddress());
+      expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
     });
 
     it('should emit an ExchangeExecuted event', async () => {
       const block = await ethers.provider.getBlockNumber();
 
       await asks
-        .connect(buyerA)
+        .connect(buyer)
         .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
           value: ONE_ETH,
         });
@@ -481,7 +486,7 @@ describe('AsksV1', () => {
       const logDescription = asks.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('ExchangeExecuted');
       expect(logDescription.args.userA).to.eq(await deployer.getAddress());
-      expect(logDescription.args.userB).to.eq(await buyerA.getAddress());
+      expect(logDescription.args.userB).to.eq(await buyer.getAddress());
 
       expect(logDescription.args.a.tokenContract).to.eq(zoraV1.address);
       expect(logDescription.args.b.tokenContract).to.eq(

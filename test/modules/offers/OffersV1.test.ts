@@ -9,6 +9,7 @@ import {
   OffersV1,
   WETH,
   RoyaltyEngineV1,
+  TestERC721,
 } from '../../../typechain';
 
 import {
@@ -16,15 +17,15 @@ import {
   deployERC20TransferHelper,
   deployERC721TransferHelper,
   deployOffersV1,
+  deployProtocolFeeSettings,
   deployRoyaltyEngine,
+  deployTestERC721,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   deployZoraProtocol,
   mintZoraNFT,
   ONE_ETH,
   ONE_HALF_ETH,
-  proposeModule,
   registerModule,
   revert,
   TENTH_ETH,
@@ -46,6 +47,7 @@ describe('OffersV1', () => {
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
   let royaltyEngine: RoyaltyEngineV1;
+  let testERC721: TestERC721;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -58,19 +60,20 @@ describe('OffersV1', () => {
     zoraV1 = zoraProtocol.media;
 
     weth = await deployWETH();
+    testERC721 = await deployTestERC721();
 
-    const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+    const feeSettings = await deployProtocolFeeSettings();
+    const moduleManager = await deployZoraModuleManager(
+      await deployer.getAddress(),
+      feeSettings.address
     );
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address, testERC721.address);
 
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
 
@@ -78,14 +81,14 @@ describe('OffersV1', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 
-    await proposeModule(proposalManager, offers.address);
-    await registerModule(proposalManager, offers.address);
+    await registerModule(moduleManager, offers.address);
 
-    await approvalManager.setApprovalForModule(offers.address, true);
-    await approvalManager
+    await moduleManager.setApprovalForModule(offers.address, true);
+    await moduleManager
       .connect(buyer)
       .setApprovalForModule(offers.address, true);
 

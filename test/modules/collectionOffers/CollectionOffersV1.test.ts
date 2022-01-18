@@ -17,14 +17,12 @@ import {
   deployERC721TransferHelper,
   deployCollectionOffersV1,
   deployRoyaltyEngine,
-  deployTestERC271,
+  deployTestERC721,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   deployZoraProtocol,
   mintZoraNFT,
   mintMultipleERC721Tokens,
-  proposeModule,
   registerModule,
   revert,
   toRoundedNumber,
@@ -39,6 +37,7 @@ import {
   TEN_ETH,
   TEN_POINT_FIVE_ETH,
   TWENTY_ETH,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -72,21 +71,21 @@ describe('CollectionOffersV1', () => {
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
 
-    testERC721 = await deployTestERC271();
+    testERC721 = await deployTestERC721();
     weth = await deployWETH();
 
-    const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+    const feeSettings = await deployProtocolFeeSettings();
+    const moduleManager = await deployZoraModuleManager(
+      await deployer.getAddress(),
+      feeSettings.address
     );
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address, testERC721.address);
 
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
 
@@ -94,14 +93,14 @@ describe('CollectionOffersV1', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 
-    await proposeModule(proposalManager, collectionOffers.address);
-    await registerModule(proposalManager, collectionOffers.address);
+    await registerModule(moduleManager, collectionOffers.address);
 
-    await approvalManager.setApprovalForModule(collectionOffers.address, true);
-    await approvalManager
+    await moduleManager.setApprovalForModule(collectionOffers.address, true);
+    await moduleManager
       .connect(buyer)
       .setApprovalForModule(collectionOffers.address, true);
 

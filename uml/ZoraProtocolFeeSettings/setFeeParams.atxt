@@ -1,0 +1,22 @@
+          ,-.                                                          
+          `-'                                                          
+          /|\                                                          
+           |                ,-----------------------.                  
+          / \               |ZoraProtocolFeeSettings|                  
+      ModuleOwner           `-----------+-----------'                  
+           |      setFeeParams()        |                              
+           |--------------------------->|                              
+           |                            |                              
+           |                            ----.                          
+           |                                | set fee parameters       
+           |                            <---'                          
+           |                            |                              
+           |                            ----.                          
+           |                                | emit ProtocolFeeUpdated()
+           |                            <---'                          
+      ModuleOwner           ,-----------+-----------.                  
+          ,-.               |ZoraProtocolFeeSettings|                  
+          `-'               `-----------------------'                  
+          /|\                                                          
+           |                                                           
+          / \                                                          

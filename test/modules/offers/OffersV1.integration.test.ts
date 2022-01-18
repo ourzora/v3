@@ -19,22 +19,21 @@ import {
   deployOffersV1,
   deployRoyaltyEngine,
   deployTestEIP2981ERC721,
-  deployTestERC271,
+  deployTestERC721,
   deployWETH,
-  deployZoraModuleApprovalsManager,
-  deployZoraProposalManager,
+  deployZoraModuleManager,
   deployZoraProtocol,
   mintERC2981Token,
   mintERC721Token,
   mintZoraNFT,
   ONE_ETH,
-  proposeModule,
   registerModule,
   toRoundedNumber,
   ONE_HALF_ETH,
   TWO_ETH,
   TEN_ETH,
   THOUSANDTH_ETH,
+  deployProtocolFeeSettings,
 } from '../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
@@ -64,22 +63,22 @@ describe('OffersV1 integration', () => {
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
 
-    testERC721 = await deployTestERC271();
+    testERC721 = await deployTestERC721();
     testEIP2981ERC721 = await deployTestEIP2981ERC721();
     weth = await deployWETH();
 
-    const proposalManager = await deployZoraProposalManager(
-      await deployer.getAddress()
+    const feeSettings = await deployProtocolFeeSettings();
+    const moduleManager = await deployZoraModuleManager(
+      await deployer.getAddress(),
+      feeSettings.address
     );
-    const approvalManager = await deployZoraModuleApprovalsManager(
-      proposalManager.address
-    );
+    await feeSettings.init(moduleManager.address, testERC721.address);
 
     erc20TransferHelper = await deployERC20TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     erc721TransferHelper = await deployERC721TransferHelper(
-      approvalManager.address
+      moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
 
@@ -87,14 +86,14 @@ describe('OffersV1 integration', () => {
       erc20TransferHelper.address,
       erc721TransferHelper.address,
       royaltyEngine.address,
+      feeSettings.address,
       weth.address
     );
 
-    await proposeModule(proposalManager, offers.address);
-    await registerModule(proposalManager, offers.address);
+    await registerModule(moduleManager, offers.address);
 
-    await approvalManager.setApprovalForModule(offers.address, true);
-    await approvalManager
+    await moduleManager.setApprovalForModule(offers.address, true);
+    await moduleManager
       .connect(buyer)
       .setApprovalForModule(offers.address, true);
   });
@@ -332,8 +331,7 @@ describe('OffersV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testEIP2981ERC721,
-        erc721TransferHelper.address,
-        0
+        erc721TransferHelper.address
       );
     });
 
@@ -563,8 +561,7 @@ describe('OffersV1 integration', () => {
       await approveNFTTransfer(
         // @ts-ignore
         testERC721,
-        erc721TransferHelper.address,
-        0
+        erc721TransferHelper.address
       );
       await (royaltyEngine as unknown as MockContract).mock.getRoyalty.returns(
         [await deployer.getAddress()],

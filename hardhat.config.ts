@@ -6,30 +6,30 @@ import 'hardhat-gas-reporter';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-dependency-compiler';
 import dotenv from 'dotenv';
-import { deployZPM } from './scripts/deployZPM';
-import { deployZMAM } from './scripts/deployZMAM';
+import { deployZMM } from './scripts/deployZMM';
 import { deployTransferHelper } from './scripts/deployTransferHelper';
 import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
-import { proposeModule } from './scripts/proposeModule';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
 import { deployCoveredCallsV1 } from './scripts/deployCoveredCallsV1';
+import { deployProtocolFeeSettings } from './scripts/deployProtocolFeeSettings';
 
 const env = dotenv.config().parsed;
 
-task('deployZPM', 'Deploy Zora Proposal Manager')
+task(
+  'deployProtocolFeeSettings',
+  'Deploy Zora Protocol Fee Settings'
+).setAction(deployProtocolFeeSettings);
+
+task('deployZMM', 'Deploy Zora Module Manager')
   .addParam(
     'registrarAddress',
     'Address to use for registering proposals',
     undefined,
     types.string
   )
-  .setAction(deployZPM);
-
-task('deployZMAM', 'Deploy Zora Module Approvals Manager').setAction(
-  deployZMAM
-);
+  .setAction(deployZMM);
 
 task('deployTransferHelper', 'Deploy A Transfer Helper')
   .addParam(
@@ -59,27 +59,16 @@ task('deployReserveAuctionV1', 'Deploy Reserve Auction V1')
     undefined,
     types.string
   )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
+    undefined,
+    types.string
+  )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployReserveAuctionV1);
 
-task('proposeModule', 'Propose a new module')
-  .addParam(
-    'moduleAddress',
-    'Address of the module to approve',
-    undefined,
-    types.string
-  )
-  .setAction(proposeModule);
-
-task('deployAsksV1', 'Deploy Asks V1')
-  .addParam(
-    'royaltyRegistry',
-    'Manifold Royalty Registry',
-    undefined,
-    types.string
-  )
-  .addParam('weth', 'WETH address', undefined, types.string)
-  .setAction(deployAsksV1);
+task('deployAsksV1', 'Deploy Asks V1').setAction(deployAsksV1);
 
 task('deployOffersV1', 'Deploy Offers V1')
   .addParam(
@@ -95,6 +84,12 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
   .addParam(
     'royaltyRegistry',
     'Manifold Royalty Registry',
+    undefined,
+    types.string
+  )
+  .addParam(
+    'protocolFeeSettings',
+    'ZORA Protocol fee settings',
     undefined,
     types.string
   )
@@ -117,7 +112,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 2000,
       },
     },
   },
@@ -137,6 +132,10 @@ const config: HardhatUserConfig = {
     ropsten: {
       accounts: env ? [`0x${env.ROPSTEN_PRIVATE_KEY}`] : [],
       url: env ? env.ROPSTEN_RPC_URL : '',
+    },
+    mainnet: {
+      accounts: env ? [`0x${env.MAINNET_PRIVATE_KEY}`] : [],
+      url: env ? env.MAINNET_RPC_URL : '',
     },
   },
   dependencyCompiler: {

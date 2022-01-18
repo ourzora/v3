@@ -8,14 +8,14 @@ import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.s
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
-import {UniversalExchangeEventV1} from "../../UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
-import {RoyaltyPayoutSupportV1} from "../../../common/RoyaltyPayoutSupport/V1/RoyaltyPayoutSupportV1.sol";
+import {UniversalExchangeEventV1} from "../../../common/UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
+import {FeePayoutSupportV1} from "../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
 
 /// @title Offers V1
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This module allows buyers to make offers on any ERC-721 token
-contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, RoyaltyPayoutSupportV1 {
+contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1 {
     using Counters for Counters.Counter;
 
     uint256 private constant USE_ALL_GAS_FLAG = 0;
@@ -60,13 +60,18 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
+    /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
     /// @param _wethAddress WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
         address _royaltyEngine,
+        address _protocolFeeSettings,
         address _wethAddress
-    ) IncomingTransferSupportV1(_erc20TransferHelper) RoyaltyPayoutSupportV1(_royaltyEngine, _wethAddress) {
+    )
+        IncomingTransferSupportV1(_erc20TransferHelper)
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+    {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
@@ -164,6 +169,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         // Payout respective parties, ensuring royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(offer.tokenContract, offer.tokenId, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
+        remainingProfit = _handleProtocolFeePayout(remainingProfit, offer.currency);
 
         if (_finder != address(0)) {
             uint256 finderFee = (remainingProfit * offer.findersFeePercentage) / 100;

@@ -5,11 +5,12 @@ import assert from 'assert';
 export interface Args {
   zoraV1Media: string;
   royaltyRegistry: string;
+  protocolFeeSettings: string;
   weth: string;
 }
 
 export async function deployOffersV1(
-  { royaltyRegistry, weth }: Args,
+  { royaltyRegistry, protocolFeeSettings, weth }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
   const [deployer] = await hre.ethers.getSigners();
@@ -34,6 +35,8 @@ export async function deployOffersV1(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
     royaltyRegistry,
+    protocolFeeSettings,
+    // @ts-ignore
     weth
   );
   console.log(

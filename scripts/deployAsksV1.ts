@@ -2,15 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import * as fs from 'fs-extra';
 import assert from 'assert';
 
-export interface Args {
-  royaltyRegistry: string;
-  weth: string;
-}
-
-export async function deployAsksV1(
-  { royaltyRegistry, weth }: Args,
-  hre: HardhatRuntimeEnvironment
-) {
+export async function deployAsksV1(_, hre: HardhatRuntimeEnvironment) {
   const [deployer] = await hre.ethers.getSigners();
   const { chainId } = await deployer.provider.getNetwork();
 
@@ -25,6 +17,15 @@ export async function deployAsksV1(
     addressBook.ERC721TransferHelper,
     `missing ERC721TransferHelper in ${addressPath}`
   );
+  assert(
+    addressBook.ZoraProtocolFeeSettings,
+    `missing ZoraProtocolFeeSettings in ${addressPath}`
+  );
+  assert(addressBook.WETH, `missing WETH in ${addressPath}`);
+  assert(
+    addressBook.RoyaltyEngineV1,
+    `missing RoyaltyEngineV1 in ${addressPath}`
+  );
 
   console.log(`Deploying AsksV1 from address ${await deployer.getAddress()}`);
 
@@ -32,8 +33,9 @@ export async function deployAsksV1(
   const asks = await AsksFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
-    royaltyRegistry,
-    weth
+    addressBook.RoyaltyEngineV1,
+    addressBook.ZoraProtocolFeeSettings,
+    addressBook.WETH
   );
   console.log(
     `Deploying AsksV1 with tx ${asks.deployTransaction.hash} to address ${asks.address}`
