@@ -22,8 +22,8 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     ERC721TransferHelper public immutable erc721TransferHelper;
 
     /// @notice The metadata of a covered call option
-    /// @param seller The address of the seller placing the option to call
-    /// @param buyer The address of the buyer, or address(0) for not purchased, of the option
+    /// @param seller The address of the seller placing the call option
+    /// @param buyer The address of the call option buyer, or address(0) if not purchased
     /// @param currency The address of the ERC-20, or address(0) for ETH, denominating the option
     /// @param premium The premium price to purchase the call option
     /// @param strike The strike price to exercise the call option
@@ -83,7 +83,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
     /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
-    /// @param _wethAddress WETH token address
+    /// @param _wethAddress The WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
@@ -98,7 +98,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ SELLER FUNCTIONS ------------
+    /// ------------ NFT SELLER FUNCTIONS ------------
 
     /// @notice Creates a covered call option for an NFT
     /// @param _tokenContract The address of the ERC-721 token
@@ -140,7 +140,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         emit CallCreated(_tokenContract, _tokenId, callForNFT[_tokenContract][_tokenId]);
     }
 
-    /// @notice Cancels the call option for a given NFT, if not purchased
+    /// @notice Cancels the call option for a given NFT, if not yet purchased
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ID of the ERC-721 token
     function cancelCall(address _tokenContract, uint256 _tokenId) external {
@@ -173,9 +173,9 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         delete callForNFT[_tokenContract][_tokenId];
     }
 
-    /// ------------ BUYER FUNCTIONS ------------
+    /// ------------ NFT BUYER FUNCTIONS ------------
 
-    /// @notice Purchases a call option, transferring the NFT to the contract and premium price to the seller
+    /// @notice Purchases a call option, transferring the NFT to the contract and premium to the seller
     /// @param _tokenContract The address of the ERC-721 token contract
     /// @param _tokenId The ERC-721 token ID
     function buyCall(address _tokenContract, uint256 _tokenId) external payable nonReentrant {
@@ -185,13 +185,16 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         require(call.buyer == address(0), "buyCall call already purchased");
         require(call.expiration > block.timestamp, "buyCall call expired");
 
-        // Ensure payment is valid and take custody of premium
+        // Ensure premium payment is valid and take custody
         _handleIncomingTransfer(call.premium, call.currency);
-        // Hold NFT in escrow
+
+        // Transfer NFT to escrow from seller
         erc721TransferHelper.transferFrom(_tokenContract, call.seller, address(this), _tokenId);
+
         // Transfer premium to seller
         _handleOutgoingTransfer(call.seller, call.premium, call.currency, USE_ALL_GAS_FLAG);
 
+        // Store buyer
         call.buyer = msg.sender;
 
         emit CallPurchased(_tokenContract, _tokenId, msg.sender, call);
@@ -206,7 +209,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         require(call.buyer == msg.sender, "exerciseCall must be buyer");
         require(call.expiration > block.timestamp, "exerciseCall call expired");
 
-        // Ensure payment is valid and take custody of strike
+        // Ensure strike payment is valid and take custody
         _handleIncomingTransfer(call.strike, call.currency);
 
         // Payout respective parties, ensuring NFT royalties are honored
@@ -215,7 +218,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, call.currency);
 
-        // Transfer strike minus royalties to seller
+        // Transfer strike (minus royalties) to seller
         _handleOutgoingTransfer(call.seller, remainingProfit, call.currency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer
