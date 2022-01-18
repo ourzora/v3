@@ -12,6 +12,7 @@ import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
+import { deployCoveredCallsV1 } from './scripts/deployCoveredCallsV1';
 import { deployProtocolFeeSettings } from './scripts/deployProtocolFeeSettings';
 
 const env = dotenv.config().parsed;
@@ -94,6 +95,10 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
   )
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployCollectionOffersV1);
+
+task('deployCoveredCallsV1', 'Deploy Covered Calls V1').setAction(
+  deployCoveredCallsV1
+);
 
 const config: HardhatUserConfig = {
   solidity: {
