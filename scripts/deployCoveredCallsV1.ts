@@ -31,10 +31,10 @@ export async function deployCoveredCallsV1(_, hre: HardhatRuntimeEnvironment) {
     `Deploying CoveredCallsV1 from address ${await deployer.getAddress()}`
   );
 
-  const CollectionOffersFactory = await hre.ethers.getContractFactory(
+  const CoveredCallsFactory = await hre.ethers.getContractFactory(
     'CoveredCallsV1'
   );
-  const CoveredCalls = await CollectionOffersFactory.deploy(
+  const CoveredCalls = await CoveredCallsFactory.deploy(
     addressBook.ERC20TransferHelper,
     addressBook.ERC721TransferHelper,
     addressBook.RoyaltyEngineV1,

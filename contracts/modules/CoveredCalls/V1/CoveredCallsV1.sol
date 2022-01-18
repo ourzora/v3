@@ -211,8 +211,13 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
 
         // Payout respective parties, ensuring NFT royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, call.strike, call.currency, USE_ALL_GAS_FLAG);
+
+        // Payout optional protocol fee
+        remainingProfit = _handleProtocolFeePayout(remainingProfit, call.currency);
+
         // Transfer strike minus royalties to seller
         _handleOutgoingTransfer(call.seller, remainingProfit, call.currency, USE_ALL_GAS_FLAG);
+
         // Transfer NFT to buyer
         IERC721(_tokenContract).transferFrom(address(this), msg.sender, _tokenId);
 
