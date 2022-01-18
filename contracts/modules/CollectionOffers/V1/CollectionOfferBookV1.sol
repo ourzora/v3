@@ -10,7 +10,12 @@ contract CollectionOfferBookV1 {
     /// @notice The number of offers placed
     uint256 public offerCount;
 
-    /// @notice An individual offer
+    /// @notice The metadata of a collection offer
+    /// @param buyer The address of the buyer placing the offer
+    /// @param amount The amount of ETH offered
+    /// @param id The ID of the offer
+    /// @param prevId The ID of the previous offer in its collection's offer book
+    /// @param nextId The ID of the next offer in its collection's offer book
     struct Offer {
         address buyer;
         uint256 amount;
