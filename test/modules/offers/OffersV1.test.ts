@@ -105,7 +105,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -133,13 +133,13 @@ describe('OffersV1', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             {
               value: ONE_ETH,
             }
           )
       ).eventually.rejectedWith(
-        revert`createNFTOffer cannot make offer on owned NFT`
+        revert`createNFTOffer cannot place offer on own NFT`
       );
     });
 
@@ -152,7 +152,7 @@ describe('OffersV1', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             {
               value: ONE_HALF_ETH,
             }
@@ -171,7 +171,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -199,7 +199,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -220,7 +220,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -240,7 +240,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -249,9 +249,7 @@ describe('OffersV1', () => {
         offers
           .connect(otherUser)
           .setNFTOfferAmount(1, TWO_ETH, { value: TWO_ETH })
-      ).eventually.rejectedWith(
-        revert`setNFTOfferAmount offer must be active and caller must be original buyer`
-      );
+      ).eventually.rejectedWith(revert`setNFTOfferAmount must be buyer`);
     });
 
     it('should revert user decreasing an offer they did not create', async () => {
@@ -262,16 +260,14 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
         );
       await expect(
         offers.connect(otherUser).setNFTOfferAmount(1, ONE_HALF_ETH)
-      ).eventually.rejectedWith(
-        revert`setNFTOfferAmount offer must be active and caller must be original buyer`
-      );
+      ).eventually.rejectedWith(revert`setNFTOfferAmount must be buyer`);
     });
 
     it('should revert increasing an offer without attaching funds', async () => {
@@ -282,7 +278,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -302,7 +298,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -311,9 +307,7 @@ describe('OffersV1', () => {
 
       await expect(
         offers.connect(buyer).setNFTOfferAmount(1, ONE_HALF_ETH)
-      ).eventually.rejectedWith(
-        revert`setNFTOfferAmount offer must be active and caller must be original buyer`
-      );
+      ).eventually.rejectedWith(revert`setNFTOfferAmount must be buyer`);
     });
 
     it('should emit an NFTOfferAmountUpdated event', async () => {
@@ -325,7 +319,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -357,7 +351,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -376,7 +370,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -384,9 +378,7 @@ describe('OffersV1', () => {
       await offers.fillNFTOffer(1, await finder.getAddress());
       await expect(
         offers.connect(buyer).cancelNFTOffer(1)
-      ).eventually.rejectedWith(
-        revert`cancelNFTOffer offer must be active and caller must be original buyer`
-      );
+      ).eventually.rejectedWith(revert`cancelNFTOffer must be buyer`);
     });
 
     it('should revert canceling an offer not originally made', async () => {
@@ -397,7 +389,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -405,9 +397,7 @@ describe('OffersV1', () => {
 
       await expect(
         offers.connect(otherUser).cancelNFTOffer(1)
-      ).eventually.rejectedWith(
-        revert`cancelNFTOffer offer must be active and caller must be original buyer`
-      );
+      ).eventually.rejectedWith(revert`cancelNFTOffer must be buyer`);
     });
 
     it('should create new offer on same NFT after canceling', async () => {
@@ -418,7 +408,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -431,7 +421,7 @@ describe('OffersV1', () => {
           0,
           TENTH_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: TENTH_ETH,
           }
@@ -450,7 +440,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -484,7 +474,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -522,7 +512,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -543,7 +533,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -551,9 +541,7 @@ describe('OffersV1', () => {
 
       await expect(
         offers.connect(otherUser).fillNFTOffer(1, await finder.getAddress())
-      ).eventually.rejectedWith(
-        revert`fillNFTOffer must own token associated with offer`
-      );
+      ).eventually.rejectedWith(revert`fillNFTOffer must be token owner`);
     });
 
     it('should emit an NFTOfferFilled event', async () => {
@@ -565,7 +553,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }
@@ -593,7 +581,7 @@ describe('OffersV1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
-          10,
+          1000,
           {
             value: ONE_ETH,
           }

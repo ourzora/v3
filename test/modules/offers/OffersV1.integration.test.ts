@@ -121,7 +121,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             { value: ONE_ETH }
           );
       }
@@ -226,7 +226,7 @@ describe('OffersV1 integration', () => {
       async function run() {
         await offers
           .connect(buyer)
-          .createNFTOffer(zoraV1.address, 0, ONE_ETH, weth.address, 10, {
+          .createNFTOffer(zoraV1.address, 0, ONE_ETH, weth.address, 1000, {
             value: ONE_ETH,
           });
       }
@@ -344,7 +344,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             { value: ONE_ETH }
           );
       }
@@ -456,7 +456,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             weth.address,
-            10,
+            1000,
             {
               value: ONE_ETH,
             }
@@ -578,7 +578,7 @@ describe('OffersV1 integration', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
-            10,
+            1000,
             { value: ONE_ETH }
           );
       }
@@ -683,7 +683,7 @@ describe('OffersV1 integration', () => {
       async function run() {
         await offers
           .connect(buyer)
-          .createNFTOffer(testERC721.address, 0, ONE_ETH, weth.address, 10, {
+          .createNFTOffer(testERC721.address, 0, ONE_ETH, weth.address, 1000, {
             value: ONE_ETH,
           });
       }
