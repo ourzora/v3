@@ -393,8 +393,8 @@ export async function deployCoveredCallsV1(
   );
   await coveredCalls.deployed();
   return coveredCalls as CoveredCallsV1;
-
 }
+
 export async function deployCoveredPutsV1(
   erc20Helper: string,
   erc721Helper: string,
@@ -404,11 +404,11 @@ export async function deployCoveredPutsV1(
 ) {
   const CoveredPutsV1Factory = await ethers.getContractFactory('CoveredPutsV1');
   const coveredPuts = await CoveredPutsV1Factory.deploy(
-    erc20Helper: string,
-    erc721Helper: string,
-    royaltyRegistry: string,
-    protocolFeeSettings: string,
-    weth: string
+    erc20Helper,
+    erc721Helper,
+    royaltyRegistry,
+    protocolFeeSettings,
+    weth
   );
   await coveredPuts.deployed();
   return coveredPuts as CoveredPutsV1;
