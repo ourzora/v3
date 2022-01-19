@@ -40,6 +40,7 @@ describe('AsksV1', () => {
   let deployer: Signer;
   let buyer: Signer;
   let sellerFundsRecipient: Signer;
+  let listingFeeRecipient: Signer;
   let finder: Signer;
   let otherUser: Signer;
   let operator: Signer;
@@ -56,6 +57,7 @@ describe('AsksV1', () => {
     otherUser = signers[3];
     finder = signers[4];
     operator = signers[5];
+    listingFeeRecipient = signers[6];
     const zoraV1Protocol = await deployZoraProtocol();
     zoraV1 = zoraV1Protocol.media;
     weth = await deployWETH();
@@ -104,6 +106,8 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
+        1000,
         1000
       );
 
@@ -130,6 +134,8 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
+          await listingFeeRecipient.getAddress(),
+          1000,
           1000
         );
 
@@ -145,6 +151,8 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
+        1000,
         1000
       );
 
@@ -169,6 +177,8 @@ describe('AsksV1', () => {
           TWO_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
+          await listingFeeRecipient.getAddress(),
+          1000,
           1000
         );
 
@@ -184,6 +194,8 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
+        1000,
         1000
       );
 
@@ -210,6 +222,8 @@ describe('AsksV1', () => {
             ONE_ETH,
             ethers.constants.AddressZero,
             ethers.constants.AddressZero,
+            await listingFeeRecipient.getAddress(),
+            1000,
             1000
           )
       ).eventually.rejectedWith('createAsk must be token owner or operator');
@@ -231,6 +245,8 @@ describe('AsksV1', () => {
             TWO_ETH,
             ethers.constants.AddressZero,
             await sellerFundsRecipient.getAddress(),
+            await listingFeeRecipient.getAddress(),
+            1000,
             1000
           )
       ).eventually.rejectedWith(
@@ -246,9 +262,13 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           ethers.constants.AddressZero,
+          await listingFeeRecipient.getAddress(),
+          1000,
           1000
         )
-      ).eventually.rejectedWith('createAsk must specify _sellerFundsRecipient');
+      ).eventually.rejectedWith(
+        'createAsk must specify _sellerFundsRecipient & _listingFeeRecipient'
+      );
     });
 
     it('should revert if the finders fee bps is greater than 10000', async () => {
@@ -259,10 +279,12 @@ describe('AsksV1', () => {
           ONE_ETH,
           ethers.constants.AddressZero,
           await sellerFundsRecipient.getAddress(),
+          await listingFeeRecipient.getAddress(),
+          1000,
           10001
         )
       ).eventually.rejectedWith(
-        'createAsk finders fee bps must be less than or equal to 10000'
+        'createAsk listing & finders fee bps must each be <= 10000'
       );
     });
   });
@@ -275,6 +297,8 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
+        1000,
         1000
       );
     });
@@ -340,6 +364,8 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
+        1000,
         1000
       );
     });
@@ -414,6 +440,8 @@ describe('AsksV1', () => {
         ONE_ETH,
         ethers.constants.AddressZero,
         await sellerFundsRecipient.getAddress(),
+        await listingFeeRecipient.getAddress(),
+        1000,
         1000
       );
     });
@@ -428,6 +456,7 @@ describe('AsksV1', () => {
       const minterBeforeBalance = await deployer.getBalance();
       const sellerFundsRecipientBeforeBalance =
         await sellerFundsRecipient.getBalance();
+      const listerBeforeBalance = await listingFeeRecipient.getBalance();
       const finderBeforeBalance = await finder.getBalance();
       await asks
         .connect(buyer)
@@ -439,6 +468,7 @@ describe('AsksV1', () => {
       const sellerFundsRecipientAfterBalance =
         await sellerFundsRecipient.getBalance();
       const finderAfterBalance = await finder.getBalance();
+      const listerAfterBalance = await listingFeeRecipient.getBalance();
 
       const ask = await asks.askForNFT(zoraV1.address, 0);
       expect(ask.seller.toString()).to.eq(ethers.constants.AddressZero);
@@ -447,20 +477,26 @@ describe('AsksV1', () => {
         toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
         5
       );
-      // 0.5ETH royalty fee
+
+      // 1 ETH * 50% creator fee -> 0.5 ETH creator -> 0.5 ETH remaining
+      // 0.5 ETH * 1000 bps listing fee -> 0.05 ETH lister -> 0.45 ETH remaining
+      // 0.45 ETH * 1000 bps finders fee -> 0.045 ETH finder --> 0.405 ETH seller
+
       expect(toRoundedNumber(minterAfterBalance)).to.eq(
         toRoundedNumber(minterBeforeBalance.add(ONE_ETH.div(2)))
       );
 
-      // 0.5ETH creator fee + 1 ETH bid * 1000 bps finders fee -> .05 ETH profit
-      expect(toRoundedNumber(finderAfterBalance)).to.eq(
-        toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(50)))
+      expect(toRoundedNumber(listerAfterBalance)).to.eq(
+        toRoundedNumber(listerBeforeBalance.add(THOUSANDTH_ETH.mul(50)))
       );
 
-      // ask fee - creator fee - finder fee -> .765 ETH profit
+      expect(toRoundedNumber(finderAfterBalance)).to.eq(
+        toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(45)))
+      );
+
       expect(toRoundedNumber(sellerFundsRecipientAfterBalance)).to.eq(
         toRoundedNumber(
-          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(450))
+          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(405))
         )
       );
 
