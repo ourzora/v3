@@ -13,7 +13,7 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 
 /// @title Covered Puts V1
 /// @author kulkarohan <rohan@zora.co>
-/// @notice This module allows buyers to place covered put options on NFTs
+/// @notice This module allows users to sell covered put options on any ERC-721 token
 contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
@@ -25,15 +25,15 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
     ERC721TransferHelper public immutable erc721TransferHelper;
 
     /// @notice The metadata of a covered put option
-    /// @param buyer The address of the NFT buyer placing the put option
-    /// @param seller The address of the NFT seller, or address(0) if not purchased
-    /// @param currency The address of the ERC-20, or address(0) for ETH, denominating the option
-    /// @param premium The premium price to purchase the put option
-    /// @param strike The strike price for an exercised put option
-    /// @param expiration The expiration time of the put option
+    /// @param seller The address of the seller that created the option
+    /// @param buyer The address of the buyer, or address(0) if not purchased, that purchased the option
+    /// @param currency The address of the ERC-20, or address(0) for ETH, denominating the strike and premium
+    /// @param premium The premium price to purchase the option
+    /// @param strike The strike offer with exercising the option
+    /// @param expiration The expiration time of the option
     struct Put {
-        address buyer;
         address seller;
+        address buyer;
         address currency;
         uint256 premium;
         uint256 strike;
@@ -42,47 +42,50 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
 
     /// ------------ STORAGE ------------
 
-    /// @notice The metadata for a covered put option
+    /// @notice The metadata of a covered put option for a given NFT and put option ID
     /// @dev ERC-721 token address => ERC-721 token ID => Put ID => Put
     mapping(address => mapping(uint256 => mapping(uint256 => Put))) public puts;
 
-    /// @notice The covered put options placed on a given NFT
+    /// @notice The covered put options placed for a given NFT
     /// @dev ERC-721 token address => ERC-721 token ID => put IDs
     mapping(address => mapping(uint256 => uint256[])) public putsForNFT;
 
     /// ------------ EVENTS ------------
 
     /// @notice Emitted when a covered put option is created
-    /// @param tokenContract The ERC-721 token address of the created put option
-    /// @param tokenId The ERC-721 token ID of the created put option
-    /// @param put The metadata of the created caputll option
-    event PutCreated(address indexed tokenContract, uint256 indexed tokenId, Put put);
+    /// @param tokenContract The ERC-721 token address for the created put option
+    /// @param tokenId The ERC-721 token ID for the created put option
+    /// @param putId The ID of the created put option
+    /// @param put The metadata of the created put option
+    event PutCreated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed putId, Put put);
 
     /// @notice Emitted when a covered put option is canceled
     /// @param tokenContract The ERC-721 token address of the canceled put option
     /// @param tokenId The ERC-721 token ID of the canceled put option
+    /// @param putId The ID of the canceled put option
     /// @param put The metadata of the canceled put option
-    event PutCanceled(address indexed tokenContract, uint256 indexed tokenId, Put put);
+    event PutCanceled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed putId, Put put);
 
-    /// @notice Emitted when the ETH/ERC-20 from an expired put option is reclaimed
+    /// @notice Emitted when the strike from an expired put option is reclaimed
     /// @param tokenContract The ERC-721 token address of the reclaimed put option
     /// @param tokenId The ERC-721 token ID of the reclaimed put option
+    /// @param putId The ID of the reclaimed put option
     /// @param put The metadata of the reclaimed put option
-    event PutReclaimed(address indexed tokenContract, uint256 indexed tokenId, address buyer, Put put);
+    event PutReclaimed(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed putId, Put put);
 
     /// @notice Emitted when a covered put option is purchased
-    /// @param tokenContract The ERC-721 token address of the purchased put option
-    /// @param tokenId The ERC-721 token ID of the purchased put option
-    /// @param seller The NFT seller address who purchased the put option
+    /// @param tokenContract The ERC-721 token address for the purchased put option
+    /// @param tokenId The ERC-721 token ID for the purchased put option
+    /// @param putId The ID of the purchased put option
     /// @param put The metadata of the purchased put option
-    event PutPurchased(address indexed tokenContract, uint256 indexed tokenId, address seller, Put put);
+    event PutPurchased(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed putId, Put put);
 
     /// @notice Emitted when a covered put option is exercised
-    /// @param tokenContract The ERC-721 token address of the exercised put option
-    /// @param tokenId The ERC-721 token ID of the exercised put option
-    /// @param seller The NFT seller address who exercised the put option
+    /// @param tokenContract The ERC-721 token address for the exercised put option
+    /// @param tokenId The ERC-721 token ID for the exercised put option
+    /// @param putId The ID of the exercised put option
     /// @param put The metadata of the exercised put option
-    event PutExercised(address indexed tokenContract, uint256 indexed tokenId, address seller, Put put);
+    event PutExercised(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed putId, Put put);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -105,49 +108,51 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ NFT BUYER FUNCTIONS ------------
+    /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Places a covered put option on an NFT
-    /// @param _tokenContract The address of the ERC-721 token
-    /// @param _tokenId The ID of the ERC-721 token
-    /// @param _premiumPrice The amount to purchase the put option
-    /// @param _strikePrice The amount of ETH/ERC-20 for an exercised put option
-    /// @param _expiration The expiration time of the put option
-    /// @param _currency The address of the ERC-20, or address(0) for ETH, to denominate the put option
+    /// @param _tokenContract The address of the desired ERC-721 token
+    /// @param _tokenId The ID of the desired ERC-721 token
+    /// @param _premiumPrice The amount to purchase the option
+    /// @param _strikeOffer The amount offering with the exercise of the option
+    /// @param _expiration The expiration time of the option
+    /// @param _currency The address of the ERC-20, or address(0) for ETH, denominating the strike and premium
     function createPut(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _premiumPrice,
-        uint256 _strikePrice,
+        uint256 _strikeOffer,
         uint256 _expiration,
         address _currency
     ) external payable nonReentrant returns (uint256) {
         require(IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender, "createPut cannot create put on owned NFT");
-        require(_expiration > block.timestamp, "createCall _expiration must be future time");
+        require(_expiration > block.timestamp, "createPut _expiration must be future time");
 
-        // Hold strike amount in escrow
-        _handleIncomingTransfer(_strikePrice, _currency);
+        // Hold strike in escrow
+        _handleIncomingTransfer(_strikeOffer, _currency);
 
         putCount++;
 
         puts[_tokenContract][_tokenId][putCount] = Put({
-            buyer: msg.sender,
-            seller: payable(address(0)),
+            seller: msg.sender,
+            buyer: payable(address(0)),
             currency: _currency,
             premium: _premiumPrice,
-            strike: _strikePrice,
+            strike: _strikeOffer,
             expiration: _expiration
         });
 
         putsForNFT[_tokenContract][_tokenId].push(putCount);
 
-        emit PutCreated(_tokenContract, _tokenId, puts[_tokenContract][_tokenId][putCount]);
+        emit PutCreated(_tokenContract, _tokenId, putCount, puts[_tokenContract][_tokenId][putCount]);
 
         return putCount;
     }
 
-    /// @notice Cancels a covered put option and refunds the strike amount, if not purchased
-    /// @param _putId The ID of the covered put option
+    /// @notice Cancels a non-purchased covered put option and refunds the strike
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The ID of the ERC-721 token
+    /// @param _putId The ID of the option to cancel
     function cancelPut(
         address _tokenContract,
         uint256 _tokenId,
@@ -155,18 +160,21 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
     ) external nonReentrant {
         Put storage put = puts[_tokenContract][_tokenId][_putId];
 
-        require(put.buyer == msg.sender, "cancelPut must be buyer");
-        require(put.seller == address(0), "cancelPut put has been purchased");
+        require(put.seller == msg.sender, "cancelPut must be seller");
+        require(put.buyer == address(0), "cancelPut put has been purchased");
 
+        // Refund strike
         _handleOutgoingTransfer(msg.sender, put.strike, put.currency, USE_ALL_GAS_FLAG);
 
-        emit PutCanceled(_tokenContract, _tokenId, put);
+        emit PutCanceled(_tokenContract, _tokenId, _putId, put);
 
         delete puts[_tokenContract][_tokenId][_putId];
     }
 
-    /// @notice Refunds the ETH/ERC-20 strike from a purchased, but non-exercised put option
-    /// @param _putId The ID of the covered put option
+    /// @notice Reclaims the strike from a purchased, but non-exercised put option
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The ID of the ERC-721 token
+    /// @param _putId The ID of the option to reclaim
     function reclaimPut(
         address _tokenContract,
         uint256 _tokenId,
@@ -174,21 +182,23 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
     ) external nonReentrant {
         Put storage put = puts[_tokenContract][_tokenId][_putId];
 
-        require(put.buyer == msg.sender, "reclaimPut must be buyer");
-        require(put.seller != address(0), "reclaimPut put not purchased");
+        require(put.seller == msg.sender, "reclaimPut must be seller");
+        require(put.buyer != address(0), "reclaimPut put not purchased");
         require(block.timestamp >= put.expiration, "reclaimPut put is active");
 
-        _handleOutgoingTransfer(put.buyer, put.strike, put.currency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(msg.sender, put.strike, put.currency, USE_ALL_GAS_FLAG);
 
-        emit PutReclaimed(_tokenContract, _tokenId, msg.sender, put);
+        emit PutReclaimed(_tokenContract, _tokenId, _putId, put);
 
         delete puts[_tokenContract][_tokenId][_putId];
     }
 
-    /// ------------ NFT SELLER FUNCTIONS ------------
+    /// ------------ BUYER FUNCTIONS ------------
 
-    /// @notice Purchases a put option, transferring the premium to the buyer
-    /// @notice The ID of the covered put option
+    /// @notice Purchases a covered put option and transfers the premium to the seller
+    /// @param _tokenContract The address of the ERC-721 token to trade
+    /// @param _tokenId The ID of the ERC-721 token to trade
+    /// @param _putId The ID of the option to purchase
     function buyPut(
         address _tokenContract,
         uint256 _tokenId,
@@ -196,22 +206,26 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
     ) external payable nonReentrant {
         Put storage put = puts[_tokenContract][_tokenId][_putId];
 
-        require(put.buyer != address(0), "buyPut put does not exist");
-        require(put.seller == address(0), "buyPut put already purchased");
+        require(put.seller != address(0), "buyPut put does not exist");
+        require(put.buyer == address(0), "buyPut put already purchased");
         require(put.expiration > block.timestamp, "buyPut put expired");
 
-        // Take premium from NFT holder (for option to sell)
+        // Ensure premium payment is valid and take custody
         _handleIncomingTransfer(put.premium, put.currency);
-        // Send premium to buyer
-        _handleOutgoingTransfer(put.buyer, put.premium, put.currency, USE_ALL_GAS_FLAG);
 
-        put.seller = msg.sender;
+        // Send premium to seller
+        _handleOutgoingTransfer(put.seller, put.premium, put.currency, USE_ALL_GAS_FLAG);
 
-        emit PutPurchased(_tokenContract, _tokenId, msg.sender, put);
+        // Mark option as purchased
+        put.buyer = msg.sender;
+
+        emit PutPurchased(_tokenContract, _tokenId, _putId, put);
     }
 
-    /// @notice Exercises a put option, transferring the NFT to the buyer and strike amount to the seller
-    /// @notice The ID of the covered put option
+    /// @notice Exercises a covered put option -- transferring the NFT to the seller and strike to the buyer
+    /// @param _tokenContract The address of the ERC-721 token to trade
+    /// @param _tokenId The ID of the ERC-721 token to trade
+    /// @param _putId The ID of the option to exercise
     function exercisePut(
         address _tokenContract,
         uint256 _tokenId,
@@ -219,27 +233,27 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
     ) external nonReentrant {
         Put storage put = puts[_tokenContract][_tokenId][_putId];
 
-        require(put.seller == msg.sender, "exercisePut must be seller");
-        require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "exercisePut must own token");
+        require(put.buyer == msg.sender, "exercisePut must be buyer");
+        require(IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender, "exercisePut must own token");
         require(put.expiration > block.timestamp, "exercisePut put expired");
 
-        // Payout respective parties, ensuring NFT royalties are honored
+        // Ensure NFT royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, put.strike, put.currency, USE_ALL_GAS_FLAG);
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, put.currency);
 
-        // Transfer remaining strike to NFT seller
+        // Transfer ETH/ERC-20 strike to buyer
         _handleOutgoingTransfer(msg.sender, remainingProfit, put.currency, USE_ALL_GAS_FLAG);
 
-        // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, put.buyer, _tokenId);
+        // Transfer NFT to seller
+        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, put.seller, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: put.currency, tokenId: 0, amount: put.strike});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: put.currency, tokenId: 0, amount: put.strike});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
 
         emit ExchangeExecuted(put.seller, put.buyer, userAExchangeDetails, userBExchangeDetails);
-        emit PutExercised(_tokenContract, _tokenId, msg.sender, put);
+        emit PutExercised(_tokenContract, _tokenId, _putId, put);
 
         delete puts[_tokenContract][_tokenId][_putId];
     }
