@@ -13,15 +13,22 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those asks
 contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+    /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
     /// @notice The ask for a given NFT, if one exists
-    /// @dev NFT address => NFT ID => ask ID
+    /// @dev ERC-721 token contract => ERC-721 token ID => Ask
     mapping(address => mapping(uint256 => Ask)) public askForNFT;
 
+    /// @notice The metadata for an ask
+    /// @param seller The address of the seller placing the ask
+    /// @param sellerFundsRecipient The address to send funds after the ask is filled
+    /// @param askCurrency The address of the ERC-20, or address(0) for ETH, required to fill the ask
+    /// @param findersFeeBps The fee to the referrer of the ask
+    /// @param askPrice The price to fill the ask
     struct Ask {
         address seller;
         address sellerFundsRecipient;
@@ -30,19 +37,37 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         uint256 askPrice;
     }
 
+    /// @notice Emitted when an ask is created
+    /// @param tokenContract The ERC-721 token address of the created ask
+    /// @param tokenId The ERC-721 token ID of the created ask
+    /// @param ask The metadata of the created ask
     event AskCreated(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
 
+    /// @notice Emitted when an ask price is updated
+    /// @param tokenContract The ERC-721 token address of the updated ask
+    /// @param tokenId The ERC-721 token ID of the updated ask
+    /// @param ask The metadata of the updated ask
     event AskPriceUpdated(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
 
+    /// @notice Emitted when an ask is canceled
+    /// @param tokenContract The ERC-721 token address of the canceled ask
+    /// @param tokenId The ERC-721 token ID of the canceled ask
+    /// @param ask The metadata of the canceled ask
     event AskCanceled(address indexed tokenContract, uint256 indexed tokenId, Ask ask);
 
+    /// @notice Emitted when an ask is filled
+    /// @param tokenContract The ERC-721 token address of the filled ask
+    /// @param tokenId The ERC-721 token ID of the filled ask
+    /// @param buyer The buyer address of the filled ask
+    /// @param finder The address of finder who referred the ask
+    /// @param ask The metadata of the filled ask
     event AskFilled(address indexed tokenContract, uint256 indexed tokenId, address indexed buyer, address finder, Ask ask);
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
     /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
-    /// @param _wethAddress WETH token address
+    /// @param _wethAddress The WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
@@ -89,13 +114,13 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     //        /|\
     //         |
     //        / \
-    /// @notice Lists an NFT for sale
-    /// @param _tokenContract The address of the ERC-721 token contract for the token to be sold
-    /// @param _tokenId The ERC-721 token ID for the token to be sold
-    /// @param _askPrice The price of the sale
-    /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
-    /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _findersFeeBps The bps of the sale amount to be sent to the referrer of the sale
+    /// @notice Creates the ask for a given NFT
+    /// @param _tokenContract The address of the ERC-721 token to be sold
+    /// @param _tokenId The ID of the ERC-721 token to be sold
+    /// @param _askPrice The price to fill the ask
+    /// @param _askCurrency The address of the ERC-20 token required to fill, or address(0) for ETH
+    /// @param _sellerFundsRecipient The address to send funds once the ask is filled
+    /// @param _findersFeeBps The bps of the ask price (post-royalties) to be sent to the referrer of the sale
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -149,11 +174,11 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     //        /|\
     //         |
     //        / \
-    /// @notice Updates the ask price for a given ask
-    /// @param _tokenContract The address of the ERC-721 token contract for the token
-    /// @param _tokenId The ERC-721 token ID for the token
-    /// @param _askPrice the price to update the ask to
-    /// @param _askCurrency The address of the ERC-20 token to accept an offer in, or address(0) for ETH
+    /// @notice Updates the ask price for a given NFT
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The ID of the ERC-721 token
+    /// @param _askPrice The ask price to set
+    /// @param _askCurrency The address of the ERC-20 token required to fill, or address(0) for ETH
     function setAskPrice(
         address _tokenContract,
         uint256 _tokenId,
@@ -192,9 +217,9 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     //        /|\
     //         |
     //        / \
-    /// @notice Cancels a ask
-    /// @param _tokenContract The address of the ERC-721 token contract for the token
-    /// @param _tokenId The ERC-721 token ID for the token
+    /// @notice Cancels the ask for a given NFT
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The ID of the ERC-721 token
     function cancelAsk(address _tokenContract, uint256 _tokenId) external nonReentrant {
         require(askForNFT[_tokenContract][_tokenId].seller != address(0), "cancelAsk ask doesn't exist");
 
@@ -259,10 +284,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     //        /|\
     //         |
     //        / \
-    /// @notice Purchase an NFT from a ask, transferring the NFT to the buyer and funds to the recipients
-    /// @param _tokenContract The address of the ERC-721 token contract for the token
-    /// @param _tokenId The ERC-721 token ID for the token
-    /// @param _finder The address of the referrer for this ask
+    /// @notice Fills the ask for a given NFT, transferring the ETH/ERC-20 to the seller and NFT to the buyer
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The ID of the ERC-721 token
+    /// @param _finder The address of the ask referrer
     function fillAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -272,15 +297,16 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
 
         require(ask.seller != address(0), "fillAsk must be active ask");
 
-        // Ensure payment is valid and take custody of payment
+        // Ensure ETH/ERC-20 payment from buyer is valid and take custody
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-        // Payout protocol fee
+        // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, ask.askCurrency);
 
+        // Payout optional finder fee
         if (_finder != address(0)) {
             uint256 findersFee = (remainingProfit * ask.findersFeeBps) / 10000;
             _handleOutgoingTransfer(_finder, findersFee, ask.askCurrency, USE_ALL_GAS_FLAG);
@@ -288,6 +314,7 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
             remainingProfit = remainingProfit - findersFee;
         }
 
+        // Transfer remaining ETH/ERC-20 to seller
         _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer
@@ -302,9 +329,9 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         delete askForNFT[_tokenContract][_tokenId];
     }
 
-    /// @notice Removes an ask
-    /// @param _tokenContract The address of the ERC-721 token contract for the token
-    /// @param _tokenId The ERC-721 token ID for the token
+    /// @dev Deletes canceled and invalid asks
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The ID of the ERC-721 token
     function _cancelAsk(address _tokenContract, uint256 _tokenId) private {
         emit AskCanceled(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
 

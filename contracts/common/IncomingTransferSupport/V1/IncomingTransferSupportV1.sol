@@ -5,10 +5,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20TransferHelper} from "../../../transferHelpers/ERC20TransferHelper.sol";
 
+/// @title IncomingTransferSupportV1
+/// @author tbtstl <t@zora.co>
+/// @notice This contract extension supports receiving funds from an external user
 contract IncomingTransferSupportV1 {
     using SafeERC20 for IERC20;
 
-    ERC20TransferHelper immutable erc20TransferHelper;
+    /// @notice The ZORA ERC-20 Transfer Helper
+    ERC20TransferHelper public immutable erc20TransferHelper;
 
     constructor(address _erc20TransferHelper) {
         erc20TransferHelper = ERC20TransferHelper(_erc20TransferHelper);

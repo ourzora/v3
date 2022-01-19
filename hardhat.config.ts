@@ -12,6 +12,7 @@ import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
 import { deployAsksV1 } from './scripts/deployAsksV1';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
+import { deployCoveredCallsV1 } from './scripts/deployCoveredCallsV1';
 import { deployProtocolFeeSettings } from './scripts/deployProtocolFeeSettings';
 import { deployCoveredPutsV1 } from './scripts/deployCoveredPutsV1';
 
@@ -80,21 +81,13 @@ task('deployOffersV1', 'Deploy Offers V1')
   .addParam('weth', 'WETH address', undefined, types.string)
   .setAction(deployOffersV1);
 
-task('deployCollectionOffersV1', 'Deploy Collection Offers V1')
-  .addParam(
-    'royaltyRegistry',
-    'Manifold Royalty Registry',
-    undefined,
-    types.string
-  )
-  .addParam(
-    'protocolFeeSettings',
-    'ZORA Protocol fee settings',
-    undefined,
-    types.string
-  )
-  .addParam('weth', 'WETH address', undefined, types.string)
-  .setAction(deployCollectionOffersV1);
+task('deployCollectionOffersV1', 'Deploy Collection Offers V1').setAction(
+  deployCollectionOffersV1
+);
+
+task('deployCoveredCallsV1', 'Deploy Covered Calls V1').setAction(
+  deployCoveredCallsV1
+);
 
 task('deployCoveredPutsV1', 'Deploy Covered Puts V1').setAction(
   deployCoveredPutsV1
