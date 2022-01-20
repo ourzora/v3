@@ -91,7 +91,7 @@ describe('CoveredPutsV1', () => {
         0,
         ONE_HALF_ETH,
         ONE_ETH,
-        2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+        2526701565, // Tue Jan 25 2050 00:32:45 GMT-0500 (Eastern Standard Time)
         ethers.constants.AddressZero,
         {
           value: ONE_ETH,
@@ -105,7 +105,7 @@ describe('CoveredPutsV1', () => {
       expect(put.currency).to.eq(ethers.constants.AddressZero);
       expect(put.premium.toString()).to.eq(ONE_HALF_ETH.toString());
       expect(put.strike.toString()).to.eq(ONE_ETH.toString());
-      expect(put.expiration.toNumber()).to.eq(2238366608);
+      expect(put.expiration.toNumber()).to.eq(2526701565);
     });
 
     it('should revert creating an option for an owned NFT', async () => {
@@ -115,7 +115,7 @@ describe('CoveredPutsV1', () => {
           0,
           ONE_HALF_ETH,
           ONE_ETH,
-          2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+          2526701565, // Tue Jan 25 2050 00:32:45 GMT-0500 (Eastern Standard Time)
           ethers.constants.AddressZero,
           {
             value: ONE_ETH,
@@ -133,7 +133,7 @@ describe('CoveredPutsV1', () => {
           0,
           ONE_HALF_ETH,
           ONE_ETH,
-          2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+          2526701565, // Tue Jan 25 2050 00:32:45 GMT-0500 (Eastern Standard Time)
           ethers.constants.AddressZero
         )
       ).eventually.rejectedWith(
@@ -148,7 +148,7 @@ describe('CoveredPutsV1', () => {
         0,
         ONE_HALF_ETH,
         ONE_ETH,
-        2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+        2526701565, // Tue Jan 25 2050 00:32:45 GMT-0500 (Eastern Standard Time)
         ethers.constants.AddressZero,
         {
           value: ONE_ETH,
@@ -174,7 +174,7 @@ describe('CoveredPutsV1', () => {
         0,
         ONE_HALF_ETH,
         ONE_ETH,
-        2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+        2526701565, // Tue Jan 25 2050 00:32:45 GMT-0500 (Eastern Standard Time)
         ethers.constants.AddressZero,
         {
           value: ONE_ETH,
@@ -235,7 +235,7 @@ describe('CoveredPutsV1', () => {
         0,
         ONE_HALF_ETH,
         ONE_ETH,
-        2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+        2526701565, // Tue Jan 25 2050 00:32:45 GMT-0500 (Eastern Standard Time)
         ethers.constants.AddressZero,
         {
           value: ONE_ETH,
@@ -246,7 +246,7 @@ describe('CoveredPutsV1', () => {
 
       // Option expired w/o exercise
       await ethers.provider.send('evm_setNextBlockTimestamp', [
-        2238366608, // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+        2526701565, // Tue Jan 25 2050 00:32:45 GMT-0500 (Eastern Standard Time)
       ]);
 
       const beforeBalance = await seller.getBalance();
@@ -270,7 +270,7 @@ describe('CoveredPutsV1', () => {
         0,
         ONE_HALF_ETH,
         ONE_ETH,
-        2238406890, // Wed Dec 6th 2040
+        2526787965, // 	Wed Jan 26 2050 00:32:45 GMT-0500 (Eastern Standard Time)
         ethers.constants.AddressZero,
         {
           value: ONE_ETH,
@@ -288,7 +288,7 @@ describe('CoveredPutsV1', () => {
         0,
         ONE_HALF_ETH,
         ONE_ETH,
-        2238493290, // Wed Dec 7th 2040
+        2526787965, // 	Wed Jan 26 2050 00:32:45 GMT-0500 (Eastern Standard Time)
         ethers.constants.AddressZero,
         {
           value: ONE_ETH,
@@ -305,19 +305,17 @@ describe('CoveredPutsV1', () => {
 
   describe('#buyPut', () => {
     it('should buy a put option', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2270029290,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526787965, // 	Wed Jan 26 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
       const beforeBuyer = await (await puts.puts(zoraV1.address, 0, 1)).buyer;
       expect(beforeBuyer).to.eq(ethers.constants.AddressZero);
@@ -329,19 +327,17 @@ describe('CoveredPutsV1', () => {
     });
 
     it('should revert buying if put does not exist', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2270029290,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526787965, // 	Wed Jan 26 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
       await expect(
         puts.buyPut(zoraV1.address, 1, 1, { value: ONE_HALF_ETH })
@@ -349,19 +345,17 @@ describe('CoveredPutsV1', () => {
     });
 
     it('should revert buying if put was already purchased', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2270029290,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526787965, // 	Wed Jan 26 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
       await puts.buyPut(zoraV1.address, 0, 1, { value: ONE_HALF_ETH });
 
@@ -371,21 +365,19 @@ describe('CoveredPutsV1', () => {
     });
 
     it('should revert buying if put expired', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2270029290,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526787965, // 	Wed Jan 26 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
-      await ethers.provider.send('evm_setNextBlockTimestamp', [2270115690]);
+      await ethers.provider.send('evm_setNextBlockTimestamp', [2526787965]);
 
       await expect(
         puts.buyPut(zoraV1.address, 0, 1, { value: ONE_HALF_ETH })
@@ -395,19 +387,17 @@ describe('CoveredPutsV1', () => {
 
   describe('#exercisePut', () => {
     it('should exercise a put option', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2301651690,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526874365, // Thu Jan 27 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
       await puts.buyPut(zoraV1.address, 0, 1, { value: ONE_HALF_ETH });
 
@@ -422,19 +412,17 @@ describe('CoveredPutsV1', () => {
     });
 
     it('should revert if msg.sender is not buyer', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2301651690,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526874365, // Thu Jan 27 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
       await puts.buyPut(zoraV1.address, 0, 1, { value: ONE_HALF_ETH });
 
@@ -444,19 +432,17 @@ describe('CoveredPutsV1', () => {
     });
 
     it('should revert if msg.sender is buyer but does not own token', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2301651690,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526874365, // Thu Jan 27 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
       await puts
         .connect(otherUser)
@@ -468,23 +454,21 @@ describe('CoveredPutsV1', () => {
     });
 
     it('should revert if option expired', async () => {
-      await puts
-        .connect(seller)
-        .createPut(
-          zoraV1.address,
-          0,
-          ONE_HALF_ETH,
-          ONE_ETH,
-          2301651690,
-          ethers.constants.AddressZero,
-          {
-            value: ONE_ETH,
-          }
-        );
+      await puts.connect(seller).createPut(
+        zoraV1.address,
+        0,
+        ONE_HALF_ETH,
+        ONE_ETH,
+        2526874365, // Thu Jan 27 2050 00:32:45 GMT-0500 (Eastern Standard Time)
+        ethers.constants.AddressZero,
+        {
+          value: ONE_ETH,
+        }
+      );
 
       await puts.buyPut(zoraV1.address, 0, 1, { value: ONE_HALF_ETH });
 
-      await ethers.provider.send('evm_setNextBlockTimestamp', [2301651690]);
+      await ethers.provider.send('evm_setNextBlockTimestamp', [2526874365]);
 
       await expect(
         puts.exercisePut(zoraV1.address, 0, 1)
