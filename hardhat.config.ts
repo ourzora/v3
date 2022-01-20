@@ -14,6 +14,7 @@ import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
 import { deployCoveredCallsV1 } from './scripts/deployCoveredCallsV1';
 import { deployProtocolFeeSettings } from './scripts/deployProtocolFeeSettings';
+import { deployCoveredPutsV1 } from './scripts/deployCoveredPutsV1';
 
 const env = dotenv.config().parsed;
 
@@ -86,6 +87,10 @@ task('deployCollectionOffersV1', 'Deploy Collection Offers V1').setAction(
 
 task('deployCoveredCallsV1', 'Deploy Covered Calls V1').setAction(
   deployCoveredCallsV1
+);
+
+task('deployCoveredPutsV1', 'Deploy Covered Puts V1').setAction(
+  deployCoveredPutsV1
 );
 
 const config: HardhatUserConfig = {
