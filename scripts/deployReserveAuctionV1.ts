@@ -5,22 +5,12 @@ import assert from 'assert';
 export interface Args {
   zoraV1Media: string;
   zoraV1Market: string;
-  royaltyRegistry: string;
-  protocolFeeSettings: string;
-  weth: string;
 }
 
 export async function deployReserveAuctionV1(
-  {
-    zoraV1Media,
-    zoraV1Market,
-    royaltyRegistry,
-    protocolFeeSettings,
-    weth,
-  }: Args,
+  { zoraV1Media, zoraV1Market }: Args,
   hre: HardhatRuntimeEnvironment
 ) {
-  // @ts-ignore
   const [deployer] = await hre.ethers.getSigners();
   const { chainId } = await deployer.provider.getNetwork();
 
@@ -35,11 +25,19 @@ export async function deployReserveAuctionV1(
     addressBook.ERC721TransferHelper,
     `missing ERC721TransferHelper in ${addressPath}`
   );
+  assert(
+    addressBook.ZoraProtocolFeeSettings,
+    `missing ZoraProtocolFeeSettings in ${addressPath}`
+  );
+  assert(addressBook.WETH, `missing WETH in ${addressPath}`);
+  assert(
+    addressBook.RoyaltyEngineV1,
+    `missing RoyaltyEngineV1 in ${addressPath}`
+  );
 
   console.log(
     `Deploying ReserveAuctionV1 from address ${await deployer.getAddress()}`
   );
-  // @ts-ignore
   const ReserveAuctionFactory = await hre.ethers.getContractFactory(
     'ReserveAuctionV1'
   );
@@ -48,10 +46,9 @@ export async function deployReserveAuctionV1(
     addressBook.ERC721TransferHelper,
     zoraV1Media,
     zoraV1Market,
-    royaltyRegistry,
-    protocolFeeSettings,
-    // @ts-ignore
-    weth
+    addressBook.RoyaltyEngineV1,
+    addressBook.ZoraProtocolFeeSettings,
+    addressBook.WETH
   );
   console.log(
     `Deploying ReserveAuctionV1 with tx ${reserveAuction.deployTransaction.hash} to address ${reserveAuction.address}`

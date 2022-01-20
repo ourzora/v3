@@ -132,7 +132,7 @@ describe('ReserveAuctionV1 integration', () => {
             ONE_DAY,
             TENTH_ETH,
             await sellerFundsRecipient.getAddress(),
-            10,
+            1000,
             ethers.constants.AddressZero,
             0
           );
@@ -242,7 +242,7 @@ describe('ReserveAuctionV1 integration', () => {
             ONE_DAY,
             TENTH_ETH,
             await sellerFundsRecipient.getAddress(),
-            10,
+            1000,
             weth.address,
             0
           );
@@ -352,7 +352,7 @@ describe('ReserveAuctionV1 integration', () => {
             ONE_DAY,
             TENTH_ETH,
             await sellerFundsRecipient.getAddress(),
-            10,
+            1000,
             ethers.constants.AddressZero,
             0
           );
@@ -475,7 +475,7 @@ describe('ReserveAuctionV1 integration', () => {
             ONE_DAY,
             TENTH_ETH,
             await sellerFundsRecipient.getAddress(),
-            10,
+            1000,
             weth.address,
             0
           );
@@ -597,7 +597,7 @@ describe('ReserveAuctionV1 integration', () => {
             ONE_DAY,
             TENTH_ETH,
             await sellerFundsRecipient.getAddress(),
-            10,
+            1000,
             ethers.constants.AddressZero,
             0
           );
@@ -706,7 +706,7 @@ describe('ReserveAuctionV1 integration', () => {
             ONE_DAY,
             TENTH_ETH,
             await sellerFundsRecipient.getAddress(),
-            10,
+            1000,
             weth.address,
             0
           );
