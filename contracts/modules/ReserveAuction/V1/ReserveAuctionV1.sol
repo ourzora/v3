@@ -95,7 +95,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param tokenContract The ERC-721 token address of the auction
     /// @param tokenId The ERC-721 token ID of the auction
     /// @param duration The updated duration of the auction
-    /// @param auction The metadata of the updated auction
+    /// @param auction The metadata of the extended auction
     event AuctionDurationExtended(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed duration, Auction auction);
 
     /// @notice Emitted when an auction has ended
@@ -103,7 +103,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param tokenId The ERC-721 token ID of the auction
     /// @param winner The address of the winner bidder
     /// @param finder The address of the winning bid referrer
-    /// @param auction The metadata of the updated auction
+    /// @param auction The metadata of the ended auction
     event AuctionEnded(address indexed tokenContract, uint256 indexed tokenId, address indexed winner, address finder, Auction auction);
 
     /// @notice Emitted when an auction is canceled
