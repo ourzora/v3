@@ -10,6 +10,8 @@ import { deployZMM } from './scripts/deployZMM';
 import { deployTransferHelper } from './scripts/deployTransferHelper';
 import { deployReserveAuctionV1 } from './scripts/deployReserveAuctionV1';
 import { deployAsksV1 } from './scripts/deployAsksV1';
+import { deployAsksV1_1 } from './scripts/deployAsksV1_1';
+import { deployAsksV1_2 } from './scripts/deployAsksV1_2';
 import { deployOffersV1 } from './scripts/deployOffersV1';
 import { deployCollectionOffersV1 } from './scripts/deployCollectionOffersV1';
 import { deployCoveredCallsV1 } from './scripts/deployCoveredCallsV1';
@@ -57,6 +59,10 @@ task('deployReserveAuctionV1', 'Deploy Reserve Auction V1')
   .setAction(deployReserveAuctionV1);
 
 task('deployAsksV1', 'Deploy Asks V1').setAction(deployAsksV1);
+
+task('deployAsksV1_1', 'Deploy Asks V1.1').setAction(deployAsksV1_1);
+
+task('deployAsksV1_2', 'Deploy Asks V1.2').setAction(deployAsksV1_2);
 
 task('deployOffersV1', 'Deploy Offers V1')
   .addParam(

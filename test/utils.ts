@@ -11,6 +11,7 @@ import {
   SimpleModule,
   AsksV1,
   AsksV11,
+  AsksV12,
   OffersV1,
   CollectionOffersV1,
   CoveredCallsV1,
@@ -352,6 +353,25 @@ export async function deployAsksV1_1(
   );
   await asks.deployed();
   return asks as AsksV11;
+}
+
+export async function deployAsksV1_2(
+  erc20Helper: string,
+  erc721Helper: string,
+  royaltyRegistry: string,
+  protocolFeeSettings: string,
+  weth: string
+) {
+  const AsksV1_2Factory = await ethers.getContractFactory('AsksV1_2');
+  const asks = await AsksV1_2Factory.deploy(
+    erc20Helper,
+    erc721Helper,
+    royaltyRegistry,
+    protocolFeeSettings,
+    weth
+  );
+  await asks.deployed();
+  return asks as AsksV12;
 }
 
 export async function deployOffersV1(

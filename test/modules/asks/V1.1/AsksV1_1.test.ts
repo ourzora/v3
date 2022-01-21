@@ -10,7 +10,7 @@ import {
   WETH,
   RoyaltyEngineV1,
   TestERC721,
-} from '../../../typechain';
+} from '../../../../typechain';
 import {
   approveNFTTransfer,
   deployERC20TransferHelper,
@@ -29,7 +29,7 @@ import {
   deployZoraProtocol,
   deployProtocolFeeSettings,
   deployTestERC721,
-} from '../../utils';
+} from '../../../utils';
 import { MockContract } from 'ethereum-waffle';
 chai.use(asPromised);
 
