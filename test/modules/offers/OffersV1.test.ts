@@ -41,7 +41,7 @@ describe('OffersV1', () => {
   let zoraV1: Media;
   let weth: WETH;
   let deployer: Signer;
-  let buyer: Signer;
+  let seller: Signer;
   let otherUser: Signer;
   let finder: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
@@ -52,7 +52,7 @@ describe('OffersV1', () => {
   beforeEach(async () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
-    buyer = signers[1];
+    seller = signers[1];
     otherUser = signers[2];
     finder = signers[3];
 
@@ -89,7 +89,7 @@ describe('OffersV1', () => {
 
     await moduleManager.setApprovalForModule(offers.address, true);
     await moduleManager
-      .connect(buyer)
+      .connect(seller)
       .setApprovalForModule(offers.address, true);
 
     await mintZoraNFT(zoraV1);
@@ -99,7 +99,7 @@ describe('OffersV1', () => {
   describe('#createNFTOffer', () => {
     it('should create an offer for an NFT', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -112,7 +112,7 @@ describe('OffersV1', () => {
         );
       const offer = await offers.offers(zoraV1.address, 0, 1);
 
-      expect(offer.buyer).to.eq(await buyer.getAddress());
+      expect(offer.seller).to.eq(await seller.getAddress());
       expect(offer.amount.toString()).to.eq(ONE_ETH.toString());
       expect(offer.currency).to.eq(ethers.constants.AddressZero);
 
@@ -144,7 +144,7 @@ describe('OffersV1', () => {
     it('should revert creating an offer without attaching associated funds', async () => {
       await expect(
         offers
-          .connect(buyer)
+          .connect(seller)
           .createNFTOffer(
             zoraV1.address,
             0,
@@ -163,7 +163,7 @@ describe('OffersV1', () => {
     it('should emit an NFTOfferCreated event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -184,14 +184,14 @@ describe('OffersV1', () => {
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('NFTOfferCreated');
       expect(logDescription.args.id.toNumber()).to.eq(1);
-      expect(logDescription.args.offer.buyer).to.eq(await buyer.getAddress());
+      expect(logDescription.args.offer.seller).to.eq(await seller.getAddress());
     });
   });
 
   describe('#setNFTOfferAmount', () => {
     it('should increase an offer price', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -203,7 +203,7 @@ describe('OffersV1', () => {
           }
         );
       await offers
-        .connect(buyer)
+        .connect(seller)
         .setNFTOfferAmount(zoraV1.address, 0, 1, TWO_ETH, { value: ONE_ETH });
       expect(
         (await (await offers.offers(zoraV1.address, 0, 1)).amount).toString()
@@ -212,7 +212,7 @@ describe('OffersV1', () => {
 
     it('should decrease an offer price', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -225,7 +225,7 @@ describe('OffersV1', () => {
         );
 
       await offers
-        .connect(buyer)
+        .connect(seller)
         .setNFTOfferAmount(zoraV1.address, 0, 1, ONE_HALF_ETH);
       expect(
         (await (await offers.offers(zoraV1.address, 0, 1)).amount).toString()
@@ -234,7 +234,7 @@ describe('OffersV1', () => {
 
     it('should revert user increasing an offer they did not create', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -249,12 +249,12 @@ describe('OffersV1', () => {
         offers
           .connect(otherUser)
           .setNFTOfferAmount(zoraV1.address, 0, 1, TWO_ETH, { value: TWO_ETH })
-      ).eventually.rejectedWith(revert`setNFTOfferAmount must be buyer`);
+      ).eventually.rejectedWith(revert`setNFTOfferAmount must be seller`);
     });
 
     it('should revert user decreasing an offer they did not create', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -269,12 +269,12 @@ describe('OffersV1', () => {
         offers
           .connect(otherUser)
           .setNFTOfferAmount(zoraV1.address, 0, 1, ONE_HALF_ETH)
-      ).eventually.rejectedWith(revert`setNFTOfferAmount must be buyer`);
+      ).eventually.rejectedWith(revert`setNFTOfferAmount must be seller`);
     });
 
     it('should revert increasing an offer without attaching funds', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -286,7 +286,7 @@ describe('OffersV1', () => {
           }
         );
       await expect(
-        offers.connect(buyer).setNFTOfferAmount(zoraV1.address, 0, 1, TWO_ETH)
+        offers.connect(seller).setNFTOfferAmount(zoraV1.address, 0, 1, TWO_ETH)
       ).eventually.rejectedWith(
         revert`_handleIncomingTransfer msg value less than expected amount`
       );
@@ -294,7 +294,7 @@ describe('OffersV1', () => {
 
     it('should revert updating an inactive offer', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -314,15 +314,15 @@ describe('OffersV1', () => {
 
       await expect(
         offers
-          .connect(buyer)
+          .connect(seller)
           .setNFTOfferAmount(zoraV1.address, 0, 1, ONE_HALF_ETH)
-      ).eventually.rejectedWith(revert`setNFTOfferAmount must be buyer`);
+      ).eventually.rejectedWith(revert`setNFTOfferAmount must be seller`);
     });
 
     it('should emit an NFTOfferAmountUpdated event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -334,7 +334,7 @@ describe('OffersV1', () => {
           }
         );
       await offers
-        .connect(buyer)
+        .connect(seller)
         .setNFTOfferAmount(zoraV1.address, 0, 1, TWO_ETH, { value: ONE_ETH });
 
       const events = await offers.queryFilter(
@@ -354,7 +354,7 @@ describe('OffersV1', () => {
   describe('#cancelNFTOffer', () => {
     it('should cancel an active NFT offer', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -365,15 +365,15 @@ describe('OffersV1', () => {
             value: ONE_ETH,
           }
         );
-      await offers.connect(buyer).cancelNFTOffer(zoraV1.address, 0, 1);
+      await offers.connect(seller).cancelNFTOffer(zoraV1.address, 0, 1);
       expect(
-        (await (await offers.offers(zoraV1.address, 0, 1)).buyer).toString()
+        (await (await offers.offers(zoraV1.address, 0, 1)).seller).toString()
       ).to.eq(ethers.constants.AddressZero.toString());
     });
 
     it('should revert canceling an inactive offer', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -391,13 +391,13 @@ describe('OffersV1', () => {
         await finder.getAddress()
       );
       await expect(
-        offers.connect(buyer).cancelNFTOffer(zoraV1.address, 0, 1)
-      ).eventually.rejectedWith(revert`cancelNFTOffer must be buyer`);
+        offers.connect(seller).cancelNFTOffer(zoraV1.address, 0, 1)
+      ).eventually.rejectedWith(revert`cancelNFTOffer must be seller`);
     });
 
     it('should revert canceling an offer not originally made', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -411,12 +411,12 @@ describe('OffersV1', () => {
 
       await expect(
         offers.connect(otherUser).cancelNFTOffer(zoraV1.address, 0, 1)
-      ).eventually.rejectedWith(revert`cancelNFTOffer must be buyer`);
+      ).eventually.rejectedWith(revert`cancelNFTOffer must be seller`);
     });
 
     it('should create new offer on same NFT after canceling', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -427,9 +427,9 @@ describe('OffersV1', () => {
             value: ONE_ETH,
           }
         );
-      await offers.connect(buyer).cancelNFTOffer(zoraV1.address, 0, 1);
+      await offers.connect(seller).cancelNFTOffer(zoraV1.address, 0, 1);
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -448,7 +448,7 @@ describe('OffersV1', () => {
     it('should emit an NFTOfferCanceled event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -459,7 +459,7 @@ describe('OffersV1', () => {
             value: ONE_ETH,
           }
         );
-      await offers.connect(buyer).cancelNFTOffer(zoraV1.address, 0, 1);
+      await offers.connect(seller).cancelNFTOffer(zoraV1.address, 0, 1);
       const events = await offers.queryFilter(
         offers.filters.NFTOfferCanceled(null, null),
         block
@@ -478,11 +478,11 @@ describe('OffersV1', () => {
         [THOUSANDTH_ETH.mul(150)]
       );
 
-      const buyerBeforeBalance = await buyer.getBalance();
+      const sellerBeforeBalance = await seller.getBalance();
       const minterBeforeBalance = await deployer.getBalance();
       const finderBeforeBalance = await finder.getBalance();
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -499,12 +499,12 @@ describe('OffersV1', () => {
         1,
         await finder.getAddress()
       );
-      const buyerAfterBalance = await buyer.getBalance();
+      const sellerAfterBalance = await seller.getBalance();
       const minterAfterBalance = await deployer.getBalance();
       const finderAfterBalance = await finder.getBalance();
 
-      expect(toRoundedNumber(buyerAfterBalance)).to.be.approximately(
-        toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
+      expect(toRoundedNumber(sellerAfterBalance)).to.be.approximately(
+        toRoundedNumber(sellerBeforeBalance.sub(ONE_ETH)),
         5
       );
 
@@ -520,12 +520,12 @@ describe('OffersV1', () => {
         10
       );
 
-      expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
+      expect(await zoraV1.ownerOf(0)).to.eq(await seller.getAddress());
     });
 
     it('should revert accepting an inactive offer', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -551,7 +551,7 @@ describe('OffersV1', () => {
 
     it('should revert accepting an offer from non-token holder', async () => {
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -573,7 +573,7 @@ describe('OffersV1', () => {
     it('should emit an NFTOfferFilled event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -598,7 +598,7 @@ describe('OffersV1', () => {
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('NFTOfferFilled');
       expect(logDescription.args.id.toNumber()).to.eq(1);
-      expect(logDescription.args.seller.toString()).to.eq(
+      expect(logDescription.args.buyer.toString()).to.eq(
         await deployer.getAddress()
       );
     });
@@ -606,7 +606,7 @@ describe('OffersV1', () => {
     it('should emit an ExchangeExecuted event', async () => {
       const block = await ethers.provider.getBlockNumber();
       await offers
-        .connect(buyer)
+        .connect(seller)
         .createNFTOffer(
           zoraV1.address,
           0,
@@ -631,13 +631,13 @@ describe('OffersV1', () => {
       expect(events.length).to.eq(1);
       const logDescription = offers.interface.parseLog(events[0]);
       expect(logDescription.name).to.eq('ExchangeExecuted');
-      expect(logDescription.args.userA).to.eq(await deployer.getAddress());
-      expect(logDescription.args.userB).to.eq(await buyer.getAddress());
+      expect(logDescription.args.userA).to.eq(await seller.getAddress());
+      expect(logDescription.args.userB).to.eq(await deployer.getAddress());
 
-      expect(logDescription.args.a.tokenContract).to.eq(zoraV1.address);
-      expect(logDescription.args.b.tokenContract).to.eq(
+      expect(logDescription.args.a.tokenContract).to.eq(
         ethers.constants.AddressZero
       );
+      expect(logDescription.args.b.tokenContract).to.eq(zoraV1.address);
     });
   });
 });
