@@ -11,13 +11,13 @@ contract CollectionOfferBookV1 {
     uint256 public offerCount;
 
     /// @notice The metadata of a collection offer
-    /// @param buyer The address of the buyer placing the offer
+    /// @param seller The address of the seller that placed the offer
     /// @param amount The amount of ETH offered
     /// @param id The ID of the offer
     /// @param prevId The ID of the previous offer in its collection's offer book
     /// @param nextId The ID of the next offer in its collection's offer book
     struct Offer {
-        address buyer;
+        address seller;
         uint256 amount;
         uint256 id;
         uint256 prevId;
@@ -54,18 +54,18 @@ contract CollectionOfferBookV1 {
 
     /// @notice Creates and places a new offer in its collection's offer book
     /// @param _offerAmount The amount of ETH offered
-    /// @param _buyer The address of the buyer
+    /// @param _seller The address of the seller
     /// @return The ID of the created collection offer
     function _addOffer(
         address _collection,
         uint256 _offerAmount,
-        address _buyer
+        address _seller
     ) internal returns (uint256) {
         offerCount++;
 
         // If its the first offer for a collection, mark it as both floor and ceiling
         if (_isFirstOffer(_collection)) {
-            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: 0, nextId: 0});
+            offers[_collection][offerCount] = Offer({seller: _seller, amount: _offerAmount, id: offerCount, prevId: 0, nextId: 0});
 
             floorOfferId[_collection] = offerCount;
             floorOfferAmount[_collection] = _offerAmount;
@@ -78,7 +78,7 @@ contract CollectionOfferBookV1 {
             uint256 prevCeilingId = ceilingOfferId[_collection];
 
             offers[_collection][prevCeilingId].nextId = offerCount;
-            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: prevCeilingId, nextId: 0});
+            offers[_collection][offerCount] = Offer({seller: _seller, amount: _offerAmount, id: offerCount, prevId: prevCeilingId, nextId: 0});
 
             ceilingOfferId[_collection] = offerCount;
             ceilingOfferAmount[_collection] = _offerAmount;
@@ -88,7 +88,7 @@ contract CollectionOfferBookV1 {
             uint256 prevFloorId = floorOfferId[_collection];
 
             offers[_collection][prevFloorId].prevId = offerCount;
-            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: 0, nextId: prevFloorId});
+            offers[_collection][offerCount] = Offer({seller: _seller, amount: _offerAmount, id: offerCount, prevId: 0, nextId: prevFloorId});
 
             floorOfferId[_collection] = offerCount;
             floorOfferAmount[_collection] = _offerAmount;
@@ -103,7 +103,7 @@ contract CollectionOfferBookV1 {
                 offer = offers[_collection][offer.nextId];
             }
 
-            offers[_collection][offerCount] = Offer({buyer: _buyer, amount: _offerAmount, id: offerCount, prevId: offer.prevId, nextId: offer.id});
+            offers[_collection][offerCount] = Offer({seller: _seller, amount: _offerAmount, id: offerCount, prevId: offer.prevId, nextId: offer.id});
 
             // Update neighboring pointers
             offers[_collection][offer.id].prevId = offerCount;
