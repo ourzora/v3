@@ -16,7 +16,7 @@ import {CollectionOfferBookV1} from "./CollectionOfferBookV1.sol";
 
 /// @title Collection Offers V1
 /// @author kulkarohan <rohan@zora.co>
-/// @notice This module allows buyers to place offers for any NFT from an ERC-721 collection, and allows sellers to fill an offer
+/// @notice This module allows users to sell ETH for any ERC-721 token in a specified collection
 contract CollectionOffersV1 is
     ReentrancyGuard,
     UniversalExchangeEventV1,
@@ -63,10 +63,10 @@ contract CollectionOffersV1 is
     /// @notice Emitted when a collection offer is filled
     /// @param collection The ERC-721 token address of the filled offer
     /// @param id The ID of the filled offer
-    /// @param seller The address of the seller who filled the offer
+    /// @param buyer The address of the buyer who filled the offer
     /// @param finder The address of the finder who referred the sale
     /// @param offer The metadata of the canceled offer
-    event CollectionOfferFilled(address indexed collection, uint256 indexed id, address seller, address finder, Offer offer);
+    event CollectionOfferFilled(address indexed collection, uint256 indexed id, address buyer, address finder, Offer offer);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -88,7 +88,7 @@ contract CollectionOffersV1 is
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ NFT BUYER FUNCTIONS ------------
+    /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Places an offer for any NFT in a collection
     /// @param _tokenContract The ERC-721 collection address
@@ -115,7 +115,7 @@ contract CollectionOffersV1 is
         uint256 _offerId,
         uint256 _newAmount
     ) external payable nonReentrant {
-        require(msg.sender == offers[_tokenContract][_offerId].buyer, "setCollectionOfferAmount offer must be active & msg sender must be buyer");
+        require(msg.sender == offers[_tokenContract][_offerId].seller, "setCollectionOfferAmount offer must be active & msg sender must be seller");
         require(
             (_newAmount > 0) && (_newAmount != offers[_tokenContract][_offerId].amount),
             "setCollectionOfferAmount _newAmount must be greater than 0 and not equal to previous offer"
@@ -147,7 +147,7 @@ contract CollectionOffersV1 is
         uint256 _offerId,
         uint16 _findersFeeBps
     ) external nonReentrant {
-        require(msg.sender == offers[_tokenContract][_offerId].buyer, "setCollectionOfferFindersFee msg sender must be buyer");
+        require(msg.sender == offers[_tokenContract][_offerId].seller, "setCollectionOfferFindersFee msg sender must be seller");
         require((_findersFeeBps > 1) && (_findersFeeBps <= 10000), "setCollectionOfferFindersFee must be less than or equal to 10000 bps");
 
         findersFeeOverrides[_tokenContract][_offerId] = _findersFeeBps;
@@ -159,7 +159,7 @@ contract CollectionOffersV1 is
     /// @param _tokenContract The address of the ERC-721 collection
     /// @param _offerId The ID of the created offer
     function cancelCollectionOffer(address _tokenContract, uint256 _offerId) external nonReentrant {
-        require(msg.sender == offers[_tokenContract][_offerId].buyer, "cancelCollectionOffer offer must be active & msg sender must be buyer");
+        require(msg.sender == offers[_tokenContract][_offerId].seller, "cancelCollectionOffer offer must be active & msg sender must be seller");
 
         _handleOutgoingTransfer(msg.sender, offers[_tokenContract][_offerId].amount, ETH, USE_ALL_GAS_FLAG);
 
@@ -168,7 +168,7 @@ contract CollectionOffersV1 is
         _removeOffer(_tokenContract, _offerId);
     }
 
-    /// ------------ NFT SELLER FUNCTIONS ------------
+    /// ------------ BUYER FUNCTIONS ------------
 
     /// @notice Fills the highest collection offer available, if above the desired minimum
     /// @param _tokenContract The address of the ERC-721 collection
@@ -212,16 +212,16 @@ contract CollectionOffersV1 is
             remainingProfit -= findersFee;
         }
 
-        // Transfer remaining ETH to seller
+        // Transfer remaining ETH to buyer
         _handleOutgoingTransfer(msg.sender, remainingProfit, ETH, USE_ALL_GAS_FLAG);
 
-        // Transfer NFT to buyer
-        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.buyer, _tokenId);
+        // Transfer NFT to seller
+        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.seller, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ETH, tokenId: 0, amount: offer.amount});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ETH, tokenId: 0, amount: offer.amount});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
 
-        emit ExchangeExecuted(msg.sender, offer.buyer, userAExchangeDetails, userBExchangeDetails);
+        emit ExchangeExecuted(offer.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit CollectionOfferFilled(_tokenContract, offerId, msg.sender, _finder, offer);
 
         _removeOffer(_tokenContract, offerId);

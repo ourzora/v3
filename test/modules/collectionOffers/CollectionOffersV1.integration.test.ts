@@ -49,11 +49,7 @@ describe('CollectionOffersV1 integration', () => {
   let weth: WETH;
   let deployer: Signer;
   let finder: Signer;
-  let buyer: Signer;
-  let buyer2: Signer;
-  let buyer3: Signer;
-  let buyer4: Signer;
-  let buyer5: Signer;
+  let seller: Signer;
   let erc20TransferHelper: ERC20TransferHelper;
   let erc721TransferHelper: ERC721TransferHelper;
   let royaltyEngine: RoyaltyEngineV1;
@@ -62,11 +58,7 @@ describe('CollectionOffersV1 integration', () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     finder = signers[1];
-    buyer = signers[2];
-    buyer2 = signers[3];
-    buyer3 = signers[4];
-    buyer4 = signers[5];
-    buyer5 = signers[6];
+    seller = signers[2];
 
     const zoraProtocol = await deployZoraProtocol();
     zoraV1 = zoraProtocol.media;
@@ -102,7 +94,7 @@ describe('CollectionOffersV1 integration', () => {
 
     await moduleManager.setApprovalForModule(collectionOffers.address, true);
     await moduleManager
-      .connect(buyer)
+      .connect(seller)
       .setApprovalForModule(collectionOffers.address, true);
   });
 
@@ -118,33 +110,33 @@ describe('CollectionOffersV1 integration', () => {
 
     async function run() {
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .createCollectionOffer(zoraV1.address, {
           value: ONE_ETH,
         });
     }
 
-    it('should withdraw offer amount from buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should withdraw offer amount from seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(
         toRoundedNumber(beforeBalance.sub(afterBalance))
       ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
     });
 
-    it('should withdraw offer increase amount from buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should withdraw offer increase amount from seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
 
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferAmount(zoraV1.address, 1, TWO_ETH, {
           value: ONE_ETH,
         });
 
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(TWO_ETH)),
@@ -152,15 +144,15 @@ describe('CollectionOffersV1 integration', () => {
       );
     });
 
-    it('should refund offer decrease to buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should refund offer decrease to seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
 
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferAmount(zoraV1.address, 1, ONE_HALF_ETH);
 
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(ONE_HALF_ETH)),
@@ -169,13 +161,13 @@ describe('CollectionOffersV1 integration', () => {
     });
 
     it('should refund canceled offer', async () => {
-      const beforeBalance = await buyer.getBalance();
+      const beforeBalance = await seller.getBalance();
       await run();
-      const middleBalance = await buyer.getBalance();
+      const middleBalance = await seller.getBalance();
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .cancelCollectionOffer(zoraV1.address, 1);
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(middleBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(ONE_ETH)),
@@ -208,7 +200,7 @@ describe('CollectionOffersV1 integration', () => {
       const beforeBalance = await finder.getBalance();
       await run();
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferFindersFee(zoraV1.address, 1, 1000);
       await collectionOffers.fillCollectionOffer(
         zoraV1.address,
@@ -241,7 +233,7 @@ describe('CollectionOffersV1 integration', () => {
       );
     });
 
-    it('should transfer NFT to buyer after accepted offer', async () => {
+    it('should transfer NFT to seller after accepted offer', async () => {
       await run();
       await collectionOffers.fillCollectionOffer(
         zoraV1.address,
@@ -250,7 +242,7 @@ describe('CollectionOffersV1 integration', () => {
         await finder.getAddress()
       );
 
-      expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
+      expect(await zoraV1.ownerOf(0)).to.eq(await seller.getAddress());
     });
   });
 
@@ -270,31 +262,31 @@ describe('CollectionOffersV1 integration', () => {
 
     async function run() {
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .createCollectionOffer(testEIP2981ERC721.address, { value: ONE_ETH });
     }
 
-    it('should withdraw offer from buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should withdraw offer from seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(
         toRoundedNumber(beforeBalance.sub(afterBalance))
       ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
     });
 
-    it('should withdraw offer increase from buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should withdraw offer increase from seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
 
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferAmount(testEIP2981ERC721.address, 1, TWO_ETH, {
           value: ONE_ETH,
         });
 
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(TWO_ETH)),
@@ -302,15 +294,15 @@ describe('CollectionOffersV1 integration', () => {
       );
     });
 
-    it('should refund offer decrease to buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should refund offer decrease to seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
 
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferAmount(testEIP2981ERC721.address, 1, ONE_HALF_ETH);
 
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(ONE_HALF_ETH)),
@@ -319,13 +311,13 @@ describe('CollectionOffersV1 integration', () => {
     });
 
     it('should refund canceled offer', async () => {
-      const beforeBalance = await buyer.getBalance();
+      const beforeBalance = await seller.getBalance();
       await run();
-      const middleBalance = await buyer.getBalance();
+      const middleBalance = await seller.getBalance();
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .cancelCollectionOffer(testEIP2981ERC721.address, 1);
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(middleBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(ONE_ETH)),
@@ -358,7 +350,7 @@ describe('CollectionOffersV1 integration', () => {
       const beforeBalance = await finder.getBalance();
       await run();
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferFindersFee(testEIP2981ERC721.address, 1, 1000);
       await collectionOffers.fillCollectionOffer(
         testEIP2981ERC721.address,
@@ -391,7 +383,7 @@ describe('CollectionOffersV1 integration', () => {
       );
     });
 
-    it('should transfer NFT to buyer after accepted offer', async () => {
+    it('should transfer NFT to seller after accepted offer', async () => {
       await run();
       await collectionOffers.fillCollectionOffer(
         testEIP2981ERC721.address,
@@ -401,7 +393,7 @@ describe('CollectionOffersV1 integration', () => {
       );
 
       expect(await testEIP2981ERC721.ownerOf(0)).to.eq(
-        await buyer.getAddress()
+        await seller.getAddress()
       );
     });
   });
@@ -422,31 +414,31 @@ describe('CollectionOffersV1 integration', () => {
 
     async function run() {
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .createCollectionOffer(testERC721.address, { value: ONE_ETH });
     }
 
-    it('should withdraw offer from buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should withdraw offer from seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(
         toRoundedNumber(beforeBalance.sub(afterBalance))
       ).to.be.approximately(toRoundedNumber(ONE_ETH), 5);
     });
 
-    it('should withdraw offer increase from buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should withdraw offer increase from seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
 
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferAmount(testERC721.address, 1, TWO_ETH, {
           value: ONE_ETH,
         });
 
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(TWO_ETH)),
@@ -454,15 +446,15 @@ describe('CollectionOffersV1 integration', () => {
       );
     });
 
-    it('should refund offer decrease to buyer', async () => {
-      const beforeBalance = await buyer.getBalance();
+    it('should refund offer decrease to seller', async () => {
+      const beforeBalance = await seller.getBalance();
       await run();
 
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferAmount(testERC721.address, 1, ONE_HALF_ETH);
 
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(afterBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(ONE_HALF_ETH)),
@@ -471,13 +463,13 @@ describe('CollectionOffersV1 integration', () => {
     });
 
     it('should refund canceled offer', async () => {
-      const beforeBalance = await buyer.getBalance();
+      const beforeBalance = await seller.getBalance();
       await run();
-      const middleBalance = await buyer.getBalance();
+      const middleBalance = await seller.getBalance();
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .cancelCollectionOffer(testERC721.address, 1);
-      const afterBalance = await buyer.getBalance();
+      const afterBalance = await seller.getBalance();
 
       expect(toRoundedNumber(middleBalance)).to.be.approximately(
         toRoundedNumber(beforeBalance.sub(ONE_ETH)),
@@ -510,7 +502,7 @@ describe('CollectionOffersV1 integration', () => {
       const beforeBalance = await finder.getBalance();
       await run();
       await collectionOffers
-        .connect(buyer)
+        .connect(seller)
         .setCollectionOfferFindersFee(testERC721.address, 1, 1000);
       await collectionOffers.fillCollectionOffer(
         testERC721.address,
@@ -543,7 +535,7 @@ describe('CollectionOffersV1 integration', () => {
       );
     });
 
-    it('should transfer NFT to buyer after accepted offer', async () => {
+    it('should transfer NFT to seller after accepted offer', async () => {
       await run();
       await collectionOffers.fillCollectionOffer(
         testERC721.address,
@@ -552,7 +544,7 @@ describe('CollectionOffersV1 integration', () => {
         await finder.getAddress()
       );
 
-      expect(await testERC721.ownerOf(0)).to.eq(await buyer.getAddress());
+      expect(await testERC721.ownerOf(0)).to.eq(await seller.getAddress());
     });
   });
 });
