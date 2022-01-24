@@ -4,7 +4,6 @@ pragma solidity 0.8.10;
 import {ZoraModuleManager} from "../../../ZoraModuleManager.sol";
 
 /// @title ZoraRegistrar
-/// @author kulkarohan <rohan@zora.co>
 /// @notice Mock ZORA V3 Registrar
 contract ZoraRegistrar {
     ZoraModuleManager internal ZMM;
