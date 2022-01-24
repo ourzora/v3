@@ -1,18 +1,5 @@
 node_modules
-
-#Hardhat files
 cache
-artifacts
-typechain
-
-coverage
-coverage.json
-
-.idea
-
-.env
-.env.dev
-.env.prod
-.env.*
-
 dist
+.env
+.DS_Store
