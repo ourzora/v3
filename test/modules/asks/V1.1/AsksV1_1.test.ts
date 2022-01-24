@@ -39,6 +39,7 @@ describe('AsksV1.1', () => {
   let weth: WETH;
   let deployer: Signer;
   let buyer: Signer;
+  let sellerFundsRecipient: Signer;
   let finder: Signer;
   let otherUser: Signer;
   let operator: Signer;
@@ -51,6 +52,7 @@ describe('AsksV1.1', () => {
     const signers = await ethers.getSigners();
     deployer = signers[0];
     buyer = signers[1];
+    sellerFundsRecipient = signers[2];
     otherUser = signers[3];
     finder = signers[4];
     operator = signers[5];
@@ -71,6 +73,7 @@ describe('AsksV1.1', () => {
       moduleManager.address
     );
     royaltyEngine = await deployRoyaltyEngine();
+
     asks = await deployAsksV1_1(
       erc20TransferHelper.address,
       erc721TransferHelper.address,
@@ -101,12 +104,16 @@ describe('AsksV1.1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
+        await sellerFundsRecipient.getAddress(),
         1000
       );
 
       const ask = await asks.askForNFT(zoraV1.address, 0);
 
       expect(ask.seller).to.eq(await deployer.getAddress());
+      expect(ask.sellerFundsRecipient).to.eq(
+        await sellerFundsRecipient.getAddress()
+      );
       expect(ask.askCurrency).to.eq(ethers.constants.AddressZero);
       expect(ask.askPrice.toString()).to.eq(ONE_ETH.toString());
     });
@@ -123,6 +130,7 @@ describe('AsksV1.1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          await sellerFundsRecipient.getAddress(),
           1000
         );
 
@@ -137,6 +145,7 @@ describe('AsksV1.1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
+        await sellerFundsRecipient.getAddress(),
         1000
       );
 
@@ -160,6 +169,7 @@ describe('AsksV1.1', () => {
           0,
           TWO_ETH,
           ethers.constants.AddressZero,
+          await sellerFundsRecipient.getAddress(),
           1000
         );
 
@@ -174,6 +184,7 @@ describe('AsksV1.1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
+        await sellerFundsRecipient.getAddress(),
         1000
       );
 
@@ -199,6 +210,7 @@ describe('AsksV1.1', () => {
             0,
             ONE_ETH,
             ethers.constants.AddressZero,
+            ethers.constants.AddressZero,
             1000
           )
       ).eventually.rejectedWith('createAsk must be token owner or operator');
@@ -219,11 +231,25 @@ describe('AsksV1.1', () => {
             0,
             TWO_ETH,
             ethers.constants.AddressZero,
+            await sellerFundsRecipient.getAddress(),
             1000
           )
       ).eventually.rejectedWith(
         'createAsk must approve ERC721TransferHelper as operator'
       );
+    });
+
+    it('should revert if the funds recipient is the zero address', async () => {
+      await expect(
+        asks.createAsk(
+          zoraV1.address,
+          0,
+          ONE_ETH,
+          ethers.constants.AddressZero,
+          ethers.constants.AddressZero,
+          1000
+        )
+      ).eventually.rejectedWith('createAsk must specify _sellerFundsRecipient');
     });
 
     it('should revert if the finders fee bps is greater than 10000', async () => {
@@ -233,6 +259,7 @@ describe('AsksV1.1', () => {
           0,
           ONE_ETH,
           ethers.constants.AddressZero,
+          await sellerFundsRecipient.getAddress(),
           10001
         )
       ).eventually.rejectedWith(
@@ -248,6 +275,7 @@ describe('AsksV1.1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
+        await sellerFundsRecipient.getAddress(),
         1000
       );
     });
@@ -288,9 +316,16 @@ describe('AsksV1.1', () => {
     it('should revert if the ask has been sold', async () => {
       await asks
         .connect(buyer)
-        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
-          value: ONE_ETH,
-        });
+        .fillAsk(
+          zoraV1.address,
+          0,
+          ethers.constants.AddressZero,
+          ONE_ETH,
+          await finder.getAddress(),
+          {
+            value: ONE_ETH,
+          }
+        );
 
       await expect(
         asks.setAskPrice(zoraV1.address, 0, TWO_ETH, weth.address)
@@ -312,6 +347,7 @@ describe('AsksV1.1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
+        await sellerFundsRecipient.getAddress(),
         1000
       );
     });
@@ -368,9 +404,16 @@ describe('AsksV1.1', () => {
     it('should revert if the ask has been filled already', async () => {
       await asks
         .connect(buyer)
-        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
-          value: ONE_ETH,
-        });
+        .fillAsk(
+          zoraV1.address,
+          0,
+          ethers.constants.AddressZero,
+          ONE_ETH,
+          await finder.getAddress(),
+          {
+            value: ONE_ETH,
+          }
+        );
 
       await expect(asks.cancelAsk(zoraV1.address, 0)).rejectedWith(
         revert`cancelAsk ask doesn't exist`
@@ -385,6 +428,7 @@ describe('AsksV1.1', () => {
         0,
         ONE_ETH,
         ethers.constants.AddressZero,
+        await sellerFundsRecipient.getAddress(),
         1000
       );
     });
@@ -397,14 +441,25 @@ describe('AsksV1.1', () => {
 
       const buyerBeforeBalance = await buyer.getBalance();
       const minterBeforeBalance = await deployer.getBalance();
+      const sellerFundsRecipientBeforeBalance =
+        await sellerFundsRecipient.getBalance();
       const finderBeforeBalance = await finder.getBalance();
       await asks
         .connect(buyer)
-        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
-          value: ONE_ETH,
-        });
+        .fillAsk(
+          zoraV1.address,
+          0,
+          ethers.constants.AddressZero,
+          ONE_ETH,
+          await finder.getAddress(),
+          {
+            value: ONE_ETH,
+          }
+        );
       const buyerfterBalance = await buyer.getBalance();
       const minterAfterBalance = await deployer.getBalance();
+      const sellerFundsRecipientAfterBalance =
+        await sellerFundsRecipient.getBalance();
       const finderAfterBalance = await finder.getBalance();
 
       const ask = await asks.askForNFT(zoraV1.address, 0);
@@ -414,14 +469,21 @@ describe('AsksV1.1', () => {
         toRoundedNumber(buyerBeforeBalance.sub(ONE_ETH)),
         5
       );
+      // 0.5ETH royalty fee
+      expect(toRoundedNumber(minterAfterBalance)).to.eq(
+        toRoundedNumber(minterBeforeBalance.add(ONE_ETH.div(2)))
+      );
+
       // 0.5ETH creator fee + 1 ETH bid * 1000 bps finders fee -> .05 ETH profit
       expect(toRoundedNumber(finderAfterBalance)).to.eq(
         toRoundedNumber(finderBeforeBalance.add(THOUSANDTH_ETH.mul(50)))
       );
 
-      // 0.5ETH royalty fee + 0.45ETH remaining -> 0.95 ETH
-      expect(toRoundedNumber(minterAfterBalance)).to.eq(
-        toRoundedNumber(minterBeforeBalance.add(THOUSANDTH_ETH.mul(950)))
+      // ask fee - creator fee - finder fee -> .765 ETH profit
+      expect(toRoundedNumber(sellerFundsRecipientAfterBalance)).to.eq(
+        toRoundedNumber(
+          sellerFundsRecipientBeforeBalance.add(THOUSANDTH_ETH.mul(450))
+        )
       );
 
       expect(await zoraV1.ownerOf(0)).to.eq(await buyer.getAddress());
@@ -432,9 +494,16 @@ describe('AsksV1.1', () => {
 
       await asks
         .connect(buyer)
-        .fillAsk(zoraV1.address, 0, await finder.getAddress(), {
-          value: ONE_ETH,
-        });
+        .fillAsk(
+          zoraV1.address,
+          0,
+          ethers.constants.AddressZero,
+          ONE_ETH,
+          await finder.getAddress(),
+          {
+            value: ONE_ETH,
+          }
+        );
 
       const events = await asks.queryFilter(
         asks.filters.ExchangeExecuted(null, null, null, null),
