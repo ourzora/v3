@@ -71,8 +71,6 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         auctions = new ReserveAuctionV1(
             address(erc20TransferHelper),
             address(erc721TransferHelper),
-            address(0), // placeholder
-            address(0), // placeholder
             address(royaltyEngine),
             address(ZPFS),
             address(weth)

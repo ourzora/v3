@@ -73,8 +73,6 @@ contract ReserveAuctionV1Test is DSTest {
         auctions = new ReserveAuctionV1(
             address(erc20TransferHelper),
             address(erc721TransferHelper),
-            address(0), // placeholder
-            address(0), // placeholder
             address(royaltyEngine),
             address(ZPFS),
             address(weth)
@@ -550,7 +548,7 @@ contract ReserveAuctionV1Test is DSTest {
         auctions.createBid{value: 1 ether}(address(token), 0, 1 ether, address(finder));
 
         vm.prank(address(otherBidder));
-        vm.expectRevert("createBid must send more than the last bid by minBidIncrementPercentage amount");
+        vm.expectRevert("createBid must send more than 10% of last bid amount");
         auctions.createBid{value: 1.01 ether}(address(token), 0, 1.01 ether, address(finder));
     }
 

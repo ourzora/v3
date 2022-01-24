@@ -3,7 +3,6 @@ pragma solidity 0.8.10;
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {IZoraV1Market, IZoraV1Media} from "../../../interfaces/common/IZoraV1.sol";
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {UniversalExchangeEventV1} from "../../../common/UniversalExchangeEvent/V1/UniversalExchangeEventV1.sol";
 import {OutgoingTransferSupportV1} from "../../../common/OutgoingTransferSupport/V1/OutgoingTransferSupportV1.sol";
@@ -14,18 +13,19 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @title Reserve Auction V1
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to list and bid on ERC-721 tokens with timed reserve auctions
-contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+contract ReserveAuctionV1 is
+    ReentrancyGuard,
+    UniversalExchangeEventV1,
+    IncomingTransferSupportV1,
+    FeePayoutSupportV1,
+    ModuleNamingSupportV1
+{
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
-    /// @notice The minimum percentage difference between the last bid amount and the current bid.
-    uint8 constant minBidIncrementPercentage = 10; // 10%
     /// @notice The minimum amount of time left in an auction after a new bid is created
-    uint256 constant timeBuffer = 15 * 60; // 15 minutes
-
-    /// @notice The ZORA V1 Media address
-    address public immutable ZoraV1Media;
-    /// @notice The ZORA V1 Market address
-    address public immutable ZoraV1Market;
+    uint256 constant TIME_BUFFER = 15 minutes;
+    /// @notice The minimum percentage difference between the last bid amount and the current bid.
+    uint8 constant MIN_BID_INCREMENT_PERCENTAGE = 10;
 
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
@@ -71,7 +71,12 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param tokenId The ERC-721 token ID of the updated auction
     /// @param reservePrice The updated reserve price of the auction
     /// @param auction The metadata of the updated auction
-    event AuctionReservePriceUpdated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed reservePrice, Auction auction);
+    event AuctionReservePriceUpdated(
+        address indexed tokenContract,
+        uint256 indexed tokenId,
+        uint256 indexed reservePrice,
+        Auction auction
+    );
 
     /// @notice Emitted when a bid is placed on an auction
     /// @param tokenContract The ERC-721 token address of the auction
@@ -79,7 +84,6 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param amount The amount bid on the auction
     /// @param bidder The address of the bidder
     /// @param firstBid Whether the bid kicked off the auction
-    /// @param extended Whether the bid extended the auction
     /// @param auction The metadata of the updated auction
     event AuctionBid(
         address indexed tokenContract,
@@ -87,7 +91,6 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         uint256 indexed amount,
         address bidder,
         bool firstBid,
-        bool extended,
         Auction auction
     );
 
@@ -96,7 +99,12 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param tokenId The ERC-721 token ID of the auction
     /// @param duration The updated duration of the auction
     /// @param auction The metadata of the extended auction
-    event AuctionDurationExtended(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed duration, Auction auction);
+    event AuctionDurationExtended(
+        address indexed tokenContract,
+        uint256 indexed tokenId,
+        uint256 indexed duration,
+        Auction auction
+    );
 
     /// @notice Emitted when an auction has ended
     /// @param tokenContract The ERC-721 token address of the auction
@@ -104,7 +112,13 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param winner The address of the winner bidder
     /// @param finder The address of the winning bid referrer
     /// @param auction The metadata of the ended auction
-    event AuctionEnded(address indexed tokenContract, uint256 indexed tokenId, address indexed winner, address finder, Auction auction);
+    event AuctionEnded(
+        address indexed tokenContract,
+        uint256 indexed tokenId,
+        address indexed winner,
+        address finder,
+        Auction auction
+    );
 
     /// @notice Emitted when an auction is canceled
     /// @param tokenContract The ERC-721 token address of the canceled auction
@@ -114,26 +128,26 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
-    /// @param _zoraV1Media The ZORA NFT Protocol Media Contract address
-    /// @param _zoraV1Market The ZORA NFT Protocol Market Contract address
     /// @param _royaltyEngine The Manifold Royalty Engine address
+    /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
     /// @param _wethAddress The WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
-        address _zoraV1Media,
-        address _zoraV1Market,
         address _royaltyEngine,
         address _protocolFeeSettings,
         address _wethAddress
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
-        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+        FeePayoutSupportV1(
+            _royaltyEngine,
+            _protocolFeeSettings,
+            _wethAddress,
+            ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar()
+        )
         ModuleNamingSupportV1("Reserve Auction: v1.0")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
-        ZoraV1Media = _zoraV1Media;
-        ZoraV1Market = _zoraV1Market;
     }
 
     /// @notice Creates an auction for a given NFT
@@ -157,15 +171,21 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "createAuction must be token owner or operator");
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "createAuction must approve ReserveAuctionV1 module");
+        require(
+            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "createAuction must be token owner or operator"
+        );
+        require(
+            erc721TransferHelper.isModuleApproved(msg.sender),
+            "createAuction must approve ReserveAuctionV1 module"
+        );
         require(
             IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
             "createAuction must approve ERC721TransferHelper as operator"
         );
         require(_findersFeeBps <= 10000, "createAuction _findersFeeBps must be less than or equal to 10000");
         require(_sellerFundsRecipient != address(0), "createAuction must specify _sellerFundsRecipient");
-        require(_startTime == 0 || _startTime > block.timestamp, "createAuction _startTime must be 0 or a future block");
+        require(_startTime == 0 || _startTime > block.timestamp, "createAuction _startTime must be 0 or future block");
 
         if (auctionForNFT[_tokenContract][_tokenId].seller != address(0)) {
             _cancelAuction(_tokenContract, _tokenId);
@@ -226,27 +246,24 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
 
         require(auction.seller != address(0), "createBid auction doesn't exist");
         require(block.timestamp >= auction.startTime, "createBid auction hasn't started");
-        require(auction.firstBidTime == 0 || block.timestamp < (auction.firstBidTime + auction.duration), "createBid auction expired");
+        require(
+            auction.firstBidTime == 0 || block.timestamp < (auction.firstBidTime + auction.duration),
+            "createBid auction expired"
+        );
         require(_amount >= auction.reservePrice, "createBid must send at least reservePrice");
         require(
-            _amount >= (auction.amount + ((auction.amount * minBidIncrementPercentage) / 100)),
-            "createBid must send more than the last bid by minBidIncrementPercentage amount"
+            _amount >= (auction.amount + ((auction.amount * MIN_BID_INCREMENT_PERCENTAGE) / 100)),
+            "createBid must send more than 10% of last bid amount"
         );
 
-        // Ensure a ZORA V1 bid is valid for the current bidShare configuration
-        if (_tokenContract == ZoraV1Media) {
-            require(IZoraV1Market(ZoraV1Market).isValidBid(_tokenId, _amount), "createBid bid invalid for share splitting");
-        }
-
+        // If first bid, store time and transfer NFT into escrow
         bool firstBid;
         if (auction.firstBidTime == 0) {
-            // Store time of first bid
             auction.firstBidTime = block.timestamp;
             firstBid = true;
-            // Transfer NFT into escrow
             erc721TransferHelper.transferFrom(_tokenContract, auction.seller, address(this), _tokenId);
+            // Else refund previous bidder
         } else {
-            // Refund previous bidder
             _handleOutgoingTransfer(auction.bidder, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
         }
 
@@ -257,24 +274,13 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         auction.bidder = payable(msg.sender);
         auction.finder = payable(_finder);
 
-        bool extended;
-        // at this point we know that the timestamp is less than start + duration (since the auction would be over, otherwise)
-        // we want to know by how much the timestamp is less than start + duration
-        // if the difference is less than the timeBuffer, increase the duration by the timeBuffer
-        if ((auction.firstBidTime + auction.duration - block.timestamp) < timeBuffer) {
-            // Playing code golf for gas optimization:
-            // uint256 expectedEnd = (auctions[auctionId].firstBidTime + auctions[auctionId].duration);
-            // uint256 timeRemaining = (expectedEnd - block.timestamp);
-            // uint256 timeToAdd = (timeBuffer - timeRemaining);
-            // uint256 newDuration = (auctions[auctionId].duration + timeToAdd);
-            uint256 oldDuration = auction.duration;
-            auction.duration = oldDuration + (timeBuffer - (auction.firstBidTime + oldDuration - block.timestamp));
-            extended = true;
-        }
+        emit AuctionBid(_tokenContract, _tokenId, _amount, msg.sender, firstBid, auction);
 
-        emit AuctionBid(_tokenContract, _tokenId, _amount, msg.sender, firstBid, extended, auction);
-
-        if (extended) {
+        // If a bid is placed within 15 minutes of the auction ending
+        uint256 auctionTimeRemaining = auction.firstBidTime + auction.duration - block.timestamp;
+        if (auctionTimeRemaining < TIME_BUFFER) {
+            // Extend the auction by 15 minutes from the time of bid
+            auction.duration += (TIME_BUFFER - auctionTimeRemaining);
             emit AuctionDurationExtended(_tokenContract, _tokenId, auction.duration, auction);
         }
     }
@@ -290,7 +296,13 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         require(block.timestamp >= (auction.firstBidTime + auction.duration), "settleAuction auction hasn't completed");
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(
+            _tokenContract,
+            _tokenId,
+            auction.amount,
+            auction.auctionCurrency,
+            USE_ALL_GAS_FLAG
+        );
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, auction.auctionCurrency);
@@ -304,13 +316,26 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         }
 
         // Transfer remaining funds to seller
-        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, auction.auctionCurrency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(
+            auction.sellerFundsRecipient,
+            remainingProfit,
+            auction.auctionCurrency,
+            USE_ALL_GAS_FLAG
+        );
 
         // Transfer NFT to winning bidder
         IERC721(_tokenContract).transferFrom(address(this), auction.bidder, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: auction.auctionCurrency, tokenId: 0, amount: auction.amount});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({
+            tokenContract: _tokenContract,
+            tokenId: _tokenId,
+            amount: 1
+        });
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({
+            tokenContract: auction.auctionCurrency,
+            tokenId: 0,
+            amount: auction.amount
+        });
 
         emit ExchangeExecuted(auction.seller, auction.bidder, userAExchangeDetails, userBExchangeDetails);
         emit AuctionEnded(_tokenContract, _tokenId, auction.bidder, auction.finder, auction);
@@ -328,7 +353,10 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         require(auction.firstBidTime == 0, "cancelAuction auction already started");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "cancelAuction must be token owner or operator");
+        require(
+            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "cancelAuction must be token owner or operator"
+        );
 
         _cancelAuction(_tokenContract, _tokenId);
     }
