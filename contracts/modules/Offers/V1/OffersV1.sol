@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-/// ------------ IMPORTS ------------
+/// ------------ IMPORTS ------------ ///
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -15,13 +15,7 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @title Offers V1
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This module allows users to place ETH/ERC-20 offers for any ERC-721 token
-contract OffersV1 is
-    ReentrancyGuard,
-    UniversalExchangeEventV1,
-    IncomingTransferSupportV1,
-    FeePayoutSupportV1,
-    ModuleNamingSupportV1
-{
+contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
@@ -67,12 +61,7 @@ contract OffersV1 is
     /// @param tokenId The ERC-721 token ID of the updated offer
     /// @param id The ID of the updated offer
     /// @param offer The metadata of the updated offer
-    event NFTOfferAmountUpdated(
-        address indexed tokenContract,
-        uint256 indexed tokenId,
-        uint256 indexed id,
-        Offer offer
-    );
+    event NFTOfferAmountUpdated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
     /// @notice Emitted when an offer is canceled
     /// @param tokenContract The ERC-721 token address of the canceled offer
@@ -88,14 +77,7 @@ contract OffersV1 is
     /// @param buyer The address of the buyer who filled the offer
     /// @param finder The address of the finder who referred the offer
     /// @param offer The metadata of the filled offer
-    event NFTOfferFilled(
-        address indexed tokenContract,
-        uint256 indexed tokenId,
-        uint256 indexed id,
-        address buyer,
-        address finder,
-        Offer offer
-    );
+    event NFTOfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address buyer, address finder, Offer offer);
 
     /// ------------ CONSTRUCTOR ------------ ///
 
@@ -112,12 +94,7 @@ contract OffersV1 is
         address _wethAddress
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
-        FeePayoutSupportV1(
-            _royaltyEngine,
-            _protocolFeeSettings,
-            _wethAddress,
-            ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar()
-        )
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Offers: v1.0")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
@@ -139,10 +116,7 @@ contract OffersV1 is
         uint256 _amount,
         uint16 _findersFeeBps
     ) external payable nonReentrant returns (uint256) {
-        require(
-            IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender,
-            "createNFTOffer cannot place offer on own NFT"
-        );
+        require(IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender, "createNFTOffer cannot place offer on own NFT");
         require(_findersFeeBps <= 10000, "createNFTOffer finders fee bps must be less than or equal to 10000");
 
         // Ensure valid payment and take custody of offer
@@ -231,36 +205,30 @@ contract OffersV1 is
 
     /// ------------ BUYER FUNCTIONS ------------ ///
 
-    /// @notice Fills the offer for an NFT, transferring the ETH/ERC-20 to the buyer and NFT to the seller
-    /// @param _tokenContract The address of the ERC-721 token selling
-    /// @param _tokenId The ID of the ERC-721 token selling
-    /// @param _offerId The ID of the offer filling
-    /// @param _acceptCurrency The address of the offered ERC-20 token to accept, or address(0) for ETH
-    /// @param _acceptAmount The amount to from the offer
+    /// @notice Fills the offer for an owned NFT, in exchange for ETH/ERC-20 tokens
+    /// @param _tokenContract The address of the ERC-721 token to sell
+    /// @param _tokenId The ID of the ERC-721 token to sell
+    /// @param _offerId The ID of the offer to fill
+    /// @param _currency The address of ERC-20 token to accept, or address(0) for ETH
+    /// @param _amount The offered amount to accept
     /// @param _finder The address of the offer referrer
     function fillNFTOffer(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _offerId,
-        address _acceptCurrency,
-        uint256 _acceptAmount,
+        address _currency,
+        uint256 _amount,
         address _finder
     ) external nonReentrant {
         Offer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
         require(offer.seller != address(0), "fillNFTOffer must be active offer");
         require(IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender, "fillNFTOffer must be token owner");
-        require(offer.currency == _acceptCurrency, "fillNFTOffer _acceptCurrency must match offer currency");
-        require(offer.amount == _acceptAmount, "fillNFTOffer _acceptAmount must match offer amount");
+        require(offer.currency == _currency, "fillNFTOffer _currency must match offer currency");
+        require(offer.amount == _amount, "fillNFTOffer _amount must match offer amount");
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(
-            _tokenContract,
-            _tokenId,
-            offer.amount,
-            offer.currency,
-            USE_ALL_GAS_FLAG
-        );
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, offer.currency);
@@ -279,17 +247,9 @@ contract OffersV1 is
         // Transfer NFT to buyer
         erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.seller, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({
-            tokenContract: offer.currency,
-            tokenId: 0,
-            amount: offer.amount
-        });
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: offer.currency, tokenId: 0, amount: offer.amount});
 
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({
-            tokenContract: _tokenContract,
-            tokenId: _tokenId,
-            amount: 1
-        });
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
 
         emit ExchangeExecuted(offer.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit NFTOfferFilled(_tokenContract, _tokenId, _offerId, msg.sender, _finder, offer);

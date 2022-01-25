@@ -64,13 +64,7 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         weth = new WETH();
 
         // Deploy Covered Call Options v1.0
-        calls = new CoveredCallsV1(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        calls = new CoveredCallsV1(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(calls));
 
         // Set user balances
@@ -105,7 +99,7 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
     }
 
     function test_ETHPurchaseIntegration() public {
@@ -133,7 +127,7 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.warp(10 hours);
 
@@ -169,7 +163,7 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall(address(token), 0);
+        calls.buyCall(address(token), 0, address(weth), 0.5 ether, 1 ether);
     }
 
     function test_ERC20PurchaseIntegration() public {
@@ -197,7 +191,7 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall(address(token), 0);
+        calls.buyCall(address(token), 0, address(weth), 0.5 ether, 1 ether);
 
         vm.warp(10 hours);
 

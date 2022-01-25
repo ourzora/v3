@@ -64,13 +64,7 @@ contract CoveredPutsV1Test is DSTest {
         weth = new WETH();
 
         // Deploy Covered Put Options v1.0
-        puts = new CoveredPutsV1(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        puts = new CoveredPutsV1(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(puts));
 
         // Set user balances
@@ -108,14 +102,11 @@ contract CoveredPutsV1Test is DSTest {
         vm.prank(address(seller));
         puts.createPut{value: 1 ether}(address(token), 0, 0.5 ether, 1 ether, 1 days, address(0));
 
-        (
-            address putSeller,
-            address putBuyer,
-            address putCurrency,
-            uint256 putPremium,
-            uint256 putStrike,
-            uint256 putExpiry
-        ) = puts.puts(address(token), 0, 1);
+        (address putSeller, address putBuyer, address putCurrency, uint256 putPremium, uint256 putStrike, uint256 putExpiry) = puts.puts(
+            address(token),
+            0,
+            1
+        );
 
         require(putSeller == address(seller));
         require(putBuyer == address(0));
@@ -171,7 +162,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.prank(address(seller));
         vm.expectRevert("cancelPut put has been purchased");
@@ -187,7 +178,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         (, address putBuyer, , , , ) = puts.puts(address(token), 0, 1);
         require(putBuyer == address(buyer));
@@ -195,7 +186,7 @@ contract CoveredPutsV1Test is DSTest {
 
     function testRevert_BuyPutDoesNotExist() public {
         vm.expectRevert("buyPut put does not exist");
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
     }
 
     function testRevert_BuyPutAlreadyPurchased() public {
@@ -205,12 +196,12 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(11 hours);
 
         vm.expectRevert("buyPut put already purchased");
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
     }
 
     function testRevert_BuyPutExpired() public {
@@ -221,7 +212,7 @@ contract CoveredPutsV1Test is DSTest {
 
         vm.prank(address(buyer));
         vm.expectRevert("buyPut put expired");
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
     }
 
     /// ------------ EXERCISE PUT ------------ ///
@@ -233,7 +224,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(23 hours);
 
@@ -250,7 +241,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(23 hours);
 
@@ -265,7 +256,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(23 hours);
 
@@ -284,7 +275,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(1 days + 1 seconds);
 
@@ -302,7 +293,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(1 days + 1 seconds);
 
@@ -322,7 +313,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(1 days + 1 seconds);
 
@@ -348,7 +339,7 @@ contract CoveredPutsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(23 hours);
 

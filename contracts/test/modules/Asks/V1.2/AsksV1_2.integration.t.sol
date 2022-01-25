@@ -68,13 +68,7 @@ contract AsksV1_2IntegrationTest is DSTest {
         weth = new WETH();
 
         // Deploy Asks v1.2
-        asks = new AsksV1_2(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        asks = new AsksV1_2(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(asks));
 
         // Set user balances
@@ -104,16 +98,7 @@ contract AsksV1_2IntegrationTest is DSTest {
 
     function runETH() public {
         vm.prank(address(seller));
-        asks.createAsk(
-            address(token),
-            0,
-            1 ether,
-            address(0),
-            address(sellerFundsRecipient),
-            address(listingFeeRecipient),
-            1000,
-            1000
-        );
+        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), address(listingFeeRecipient), 1000, 1000);
 
         vm.prank(address(buyer));
         asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
@@ -154,16 +139,7 @@ contract AsksV1_2IntegrationTest is DSTest {
 
     function runERC20() public {
         vm.prank(address(seller));
-        asks.createAsk(
-            address(token),
-            0,
-            1 ether,
-            address(weth),
-            address(sellerFundsRecipient),
-            address(listingFeeRecipient),
-            1000,
-            1000
-        );
+        asks.createAsk(address(token), 0, 1 ether, address(weth), address(sellerFundsRecipient), address(listingFeeRecipient), 1000, 1000);
 
         vm.prank(address(buyer));
         asks.fillAsk(address(token), 0, address(weth), 1 ether, address(finder));

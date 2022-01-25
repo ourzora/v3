@@ -12,13 +12,7 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @title Asks V1.3
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those asks
-contract AsksV1_3 is
-    ReentrancyGuard,
-    UniversalExchangeEventV1,
-    IncomingTransferSupportV1,
-    FeePayoutSupportV1,
-    ModuleNamingSupportV1
-{
+contract AsksV1_3 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
@@ -65,13 +59,7 @@ contract AsksV1_3 is
     /// @param buyer The buyer address of the filled ask
     /// @param finder The address of finder who referred the ask
     /// @param ask The metadata of the filled ask
-    event AskFilled(
-        address indexed tokenContract,
-        uint256 indexed tokenId,
-        address indexed buyer,
-        address finder,
-        Ask ask
-    );
+    event AskFilled(address indexed tokenContract, uint256 indexed tokenId, address indexed buyer, address finder, Ask ask);
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -86,12 +74,7 @@ contract AsksV1_3 is
         address _wethAddress
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
-        FeePayoutSupportV1(
-            _royaltyEngine,
-            _protocolFeeSettings,
-            _wethAddress,
-            ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar()
-        )
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Asks: v1.3")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
@@ -327,13 +310,7 @@ contract AsksV1_3 is
         _handleIncomingTransfer(ask.askPrice, ask.askCurrency);
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(
-            _tokenContract,
-            _tokenId,
-            ask.askPrice,
-            ask.askCurrency,
-            USE_ALL_GAS_FLAG
-        );
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, ask.askPrice, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, ask.askCurrency);
@@ -352,16 +329,8 @@ contract AsksV1_3 is
         // Transfer NFT to buyer
         erc721TransferHelper.transferFrom(_tokenContract, ask.seller, msg.sender, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({
-            tokenContract: _tokenContract,
-            tokenId: _tokenId,
-            amount: 1
-        });
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({
-            tokenContract: ask.askCurrency,
-            tokenId: 0,
-            amount: ask.askPrice
-        });
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: ask.askCurrency, tokenId: 0, amount: ask.askPrice});
 
         emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit AskFilled(_tokenContract, _tokenId, msg.sender, _finder, ask);

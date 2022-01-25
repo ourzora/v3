@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-/// ------------ IMPORTS ------------
+/// ------------ IMPORTS ------------ ///
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -37,13 +37,13 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         uint256 expiration;
     }
 
-    /// ------------ STORAGE ------------
+    /// ------------ STORAGE ------------ ///
 
     /// @notice The covered call option for a given NFT, if one exists
     /// @dev ERC-721 token address => ERC-721 token ID => Call
     mapping(address => mapping(uint256 => Call)) public callForNFT;
 
-    /// ------------ EVENTS ------------
+    /// ------------ EVENTS ------------ ///
 
     /// @notice Emitted when a covered call option is created
     /// @param tokenContract The ERC-721 token address of the created call option
@@ -75,7 +75,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @param call The metadata of the exercised call option
     event CallExercised(address indexed tokenContract, uint256 indexed tokenId, Call call);
 
-    /// ------------ CONSTRUCTOR ------------
+    /// ------------ CONSTRUCTOR ------------ ///
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -96,7 +96,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ SELLER FUNCTIONS ------------
+    /// ------------ SELLER FUNCTIONS ------------ ///
 
     /// @notice Creates a covered call option for an NFT
     /// @param _tokenContract The address of the ERC-721 token to sell
@@ -114,7 +114,10 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         address _currency
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "createCall must be token owner or operator");
+        require(
+            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "createCall must be token owner or operator"
+        );
         require(erc721TransferHelper.isModuleApproved(msg.sender), "createCall must approve CoveredCallsV1 module");
         require(
             IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
@@ -128,7 +131,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
 
         callForNFT[_tokenContract][_tokenId] = Call({
             seller: tokenOwner,
-            buyer: payable(address(0)),
+            buyer: address(0),
             currency: _currency,
             premium: _premiumPrice,
             strike: _strikePrice,
@@ -148,7 +151,10 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         require(call.buyer == address(0), "cancelCall call has been purchased");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "cancelCall must be seller or invalid call");
+        require(
+            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "cancelCall must be seller or invalid call"
+        );
 
         _cancelCall(_tokenContract, _tokenId);
     }
@@ -171,17 +177,29 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         delete callForNFT[_tokenContract][_tokenId];
     }
 
-    /// ------------ BUYER FUNCTIONS ------------
+    /// ------------ BUYER FUNCTIONS ------------ ///
 
     /// @notice Purchases a call option -- transferring the NFT to the contract and premium to the seller
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ERC-721 token ID
-    function buyCall(address _tokenContract, uint256 _tokenId) external payable nonReentrant {
+    /// @param _currency The ERC-20 address of the strike and premium, or address(0) for ETH
+    /// @param _premium The premium price to pay for the call option
+    /// @param _strike The strike price to exercise the call option
+    function buyCall(
+        address _tokenContract,
+        uint256 _tokenId,
+        address _currency,
+        uint256 _premium,
+        uint256 _strike
+    ) external payable nonReentrant {
         Call storage call = callForNFT[_tokenContract][_tokenId];
 
         require(call.seller != address(0), "buyCall call does not exist");
         require(call.buyer == address(0), "buyCall call already purchased");
         require(call.expiration > block.timestamp, "buyCall call expired");
+        require(call.currency == _currency, "buyCall _currency must match call");
+        require(call.premium == _premium, "buyCall _premium must match call");
+        require(call.strike == _strike, "buyCall _strike must match call");
 
         // Ensure premium payment is valid and take custody
         _handleIncomingTransfer(call.premium, call.currency);
@@ -231,7 +249,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         delete callForNFT[_tokenContract][_tokenId];
     }
 
-    /// ------------ PRIVATE FUNCTIONS ------------
+    /// ------------ PRIVATE FUNCTIONS ------------ ///
 
     /// @dev Deletes canceled and invalid call options
     /// @param _tokenContract The address of the ERC-721 token

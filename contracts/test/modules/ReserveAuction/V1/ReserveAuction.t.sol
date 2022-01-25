@@ -117,30 +117,12 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testGas_CreateAuction() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
     }
 
     function test_CreateAuction() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
         (
             address creator,
             address currency,
@@ -170,16 +152,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_CreateAuctionAndCancelPrevious() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.prank(address(seller));
         token.transferFrom(address(seller), address(sellerFundsRecipient), 0);
@@ -187,22 +160,10 @@ contract ReserveAuctionV1Test is DSTest {
         sellerFundsRecipient.setApprovalForModule(address(auctions), true);
         vm.startPrank(address(sellerFundsRecipient));
         token.setApprovalForAll(address(erc721TransferHelper), true);
-        auctions.createAuction(
-            address(token),
-            0,
-            5 days,
-            12 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 5 days, 12 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
         vm.stopPrank();
 
-        (address creator, , , , , , , uint256 duration, , , uint256 reservePrice) = auctions.auctionForNFT(
-            address(token),
-            0
-        );
+        (address creator, , , , , , , uint256 duration, , , uint256 reservePrice) = auctions.auctionForNFT(address(token), 0);
 
         require(creator == address(sellerFundsRecipient));
         require(duration == 5 days);
@@ -210,16 +171,7 @@ contract ReserveAuctionV1Test is DSTest {
     }
 
     function testFail_MustBeTokenOwnerOrOperator() public {
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
     }
 
     function testRevert_MustApproveERC721TransferHelper() public {
@@ -228,31 +180,13 @@ contract ReserveAuctionV1Test is DSTest {
 
         vm.prank(address(seller));
         vm.expectRevert("createAuction must approve ERC721TransferHelper as operator");
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
     }
 
     function testRevert_FindersFeeBPSCannotExceed10000() public {
         vm.prank(address(seller));
         vm.expectRevert("createAuction _findersFeeBps must be less than or equal to 10000");
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            10001,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 10001, address(0), 0);
     }
 
     function testRevert_SellerFundsRecipientCannotBeZeroAddress() public {
@@ -265,16 +199,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_SetReservePrice() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.prank(address(seller));
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
@@ -286,16 +211,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_MustBeOwnerOrOperatorToUpdate() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.expectRevert("setAuctionReservePrice must be seller");
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
@@ -308,16 +224,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_CannotUpdateActiveAuction() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(500);
         vm.prank(address(bidder));
@@ -332,16 +239,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_CreateFirstBid() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.prank(address(bidder));
         auctions.createBid{value: 1 ether}(address(token), 0, 1 ether, address(finder));
@@ -349,16 +247,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_SetAuctionStartTimeAfterFirstBid() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(500);
 
@@ -372,16 +261,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_RefundPreviousBidder() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(500);
         vm.prank(address(bidder));
@@ -398,16 +278,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_TransferNFTIntoEscrow() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.prank(address(bidder));
         auctions.createBid{value: 1 ether}(address(token), 0, 1 ether, address(finder));
@@ -417,16 +288,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_ExtendAuction() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 hours,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 hours, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         // Start 1 hr auction at 5 minutes block time (projected end 1hr 5min block time)
         vm.warp(5 minutes);
@@ -447,16 +309,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_CreatorTokenTransferBeforeFirstBid() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 hours,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 hours, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.prank(address(seller));
         token.transferFrom(address(seller), address(otherBidder), 0);
@@ -468,16 +321,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_CannotBidOnExpiredAuction() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 hours,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 hours, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(2 hours);
 
@@ -493,16 +337,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_CannotBidOnAuctionNotStarted() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            2238366608
-        ); // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 2238366608); // Wed Dec 05 2040 19:30:08 GMT-0500 (EST)
 
         vm.prank(address(bidder));
         vm.expectRevert("createBid auction hasn't started");
@@ -515,16 +350,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_BidMustMeetReservePrice() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.prank(address(bidder));
         vm.expectRevert("createBid must send at least reservePrice");
@@ -533,16 +359,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_BidMustBe10PercentGreaterThanPrevious() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.prank(address(bidder));
         auctions.createBid{value: 1 ether}(address(token), 0, 1 ether, address(finder));
@@ -557,16 +374,7 @@ contract ReserveAuctionV1Test is DSTest {
     function test_CancelAuction() public {
         vm.startPrank(address(seller));
 
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
         auctions.cancelAuction(address(token), 0);
 
         vm.stopPrank();
@@ -577,16 +385,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_OnlySellerCanCancel() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.expectRevert("cancelAuction must be token owner or operator");
         auctions.cancelAuction(address(token), 0);
@@ -594,16 +393,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_CannotCancelActiveAuction() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(500);
 
@@ -619,16 +409,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function test_SettleAuction() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(1 hours);
         vm.prank(address(bidder));
@@ -646,16 +427,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_CannotSettleAuctionNotBegun() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.expectRevert("settleAuction auction hasn't begun");
         auctions.settleAuction(address(token), 0);
@@ -663,16 +435,7 @@ contract ReserveAuctionV1Test is DSTest {
 
     function testRevert_CannotSettleAuctionNotComplete() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(1 hours);
         vm.prank(address(bidder));

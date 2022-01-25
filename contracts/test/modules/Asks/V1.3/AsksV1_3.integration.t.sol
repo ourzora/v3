@@ -67,13 +67,7 @@ contract AsksV1_3IntegrationTest is DSTest {
         weth = new WETH();
 
         // Deploy Asks v1.3
-        asks = new AsksV1_3(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        asks = new AsksV1_3(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(asks));
 
         // Set buyer balance

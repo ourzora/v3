@@ -13,13 +13,7 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @title Reserve Auction V1
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to list and bid on ERC-721 tokens with timed reserve auctions
-contract ReserveAuctionV1 is
-    ReentrancyGuard,
-    UniversalExchangeEventV1,
-    IncomingTransferSupportV1,
-    FeePayoutSupportV1,
-    ModuleNamingSupportV1
-{
+contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
     /// @notice The minimum amount of time left in an auction after a new bid is created
@@ -71,12 +65,7 @@ contract ReserveAuctionV1 is
     /// @param tokenId The ERC-721 token ID of the updated auction
     /// @param reservePrice The updated reserve price of the auction
     /// @param auction The metadata of the updated auction
-    event AuctionReservePriceUpdated(
-        address indexed tokenContract,
-        uint256 indexed tokenId,
-        uint256 indexed reservePrice,
-        Auction auction
-    );
+    event AuctionReservePriceUpdated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed reservePrice, Auction auction);
 
     /// @notice Emitted when a bid is placed on an auction
     /// @param tokenContract The ERC-721 token address of the auction
@@ -85,26 +74,14 @@ contract ReserveAuctionV1 is
     /// @param bidder The address of the bidder
     /// @param firstBid Whether the bid kicked off the auction
     /// @param auction The metadata of the updated auction
-    event AuctionBid(
-        address indexed tokenContract,
-        uint256 indexed tokenId,
-        uint256 indexed amount,
-        address bidder,
-        bool firstBid,
-        Auction auction
-    );
+    event AuctionBid(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed amount, address bidder, bool firstBid, Auction auction);
 
     /// @notice Emitted when the duration of an auction is extended
     /// @param tokenContract The ERC-721 token address of the auction
     /// @param tokenId The ERC-721 token ID of the auction
     /// @param duration The updated duration of the auction
     /// @param auction The metadata of the extended auction
-    event AuctionDurationExtended(
-        address indexed tokenContract,
-        uint256 indexed tokenId,
-        uint256 indexed duration,
-        Auction auction
-    );
+    event AuctionDurationExtended(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed duration, Auction auction);
 
     /// @notice Emitted when an auction has ended
     /// @param tokenContract The ERC-721 token address of the auction
@@ -112,13 +89,7 @@ contract ReserveAuctionV1 is
     /// @param winner The address of the winner bidder
     /// @param finder The address of the winning bid referrer
     /// @param auction The metadata of the ended auction
-    event AuctionEnded(
-        address indexed tokenContract,
-        uint256 indexed tokenId,
-        address indexed winner,
-        address finder,
-        Auction auction
-    );
+    event AuctionEnded(address indexed tokenContract, uint256 indexed tokenId, address indexed winner, address finder, Auction auction);
 
     /// @notice Emitted when an auction is canceled
     /// @param tokenContract The ERC-721 token address of the canceled auction
@@ -139,12 +110,7 @@ contract ReserveAuctionV1 is
         address _wethAddress
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
-        FeePayoutSupportV1(
-            _royaltyEngine,
-            _protocolFeeSettings,
-            _wethAddress,
-            ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar()
-        )
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Reserve Auction: v1.0")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
@@ -174,10 +140,7 @@ contract ReserveAuctionV1 is
             msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
             "createAuction must be token owner or operator"
         );
-        require(
-            erc721TransferHelper.isModuleApproved(msg.sender),
-            "createAuction must approve ReserveAuctionV1 module"
-        );
+        require(erc721TransferHelper.isModuleApproved(msg.sender), "createAuction must approve ReserveAuctionV1 module");
         require(
             IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
             "createAuction must approve ERC721TransferHelper as operator"
@@ -244,10 +207,7 @@ contract ReserveAuctionV1 is
 
         require(auction.seller != address(0), "createBid auction doesn't exist");
         require(block.timestamp >= auction.startTime, "createBid auction hasn't started");
-        require(
-            auction.firstBidTime == 0 || block.timestamp < (auction.firstBidTime + auction.duration),
-            "createBid auction expired"
-        );
+        require(auction.firstBidTime == 0 || block.timestamp < (auction.firstBidTime + auction.duration), "createBid auction expired");
         require(_amount >= auction.reservePrice, "createBid must send at least reservePrice");
         require(
             _amount >= (auction.amount + ((auction.amount * MIN_BID_INCREMENT_PERCENTAGE) / 100)),
@@ -297,13 +257,7 @@ contract ReserveAuctionV1 is
         require(block.timestamp >= (auction.firstBidTime + auction.duration), "settleAuction auction hasn't completed");
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(
-            _tokenContract,
-            _tokenId,
-            auction.amount,
-            auction.auctionCurrency,
-            USE_ALL_GAS_FLAG
-        );
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, auction.auctionCurrency);
@@ -317,26 +271,13 @@ contract ReserveAuctionV1 is
         }
 
         // Transfer remaining funds to seller
-        _handleOutgoingTransfer(
-            auction.sellerFundsRecipient,
-            remainingProfit,
-            auction.auctionCurrency,
-            USE_ALL_GAS_FLAG
-        );
+        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, auction.auctionCurrency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to winning bidder
         IERC721(_tokenContract).transferFrom(address(this), auction.bidder, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({
-            tokenContract: _tokenContract,
-            tokenId: _tokenId,
-            amount: 1
-        });
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({
-            tokenContract: auction.auctionCurrency,
-            tokenId: 0,
-            amount: auction.amount
-        });
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
+        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: auction.auctionCurrency, tokenId: 0, amount: auction.amount});
 
         emit ExchangeExecuted(auction.seller, auction.bidder, userAExchangeDetails, userBExchangeDetails);
         emit AuctionEnded(_tokenContract, _tokenId, auction.bidder, auction.finder, auction);

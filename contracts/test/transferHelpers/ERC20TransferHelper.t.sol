@@ -53,11 +53,7 @@ contract ERC20TransferHelperTest is DSTest {
 
         // Deploy mocks
         weth = new WETH();
-        module = new TransferModule(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(erc1155TransferHelper)
-        );
+        module = new TransferModule(address(erc20TransferHelper), address(erc721TransferHelper), address(erc1155TransferHelper));
         registrar.registerModule(address(module));
 
         // Set user balance

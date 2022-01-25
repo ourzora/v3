@@ -72,13 +72,7 @@ contract AsksV1_1Test is DSTest {
         weth = new WETH();
 
         // Deploy Asks v1.1
-        asks = new AsksV1_1(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        asks = new AsksV1_1(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(asks));
 
         // Set user balances
@@ -116,8 +110,7 @@ contract AsksV1_1Test is DSTest {
         vm.prank(address(seller));
         asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
 
-        (address askSeller, address fundsRecipient, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks
-            .askForNFT(address(token), 0);
+        (address askSeller, address fundsRecipient, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks.askForNFT(address(token), 0);
 
         require(askSeller == address(seller));
         require(fundsRecipient == address(sellerFundsRecipient));
@@ -135,8 +128,7 @@ contract AsksV1_1Test is DSTest {
         vm.prank(address(operator));
         asks.createAsk(address(token), 0, 0.5 ether, address(0), address(sellerFundsRecipient), 1000);
 
-        (address askSeller, address fundsRecipient, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks
-            .askForNFT(address(token), 0);
+        (address askSeller, address fundsRecipient, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks.askForNFT(address(token), 0);
 
         require(askSeller == address(seller));
         require(fundsRecipient == address(sellerFundsRecipient));
@@ -164,13 +156,10 @@ contract AsksV1_1Test is DSTest {
         vm.prank(address(otherSeller));
         asks.createAsk(address(token), 0, 10 ether, address(0), address(sellerFundsRecipient), 1);
 
-        (
-            address newAskSeller,
-            address fundsRecipient,
-            address askCurrency,
-            uint16 findersFeeBps,
-            uint256 askPrice
-        ) = asks.askForNFT(address(token), 0);
+        (address newAskSeller, address fundsRecipient, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks.askForNFT(
+            address(token),
+            0
+        );
 
         require(newAskSeller == address(otherSeller));
         require(fundsRecipient == address(sellerFundsRecipient));

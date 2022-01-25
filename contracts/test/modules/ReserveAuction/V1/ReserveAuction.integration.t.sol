@@ -115,16 +115,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
 
     function runETH() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            0.1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(0),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 0.1 ether, payable(address(sellerFundsRecipient)), 1000, address(0), 0);
 
         vm.warp(1 hours);
         vm.prank(address(bidder));
@@ -177,16 +168,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
 
     function runERC20() public {
         vm.prank(address(seller));
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            0.1 ether,
-            payable(address(sellerFundsRecipient)),
-            1000,
-            address(weth),
-            0
-        );
+        auctions.createAuction(address(token), 0, 1 days, 0.1 ether, payable(address(sellerFundsRecipient)), 1000, address(weth), 0);
 
         vm.warp(1 hours);
         vm.prank(address(bidder));

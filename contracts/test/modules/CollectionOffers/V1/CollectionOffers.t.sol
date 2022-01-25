@@ -133,10 +133,7 @@ contract CollectionOffersV1Test is DSTest {
         vm.prank(address(seller));
         offers.createCollectionOffer{value: 1 ether}(address(token));
 
-        (address offeror, uint256 amount, uint256 id, uint256 _prevId, uint256 _nextId) = offers.offers(
-            address(token),
-            1
-        );
+        (address offeror, uint256 amount, uint256 id, uint256 _prevId, uint256 _nextId) = offers.offers(address(token), 1);
 
         require(offeror == address(seller));
         require(id == 1);
@@ -163,14 +160,8 @@ contract CollectionOffersV1Test is DSTest {
         vm.prank(address(seller2));
         offers.createCollectionOffer{value: 2 ether}(address(token));
 
-        (address offeror1, uint256 amount1, uint256 id1, uint256 _prevId1, uint256 _nextId1) = offers.offers(
-            address(token),
-            1
-        );
-        (address offeror2, uint256 amount2, uint256 id2, uint256 _prevId2, uint256 _nextId2) = offers.offers(
-            address(token),
-            2
-        );
+        (address offeror1, uint256 amount1, uint256 id1, uint256 _prevId1, uint256 _nextId1) = offers.offers(address(token), 1);
+        (address offeror2, uint256 amount2, uint256 id2, uint256 _prevId2, uint256 _nextId2) = offers.offers(address(token), 2);
 
         require(offeror1 == address(seller) && offeror2 == address(seller2));
         require(amount1 == 1 ether && amount2 == 2 ether);
@@ -201,18 +192,9 @@ contract CollectionOffersV1Test is DSTest {
         vm.prank(address(seller3));
         offers.createCollectionOffer{value: 0.5 ether}(address(token));
 
-        (address offeror1, uint256 amount1, uint256 id1, uint256 _prevId1, uint256 _nextId1) = offers.offers(
-            address(token),
-            1
-        );
-        (address offeror2, uint256 amount2, uint256 id2, uint256 _prevId2, uint256 _nextId2) = offers.offers(
-            address(token),
-            2
-        );
-        (address offeror3, uint256 amount3, uint256 id3, uint256 _prevId3, uint256 _nextId3) = offers.offers(
-            address(token),
-            3
-        );
+        (address offeror1, uint256 amount1, uint256 id1, uint256 _prevId1, uint256 _nextId1) = offers.offers(address(token), 1);
+        (address offeror2, uint256 amount2, uint256 id2, uint256 _prevId2, uint256 _nextId2) = offers.offers(address(token), 2);
+        (address offeror3, uint256 amount3, uint256 id3, uint256 _prevId3, uint256 _nextId3) = offers.offers(address(token), 3);
 
         // Ensure sellers and amounts are valid
         require(offeror1 == address(seller) && offeror2 == address(seller2) && offeror3 == address(seller3));

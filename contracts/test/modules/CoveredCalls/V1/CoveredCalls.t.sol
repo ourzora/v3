@@ -72,13 +72,7 @@ contract CoveredCallsV1Test is DSTest {
         weth = new WETH();
 
         // Deploy Covered Call Options v1.0
-        calls = new CoveredCallsV1(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        calls = new CoveredCallsV1(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(calls));
 
         // Set user balances
@@ -116,14 +110,10 @@ contract CoveredCallsV1Test is DSTest {
         vm.prank(address(seller));
         calls.createCall(address(token), 0, 0.5 ether, 1 ether, 1 days, address(0));
 
-        (
-            address callSeller,
-            address callBuyer,
-            address callCurrency,
-            uint256 callPremium,
-            uint256 callStrike,
-            uint256 callExpiry
-        ) = calls.callForNFT(address(token), 0);
+        (address callSeller, address callBuyer, address callCurrency, uint256 callPremium, uint256 callStrike, uint256 callExpiry) = calls.callForNFT(
+            address(token),
+            0
+        );
 
         require(callSeller == address(seller));
         require(callBuyer == address(0));
@@ -227,7 +217,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.prank(address(seller));
         vm.expectRevert("cancelCall call has been purchased");
@@ -245,7 +235,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         (, address afterCallBuyer, , , , ) = calls.callForNFT(address(token), 0);
 
@@ -255,7 +245,7 @@ contract CoveredCallsV1Test is DSTest {
 
     function testRevert_BuyCallDoesNotExist() public {
         vm.expectRevert("buyCall call does not exist");
-        calls.buyCall(address(token), 0);
+        calls.buyCall(address(token), 0, address(0), 0.5 ether, 1 ether);
     }
 
     function testRevert_BuyCallAlreadyPurchased() public {
@@ -265,10 +255,10 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.expectRevert("buyCall call already purchased");
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
     }
 
     function testRevert_BuyCallExpired() public {
@@ -278,7 +268,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(1 days + 1 minutes);
 
         vm.expectRevert("buyCall call expired");
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
     }
 
     /// ------------ EXERCISE CALL ------------ ///
@@ -290,7 +280,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.warp(23 hours);
 
@@ -307,7 +297,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.warp(23 hours);
 
@@ -322,7 +312,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.warp(1 days + 1 seconds);
 
@@ -340,7 +330,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.warp(1 days + 1 seconds);
 
@@ -357,7 +347,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.warp(1 days + 1 seconds);
 
@@ -383,7 +373,7 @@ contract CoveredCallsV1Test is DSTest {
         vm.warp(10 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
 
         vm.warp(23 hours);
 

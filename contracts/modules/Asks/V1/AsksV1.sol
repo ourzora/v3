@@ -131,9 +131,15 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "createAsk must be token owner or operator");
+        require(
+            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "createAsk must be token owner or operator"
+        );
         require(erc721TransferHelper.isModuleApproved(msg.sender), "createAsk must approve AsksV1 module");
-        require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "createAsk must approve ERC721TransferHelper as operator");
+        require(
+            IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
+            "createAsk must approve ERC721TransferHelper as operator"
+        );
         require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
         require(_sellerFundsRecipient != address(0), "createAsk must specify _sellerFundsRecipient");
 
@@ -224,7 +230,10 @@ contract AsksV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSu
         require(askForNFT[_tokenContract][_tokenId].seller != address(0), "cancelAsk ask doesn't exist");
 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "cancelAsk must be token owner or operator");
+        require(
+            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
+            "cancelAsk must be token owner or operator"
+        );
 
         _cancelAsk(_tokenContract, _tokenId);
     }

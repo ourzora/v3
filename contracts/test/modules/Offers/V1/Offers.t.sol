@@ -64,13 +64,7 @@ contract OffersV1Test is DSTest {
         weth = new WETH();
 
         // Deploy Offers v1.0
-        offers = new OffersV1(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        offers = new OffersV1(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(offers));
 
         // Set seller balance
@@ -258,7 +252,7 @@ contract OffersV1Test is DSTest {
         uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(buyer));
-        vm.expectRevert("fillNFTOffer _acceptCurrency must match offer currency");
+        vm.expectRevert("fillNFTOffer _currency must match offer currency");
         offers.fillNFTOffer(address(token), 0, id, address(weth), 1 ether, address(finder));
     }
 
@@ -267,7 +261,7 @@ contract OffersV1Test is DSTest {
         uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(buyer));
-        vm.expectRevert("fillNFTOffer _acceptAmount must match offer amount");
+        vm.expectRevert("fillNFTOffer _amount must match offer amount");
         offers.fillNFTOffer(address(token), 0, id, address(0), 0.5 ether, address(finder));
     }
 }

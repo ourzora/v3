@@ -64,13 +64,7 @@ contract OffersV1IntegrationTest is DSTest {
         weth = new WETH();
 
         // Deploy Offers v1.0
-        offers = new OffersV1(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        offers = new OffersV1(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(offers));
 
         // Set seller balance

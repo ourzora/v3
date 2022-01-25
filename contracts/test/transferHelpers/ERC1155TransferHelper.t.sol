@@ -56,11 +56,7 @@ contract ERC1155TransferHelperTest is DSTest {
 
         // Deploy mocks
         token = new TestERC1155();
-        module = new TransferModule(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(erc1155TransferHelper)
-        );
+        module = new TransferModule(address(erc20TransferHelper), address(erc721TransferHelper), address(erc1155TransferHelper));
         registrar.registerModule(address(module));
 
         // Mint user ERC1155 tokens

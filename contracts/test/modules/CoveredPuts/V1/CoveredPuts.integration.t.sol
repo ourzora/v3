@@ -64,13 +64,7 @@ contract CoveredPutsV1IntegrationTest is DSTest {
         weth = new WETH();
 
         // Deploy Covered Put Options v1.0
-        puts = new CoveredPutsV1(
-            address(erc20TransferHelper),
-            address(erc721TransferHelper),
-            address(royaltyEngine),
-            address(ZPFS),
-            address(weth)
-        );
+        puts = new CoveredPutsV1(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(puts));
 
         // Set user balances
@@ -112,7 +106,7 @@ contract CoveredPutsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
     }
 
     function test_ETHPurchaseIntegration() public {
@@ -137,7 +131,7 @@ contract CoveredPutsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut{value: 0.5 ether}(address(token), 0, 1);
+        puts.buyPut{value: 0.5 ether}(address(token), 0, 1, address(0), 0.5 ether, 1 ether);
 
         vm.warp(10 hours);
 
@@ -173,7 +167,7 @@ contract CoveredPutsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut(address(token), 0, 1);
+        puts.buyPut(address(token), 0, 1, address(weth), 0.5 ether, 1 ether);
     }
 
     function test_ERC20PurchaseIntegration() public {
@@ -198,7 +192,7 @@ contract CoveredPutsV1IntegrationTest is DSTest {
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        puts.buyPut(address(token), 0, 1);
+        puts.buyPut(address(token), 0, 1, address(weth), 0.5 ether, 1 ether);
 
         vm.warp(10 hours);
 
