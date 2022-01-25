@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-/// ------------ IMPORTS ------------ ///
+/// ------------ IMPORTS ------------
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -40,7 +40,7 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
         uint256 expiration;
     }
 
-    /// ------------ STORAGE ------------ ///
+    /// ------------ STORAGE ------------
 
     /// @notice The metadata of a covered put option for a given NFT and put option ID
     /// @dev ERC-721 token address => ERC-721 token ID => Put ID => Put
@@ -50,7 +50,7 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
     /// @dev ERC-721 token address => ERC-721 token ID => put IDs
     mapping(address => mapping(uint256 => uint256[])) public putsForNFT;
 
-    /// ------------ EVENTS ------------ ///
+    /// ------------ EVENTS ------------
 
     /// @notice Emitted when a covered put option is created
     /// @param tokenContract The ERC-721 token address for the created put option
@@ -87,7 +87,7 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
     /// @param put The metadata of the exercised put option
     event PutExercised(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed putId, Put put);
 
-    /// ------------ CONSTRUCTOR ------------ ///
+    /// ------------ CONSTRUCTOR ------------
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -108,7 +108,7 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ SELLER FUNCTIONS ------------ ///
+    /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Places a covered put option on an NFT
     /// @param _tokenContract The address of the desired ERC-721 token
@@ -193,7 +193,7 @@ contract CoveredPutsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTra
         delete puts[_tokenContract][_tokenId][_putId];
     }
 
-    /// ------------ BUYER FUNCTIONS ------------ ///
+    /// ------------ BUYER FUNCTIONS ------------
 
     /// @notice Purchases a covered put option and transfers the premium to the seller
     /// @param _tokenContract The address of the ERC-721 token to trade

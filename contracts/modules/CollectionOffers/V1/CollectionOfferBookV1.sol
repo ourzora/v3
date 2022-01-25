@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-/// ------------ IMPORTS ------------ ///
+/// ------------ IMPORTS ------------
 
 /// @title Collection Offer Book V1
 /// @author kulkarohan <rohan@zora.co>
@@ -24,7 +24,7 @@ contract CollectionOfferBookV1 {
         uint256 nextId;
     }
 
-    /// ------------ PUBLIC STORAGE ------------ ///
+    /// ------------ PUBLIC STORAGE ------------
 
     /// @notice The metadata for a given collection offer
     /// @dev ERC-721 token address => ERC-721 token ID => Offer ID => Offer
@@ -50,7 +50,7 @@ contract CollectionOfferBookV1 {
     /// @notice ERC-721 token address => Offer ID => Finders Fee BPS
     mapping(address => mapping(uint256 => uint16)) public findersFeeOverrides;
 
-    /// ------------ INTERNAL FUNCTIONS ------------ ///
+    /// ------------ INTERNAL FUNCTIONS ------------
 
     /// @notice Creates and places a new offer in its collection's offer book
     /// @param _offerAmount The amount of ETH offered
@@ -263,7 +263,7 @@ contract CollectionOfferBookV1 {
         }
     }
 
-    /// ------------ PRIVATE FUNCTIONS ------------ ///
+    /// ------------ PRIVATE FUNCTIONS ------------
 
     /// @notice Checks whether any offers exist for a collection
     /// @param _collection The ERC-721 collection

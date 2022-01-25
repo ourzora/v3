@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-/// ------------ IMPORTS ------------ ///
+/// ------------ IMPORTS ------------
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -37,13 +37,13 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         uint256 expiration;
     }
 
-    /// ------------ STORAGE ------------ ///
+    /// ------------ STORAGE ------------
 
     /// @notice The covered call option for a given NFT, if one exists
     /// @dev ERC-721 token address => ERC-721 token ID => Call
     mapping(address => mapping(uint256 => Call)) public callForNFT;
 
-    /// ------------ EVENTS ------------ ///
+    /// ------------ EVENTS ------------
 
     /// @notice Emitted when a covered call option is created
     /// @param tokenContract The ERC-721 token address of the created call option
@@ -75,7 +75,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @param call The metadata of the exercised call option
     event CallExercised(address indexed tokenContract, uint256 indexed tokenId, Call call);
 
-    /// ------------ CONSTRUCTOR ------------ ///
+    /// ------------ CONSTRUCTOR ------------
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -96,7 +96,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ SELLER FUNCTIONS ------------ ///
+    /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Creates a covered call option for an NFT
     /// @param _tokenContract The address of the ERC-721 token to sell
@@ -177,7 +177,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         delete callForNFT[_tokenContract][_tokenId];
     }
 
-    /// ------------ BUYER FUNCTIONS ------------ ///
+    /// ------------ BUYER FUNCTIONS ------------
 
     /// @notice Purchases a call option -- transferring the NFT to the contract and premium to the seller
     /// @param _tokenContract The address of the ERC-721 token
@@ -249,7 +249,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         delete callForNFT[_tokenContract][_tokenId];
     }
 
-    /// ------------ PRIVATE FUNCTIONS ------------ ///
+    /// ------------ PRIVATE FUNCTIONS ------------
 
     /// @dev Deletes canceled and invalid call options
     /// @param _tokenContract The address of the ERC-721 token

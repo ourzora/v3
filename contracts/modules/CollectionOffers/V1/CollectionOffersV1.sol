@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-/// ------------ IMPORTS ------------ ///
+/// ------------ IMPORTS ------------
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -33,7 +33,7 @@ contract CollectionOffersV1 is
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
-    /// ------------ EVENTS ------------ ///
+    /// ------------ EVENTS ------------
 
     /// @notice Emitted when a collection offer is created
     /// @param collection The ERC-721 token address of the created offer
@@ -68,7 +68,7 @@ contract CollectionOffersV1 is
     /// @param offer The metadata of the canceled offer
     event CollectionOfferFilled(address indexed collection, uint256 indexed id, address buyer, address finder, Offer offer);
 
-    /// ------------ CONSTRUCTOR ------------ ///
+    /// ------------ CONSTRUCTOR ------------
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -88,7 +88,7 @@ contract CollectionOffersV1 is
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ SELLER FUNCTIONS ------------ ///
+    /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Places an offer for any NFT in a collection
     /// @param _tokenContract The ERC-721 collection address
@@ -169,7 +169,7 @@ contract CollectionOffersV1 is
         _removeOffer(_tokenContract, _offerId);
     }
 
-    /// ------------ BUYER FUNCTIONS ------------ ///
+    /// ------------ BUYER FUNCTIONS ------------
 
     /// @notice Fills the highest collection offer available, if above the desired minimum
     /// @param _tokenContract The address of the ERC-721 collection
@@ -203,10 +203,10 @@ contract CollectionOffersV1 is
 
             // If override exists --
             if (findersFeeOverrides[_tokenContract][offerId] != 0) {
-                // Calculate pay out with override
+                // Calculate with override
                 findersFee = (remainingProfit * findersFeeOverrides[_tokenContract][offerId]) / 10000;
 
-                // Else pay out default 100 bps finders fee
+                // Else default 100 bps finders fee
             } else {
                 findersFee = (remainingProfit * 100) / 10000;
             }

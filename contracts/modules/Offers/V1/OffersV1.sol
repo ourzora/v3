@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-/// ------------ IMPORTS ------------ ///
+/// ------------ IMPORTS ------------
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -37,7 +37,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         uint256 amount;
     }
 
-    /// ------------ STORAGE ------------ ///
+    /// ------------ STORAGE ------------
 
     /// @notice The metadata for a given offer
     /// @dev ERC-721 token address => ERC-721 token ID => Offer ID => Offer
@@ -47,7 +47,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @dev ERC-721 token address => ERC-721 token ID => offer IDs
     mapping(address => mapping(uint256 => uint256[])) public offersForNFT;
 
-    /// ------------ EVENTS ------------ ///
+    /// ------------ EVENTS ------------
 
     /// @notice Emitted when an offer is created
     /// @param tokenContract The ERC-721 token address of the created offer
@@ -79,7 +79,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param offer The metadata of the filled offer
     event NFTOfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address buyer, address finder, Offer offer);
 
-    /// ------------ CONSTRUCTOR ------------ ///
+    /// ------------ CONSTRUCTOR ------------
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -100,7 +100,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
-    /// ------------ SELLER FUNCTIONS ------------ ///
+    /// ------------ SELLER FUNCTIONS ------------
 
     /// @notice Creates an offer for an NFT
     /// @param _tokenContract The address of the desired ERC-721 token
@@ -203,7 +203,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         delete offers[_tokenContract][_tokenId][offerCount];
     }
 
-    /// ------------ BUYER FUNCTIONS ------------ ///
+    /// ------------ BUYER FUNCTIONS ------------
 
     /// @notice Fills the offer for an owned NFT, in exchange for ETH/ERC-20 tokens
     /// @param _tokenContract The address of the ERC-721 token to sell
