@@ -9,10 +9,10 @@ import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport
 import {FeePayoutSupportV1} from "../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
 import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
 
-/// @title Asks V1.1
+/// @title Asks V1.2
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those asks
-contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+contract AsksV1_2 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
@@ -26,14 +26,18 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @notice The metadata for an ask
     /// @param seller The address of the seller placing the ask
     /// @param sellerFundsRecipient The address to send funds after the ask is filled
+    /// @param listingFeeRecipient The address to send the listing fee after the ask is filled
     /// @param askCurrency The address of the ERC-20, or address(0) for ETH, required to fill the ask
     /// @param findersFeeBps The fee to the referrer of the ask
+    /// @param listingFeeBps The fee to the lister of the ask
     /// @param askPrice The price to fill the ask
     struct Ask {
         address seller;
         address sellerFundsRecipient;
+        address listingFeeRecipient;
         address askCurrency;
         uint16 findersFeeBps;
+        uint16 listingFeeBps;
         uint256 askPrice;
     }
 
@@ -77,7 +81,7 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
         FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
-        ModuleNamingSupportV1("Asks: v1.1")
+        ModuleNamingSupportV1("Asks: v1.2")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
@@ -120,13 +124,17 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _askPrice The price to fill the ask
     /// @param _askCurrency The address of the ERC-20 token required to fill, or address(0) for ETH
     /// @param _sellerFundsRecipient The address to send funds once the ask is filled
-    /// @param _findersFeeBps The bps of the ask price (post-royalties) to be sent to the referrer of the sale
+    /// @param _listingFeeRecipient The address to send the listing fee once the ask is filled
+    /// @param _listingFeeBps The bps of the ask price (post royalties) to be sent to the lister of the sale
+    /// @param _findersFeeBps The bps of the ask price (post royalties + listing fee) to be sent to the referrer of the sale
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _askPrice,
         address _askCurrency,
         address _sellerFundsRecipient,
+        address _listingFeeRecipient,
+        uint16 _listingFeeBps,
         uint16 _findersFeeBps
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
@@ -140,8 +148,11 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
             IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
             "createAsk must approve ERC721TransferHelper as operator"
         );
-        require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
-        require(_sellerFundsRecipient != address(0), "createAsk must specify _sellerFundsRecipient");
+        require(_findersFeeBps <= 10000 && _listingFeeBps <= 10000, "createAsk listing & finders fee bps must each be <= 10000");
+        require(
+            _sellerFundsRecipient != address(0) && _listingFeeRecipient != address(0),
+            "createAsk must specify _sellerFundsRecipient & _listingFeeRecipient"
+        );
 
         if (askForNFT[_tokenContract][_tokenId].seller != address(0)) {
             _cancelAsk(_tokenContract, _tokenId);
@@ -150,8 +161,10 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         askForNFT[_tokenContract][_tokenId] = Ask({
             seller: tokenOwner,
             sellerFundsRecipient: _sellerFundsRecipient,
+            listingFeeRecipient: _listingFeeRecipient,
             askCurrency: _askCurrency,
             findersFeeBps: _findersFeeBps,
+            listingFeeBps: _listingFeeBps,
             askPrice: _askPrice
         });
 
@@ -321,12 +334,20 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, ask.askCurrency);
 
-        // Payout optional finder fee
+        // Payout optional listing fee
+        if (ask.listingFeeBps != 0) {
+            uint256 listingFee = (remainingProfit * ask.listingFeeBps) / 10000;
+            _handleOutgoingTransfer(ask.listingFeeRecipient, listingFee, ask.askCurrency, USE_ALL_GAS_FLAG);
+
+            remainingProfit -= listingFee;
+        }
+
+        // Payout optional finders fee
         if (_finder != address(0)) {
             uint256 findersFee = (remainingProfit * ask.findersFeeBps) / 10000;
             _handleOutgoingTransfer(_finder, findersFee, ask.askCurrency, USE_ALL_GAS_FLAG);
 
-            remainingProfit = remainingProfit - findersFee;
+            remainingProfit -= findersFee;
         }
 
         // Transfer remaining ETH/ERC-20 to seller

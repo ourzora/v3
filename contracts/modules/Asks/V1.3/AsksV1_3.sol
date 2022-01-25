@@ -9,10 +9,10 @@ import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport
 import {FeePayoutSupportV1} from "../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
 import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
 
-/// @title Asks V1.1
+/// @title Asks V1.3
 /// @author tbtstl <t@zora.co>
 /// @notice This module allows sellers to list an owned ERC-721 token for sale for a given price in a given currency, and allows buyers to purchase from those asks
-contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+contract AsksV1_3 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
@@ -25,13 +25,11 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
     /// @notice The metadata for an ask
     /// @param seller The address of the seller placing the ask
-    /// @param sellerFundsRecipient The address to send funds after the ask is filled
     /// @param askCurrency The address of the ERC-20, or address(0) for ETH, required to fill the ask
     /// @param findersFeeBps The fee to the referrer of the ask
     /// @param askPrice The price to fill the ask
     struct Ask {
         address seller;
-        address sellerFundsRecipient;
         address askCurrency;
         uint16 findersFeeBps;
         uint256 askPrice;
@@ -77,7 +75,7 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
         FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
-        ModuleNamingSupportV1("Asks: v1.1")
+        ModuleNamingSupportV1("Asks: v1.3")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
@@ -119,14 +117,12 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _tokenId The ID of the ERC-721 token to be sold
     /// @param _askPrice The price to fill the ask
     /// @param _askCurrency The address of the ERC-20 token required to fill, or address(0) for ETH
-    /// @param _sellerFundsRecipient The address to send funds once the ask is filled
     /// @param _findersFeeBps The bps of the ask price (post-royalties) to be sent to the referrer of the sale
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _askPrice,
         address _askCurrency,
-        address _sellerFundsRecipient,
         uint16 _findersFeeBps
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
@@ -141,7 +137,6 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
             "createAsk must approve ERC721TransferHelper as operator"
         );
         require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
-        require(_sellerFundsRecipient != address(0), "createAsk must specify _sellerFundsRecipient");
 
         if (askForNFT[_tokenContract][_tokenId].seller != address(0)) {
             _cancelAsk(_tokenContract, _tokenId);
@@ -149,7 +144,6 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         askForNFT[_tokenContract][_tokenId] = Ask({
             seller: tokenOwner,
-            sellerFundsRecipient: _sellerFundsRecipient,
             askCurrency: _askCurrency,
             findersFeeBps: _findersFeeBps,
             askPrice: _askPrice
@@ -265,9 +259,9 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     //        |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!     |
     //        |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!     |
     //        |                 |                                         |
-    //        |                 |----.
-    //        |                 |    | handle seller funds recipient payout
-    //        |                 |<---'
+    //        |                 |----.                                    |
+    //        |                 |    | handle seller payout               |
+    //        |                 |<---'                                    |
     //        |                 |                                         |
     //        |                 |              transferFrom()             |
     //        |                 | ---------------------------------------->
@@ -330,7 +324,7 @@ contract AsksV1_1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         }
 
         // Transfer remaining ETH/ERC-20 to seller
-        _handleOutgoingTransfer(ask.sellerFundsRecipient, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(ask.seller, remainingProfit, ask.askCurrency, USE_ALL_GAS_FLAG);
 
         // Transfer NFT to buyer
         erc721TransferHelper.transferFrom(_tokenContract, ask.seller, msg.sender, _tokenId);

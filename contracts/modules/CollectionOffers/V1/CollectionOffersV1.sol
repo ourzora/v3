@@ -161,6 +161,7 @@ contract CollectionOffersV1 is
     function cancelCollectionOffer(address _tokenContract, uint256 _offerId) external nonReentrant {
         require(msg.sender == offers[_tokenContract][_offerId].seller, "cancelCollectionOffer offer must be active & msg sender must be seller");
 
+        // Refund offered amount
         _handleOutgoingTransfer(msg.sender, offers[_tokenContract][_offerId].amount, ETH, USE_ALL_GAS_FLAG);
 
         emit CollectionOfferCanceled(_tokenContract, _offerId, offers[_tokenContract][_offerId]);
@@ -200,13 +201,16 @@ contract CollectionOffersV1 is
         if (_finder != address(0)) {
             uint256 findersFee;
 
-            // If no override, payout default 100 bps finders fee
-            if (findersFeeOverrides[_tokenContract][offerId] == 0) {
-                findersFee = (remainingProfit * 100) / 10000;
-                // Else payout with override
-            } else {
+            // If override exists --
+            if (findersFeeOverrides[_tokenContract][offerId] != 0) {
+                // Calculate with override
                 findersFee = (remainingProfit * findersFeeOverrides[_tokenContract][offerId]) / 10000;
+
+                // Else default 100 bps finders fee
+            } else {
+                findersFee = (remainingProfit * 100) / 10000;
             }
+
             _handleOutgoingTransfer(_finder, findersFee, ETH, USE_ALL_GAS_FLAG);
 
             remainingProfit -= findersFee;

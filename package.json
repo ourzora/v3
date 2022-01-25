@@ -7,58 +7,36 @@
     "type": "git",
     "url": "https://github.com/ourzora/v3.git"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "files": [
     "./dist/**/*",
     "./dist/*"
   ],
+  "dependencies": {
+    "@manifoldxyz/royalty-registry-solidity": "^1.0.7",
+    "@openzeppelin/contracts": "^4.4.2",
+    "@rari-capital/solmate": "^6.2.0"
+  },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-etherscan": "^2.1.6",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@typechain/ethers-v5": "^8.0.0",
-    "@typechain/hardhat": "^3.0.0",
-    "@types/chai": "^4.2.19",
-    "@types/chai-as-promised": "^7.1.4",
-    "@types/mocha": "^8.2.2",
-    "@types/node": "^15.12.4",
-    "chai": "^4.3.4",
-    "chai-as-promised": "^7.1.1",
-    "dotenv": "^10.0.0",
-    "eth-sig-util": "^3.0.1",
-    "ethereum-waffle": "^3.4.0",
-    "ethereumjs-util": "^7.1.3",
-    "ethers": "^5.4.1",
-    "fs-extra": "^10.0.0",
-    "hardhat": "^2.4.1",
-    "hardhat-dependency-compiler": "^1.1.2",
-    "hardhat-gas-reporter": "^1.0.4",
+    "@typechain/ethers-v5": "^9.0.0",
     "husky": "^7.0.0",
-    "lint-staged": "^11.0.0",
-    "prettier": "^2.3.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.18",
+    "lint-staged": "^12.3.1",
+    "prettier": "^2.5.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.6",
     "solhint-plugin-prettier": "^0.0.5",
-    "ts-node": "^10.0.0",
-    "tsconfig-paths": "^3.9.0",
-    "typechain": "^6.0.0",
-    "typescript": "^4.3.4"
-  },
-  "dependencies": {
-    "@manifoldxyz/royalty-registry-solidity": "1.0.4",
-    "@openzeppelin/contracts": "^4.3.2",
-    "@rari-capital/solmate": "^5.9.0",
-    "@zoralabs/core": "^1.0.5"
+    "typechain": "^7.0.0",
+    "typescript": "^4.5.5"
   },
   "lint-staged": {
     "*.{ts,js,css,md,sol}": "prettier --write",
     "*.sol": "solhint"
   },
   "scripts": {
+    "build": "forge build && yarn typechain",
+    "clean": "forge clean && rm -rf dist/typechain",
     "prepare": "husky install",
-    "build": "hardhat compile",
-    "test": "hardhat test",
-    "prepublishOnly": "yarn build && rm -rf ./dist && tsc && cp typechain/*.d.ts dist/typechain && cp -R addresses dist && cp -R artifacts/contracts dist/artifacts && cp -R contracts dist"
+    "prepublishOnly": "rm -rf ./dist && forge clean && forge build && yarn typechain && cp -R contracts dist && cp -R addresses dist",
+    "test": "forge test",
+    "typechain": "typechain --target=ethers-v5 'dist/artifacts/*/*.json' --out-dir dist/typechain"
   }
 }

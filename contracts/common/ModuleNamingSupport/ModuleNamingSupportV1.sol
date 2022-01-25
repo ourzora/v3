@@ -5,7 +5,7 @@ pragma solidity 0.8.10;
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This contract extension supports naming modules
 contract ModuleNamingSupportV1 {
-    /// @notice The name of the module
+    /// @notice The module name
     string public name;
 
     /// @notice Sets the name of a module
