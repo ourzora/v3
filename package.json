@@ -12,19 +12,19 @@
     "./dist/*"
   ],
   "dependencies": {
-    "@manifoldxyz/royalty-registry-solidity": "1.0.4",
-    "@openzeppelin/contracts": "^4.3.2",
-    "@rari-capital/solmate": "^5.9.0"
+    "@manifoldxyz/royalty-registry-solidity": "^1.0.7",
+    "@openzeppelin/contracts": "^4.4.2",
+    "@rari-capital/solmate": "^6.2.0"
   },
   "devDependencies": {
-    "@typechain/ethers-v5": "^8.0.5",
+    "@typechain/ethers-v5": "^9.0.0",
     "husky": "^7.0.0",
-    "lint-staged": "^11.0.0",
+    "lint-staged": "^12.3.1",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.6",
     "solhint-plugin-prettier": "^0.0.5",
-    "typechain": "^6.1.0",
+    "typechain": "^7.0.0",
     "typescript": "^4.5.5"
   },
   "lint-staged": {
