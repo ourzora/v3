@@ -17,13 +17,13 @@
     "@rari-capital/solmate": "^5.9.0"
   },
   "devDependencies": {
+    "@typechain/ethers-v5": "^8.0.5",
     "husky": "^7.0.0",
     "lint-staged": "^11.0.0",
     "prettier": "^2.5.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.6",
     "solhint-plugin-prettier": "^0.0.5",
-    "@typechain/ethers-v5": "^8.0.5",
     "typechain": "^6.1.0",
     "typescript": "^4.5.5"
   },
