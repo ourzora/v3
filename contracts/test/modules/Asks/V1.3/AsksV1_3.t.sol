@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import {DSTest} from "ds-test/test.sol";
 
-import {AsksV1_1} from "../../../../modules/Asks/V1.1/AsksV1_1.sol";
+import {AsksV1_3} from "../../../../modules/Asks/V1.3/AsksV1_3.sol";
 import {Zorb} from "../../../utils/users/Zorb.sol";
 import {ZoraRegistrar} from "../../../utils/users/ZoraRegistrar.sol";
 import {ZoraModuleManager} from "../../../../ZoraModuleManager.sol";
@@ -16,9 +16,9 @@ import {TestERC721} from "../../../utils/tokens/TestERC721.sol";
 import {WETH} from "../../../utils/tokens/WETH.sol";
 import {VM} from "../../../utils/VM.sol";
 
-/// @title AskV1_1Test
-/// @notice Unit Tests for Asks v1.1
-contract AsksV1_1Test is DSTest {
+/// @title AskV1_3Test
+/// @notice Unit Tests for Asks v1.3
+contract AsksV1_3Test is DSTest {
     VM internal vm;
 
     ZoraRegistrar internal registrar;
@@ -28,7 +28,7 @@ contract AsksV1_1Test is DSTest {
     ERC721TransferHelper internal erc721TransferHelper;
     RoyaltyEngine internal royaltyEngine;
 
-    AsksV1_1 internal asks;
+    AsksV1_3 internal asks;
     TestERC721 internal token;
     WETH internal weth;
 
@@ -71,8 +71,8 @@ contract AsksV1_1Test is DSTest {
         token = new TestERC721();
         weth = new WETH();
 
-        // Deploy Asks v1.1
-        asks = new AsksV1_1(
+        // Deploy Asks v1.3
+        asks = new AsksV1_3(
             address(erc20TransferHelper),
             address(erc721TransferHelper),
             address(royaltyEngine),
@@ -109,18 +109,19 @@ contract AsksV1_1Test is DSTest {
 
     function testGas_CreateAsk() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
     }
 
     function test_CreateAskFromTokenOwner() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
-        (address askSeller, address fundsRecipient, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks
-            .askForNFT(address(token), 0);
+        (address askSeller, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks.askForNFT(
+            address(token),
+            0
+        );
 
         require(askSeller == address(seller));
-        require(fundsRecipient == address(sellerFundsRecipient));
         require(askCurrency == address(0));
         require(askPrice == 1 ether);
         require(findersFeeBps == 1000);
@@ -133,13 +134,14 @@ contract AsksV1_1Test is DSTest {
         operator.setApprovalForModule(address(asks), true);
 
         vm.prank(address(operator));
-        asks.createAsk(address(token), 0, 0.5 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 0.5 ether, address(0), 1000);
 
-        (address askSeller, address fundsRecipient, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks
-            .askForNFT(address(token), 0);
+        (address askSeller, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks.askForNFT(
+            address(token),
+            0
+        );
 
         require(askSeller == address(seller));
-        require(fundsRecipient == address(sellerFundsRecipient));
         require(askCurrency == address(0));
         require(askPrice == 0.5 ether);
         require(findersFeeBps == 1000);
@@ -147,9 +149,9 @@ contract AsksV1_1Test is DSTest {
 
     function test_CreateAskAndCancelPreviousOwners() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
-        (address askSeller, , , , ) = asks.askForNFT(address(token), 0);
+        (address askSeller, , , ) = asks.askForNFT(address(token), 0);
         require(askSeller == address(seller));
 
         vm.prank(address(seller));
@@ -162,18 +164,14 @@ contract AsksV1_1Test is DSTest {
         token.setApprovalForAll(address(erc721TransferHelper), true);
 
         vm.prank(address(otherSeller));
-        asks.createAsk(address(token), 0, 10 ether, address(0), address(sellerFundsRecipient), 1);
+        asks.createAsk(address(token), 0, 10 ether, address(0), 1);
 
-        (
-            address newAskSeller,
-            address fundsRecipient,
-            address askCurrency,
-            uint16 findersFeeBps,
-            uint256 askPrice
-        ) = asks.askForNFT(address(token), 0);
+        (address newAskSeller, address askCurrency, uint16 findersFeeBps, uint256 askPrice) = asks.askForNFT(
+            address(token),
+            0
+        );
 
         require(newAskSeller == address(otherSeller));
-        require(fundsRecipient == address(sellerFundsRecipient));
         require(askCurrency == address(0));
         require(askPrice == 10 ether);
         require(findersFeeBps == 1);
@@ -185,23 +183,17 @@ contract AsksV1_1Test is DSTest {
 
         vm.prank(address(seller));
         vm.expectRevert("createAsk must approve ERC721TransferHelper as operator");
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
     }
 
     function testFail_MustBeTokenOwnerOrOperator() public {
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
     }
 
     function testRevert_FindersFeeBPSCannotExceed10000() public {
         vm.prank(address(seller));
         vm.expectRevert("createAsk finders fee bps must be less than or equal to 10000");
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 10001);
-    }
-
-    function testRevert_SellerFundsRecipientCannotBeZeroAddress() public {
-        vm.prank(address(seller));
-        vm.expectRevert("createAsk must specify _sellerFundsRecipient");
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(0), 1001);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 10001);
     }
 
     /// ------------ SET ASK PRICE ------------ ///
@@ -209,18 +201,18 @@ contract AsksV1_1Test is DSTest {
     function test_UpdateAskPrice() public {
         vm.startPrank(address(seller));
 
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
         asks.setAskPrice(address(token), 0, 5 ether, address(0));
 
         vm.stopPrank();
 
-        (, , , , uint256 askPrice) = asks.askForNFT(address(token), 0);
+        (, , , uint256 askPrice) = asks.askForNFT(address(token), 0);
         require(askPrice == 5 ether);
     }
 
     function testRevert_OnlySellerCanSetAskPrice() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
         vm.expectRevert("setAskPrice must be seller");
         asks.setAskPrice(address(token), 0, 5 ether, address(0));
@@ -228,7 +220,7 @@ contract AsksV1_1Test is DSTest {
 
     function testFail_CannotUpdateCanceledAsk() public {
         vm.startPrank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
         asks.cancelAsk(address(token), 0);
         asks.setAskPrice(address(token), 0, 5 ether, address(0));
         vm.stopPrank();
@@ -236,7 +228,7 @@ contract AsksV1_1Test is DSTest {
 
     function testFail_CannotUpdateFilledAsk() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
         vm.prank(address(buyer));
         asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
@@ -250,14 +242,14 @@ contract AsksV1_1Test is DSTest {
     function test_CancelAsk() public {
         vm.startPrank(address(seller));
 
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
-        (, , , , uint256 beforeAskPrice) = asks.askForNFT(address(token), 0);
+        (, , , uint256 beforeAskPrice) = asks.askForNFT(address(token), 0);
         require(beforeAskPrice == 1 ether);
 
         asks.cancelAsk(address(token), 0);
 
-        (, , , , uint256 afterAskPrice) = asks.askForNFT(address(token), 0);
+        (, , , uint256 afterAskPrice) = asks.askForNFT(address(token), 0);
         require(afterAskPrice == 0);
 
         vm.stopPrank();
@@ -265,7 +257,7 @@ contract AsksV1_1Test is DSTest {
 
     function testRevert_MsgSenderMustBeApprovedToCancelAsk() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
         vm.expectRevert("cancelAsk must be token owner or operator");
         asks.cancelAsk(address(token), 0);
@@ -280,7 +272,7 @@ contract AsksV1_1Test is DSTest {
 
     function test_FillAsk() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
         vm.prank(address(buyer));
         asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
@@ -288,20 +280,20 @@ contract AsksV1_1Test is DSTest {
         require(token.ownerOf(0) == address(buyer));
     }
 
-    function testRevert_AskMustBeActiveToFill() public {
+    function testFail_AskMustBeActiveToFill() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 10);
 
         vm.prank(address(buyer));
         asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
 
-        vm.expectRevert("fillAsk must be active ask");
+        vm.prank(address(otherBuyer));
         asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
     }
 
     function testRevert_FillCurrencyMustMatchAsk() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(weth), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(weth), 1000);
 
         vm.prank(address(buyer));
         vm.expectRevert("fillAsk _fillCurrency must match ask currency");
@@ -310,7 +302,7 @@ contract AsksV1_1Test is DSTest {
 
     function testRevert_FillAmountMustMatchAsk() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(weth), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(weth), 1000);
 
         vm.prank(address(buyer));
         vm.expectRevert("fillAsk _fillCurrency must match ask currency");

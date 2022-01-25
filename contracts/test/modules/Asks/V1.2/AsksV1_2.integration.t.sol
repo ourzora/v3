@@ -116,7 +116,7 @@ contract AsksV1_2IntegrationTest is DSTest {
         );
 
         vm.prank(address(buyer));
-        asks.fillAsk{value: 1 ether}(address(token), 0, address(finder));
+        asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
     }
 
     function test_ETHIntegration() public {
@@ -166,7 +166,7 @@ contract AsksV1_2IntegrationTest is DSTest {
         );
 
         vm.prank(address(buyer));
-        asks.fillAsk(address(token), 0, address(finder));
+        asks.fillAsk(address(token), 0, address(weth), 1 ether, address(finder));
     }
 
     function test_ERC20Integration() public {

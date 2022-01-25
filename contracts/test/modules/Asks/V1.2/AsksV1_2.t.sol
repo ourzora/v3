@@ -340,7 +340,7 @@ contract AsksV1_2Test is DSTest {
         );
 
         vm.prank(address(buyer));
-        asks.fillAsk{value: 1 ether}(address(token), 0, address(finder));
+        asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
 
         vm.prank(address(seller));
         asks.setAskPrice(address(token), 0, 5 ether, address(0));
@@ -411,30 +411,12 @@ contract AsksV1_2Test is DSTest {
         );
 
         vm.prank(address(buyer));
-        asks.fillAsk{value: 1 ether}(address(token), 0, address(finder));
+        asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
 
         require(token.ownerOf(0) == address(buyer));
     }
 
-    function testFail_OnlySellerCanFillAsk() public {
-        vm.startPrank(address(seller));
-
-        asks.createAsk(
-            address(token),
-            0,
-            1 ether,
-            address(0),
-            address(sellerFundsRecipient),
-            address(listingFeeRecipient),
-            1000,
-            1000
-        );
-        asks.fillAsk{value: 1 ether}(address(token), 0, address(finder));
-
-        vm.stopPrank();
-    }
-
-    function testFail_AskMustBeActiveToFill() public {
+    function testRevert_AskMustBeActiveToFill() public {
         vm.prank(address(seller));
         asks.createAsk(
             address(token),
@@ -448,8 +430,45 @@ contract AsksV1_2Test is DSTest {
         );
 
         vm.prank(address(buyer));
-        asks.fillAsk{value: 1 ether}(address(token), 0, address(finder));
+        asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
 
-        asks.fillAsk{value: 1 ether}(address(token), 0, address(finder));
+        vm.expectRevert("fillAsk must be active ask");
+        asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
+    }
+
+    function testRevert_FillCurrencyMustMatchAsk() public {
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            1 ether,
+            address(weth),
+            address(sellerFundsRecipient),
+            address(listingFeeRecipient),
+            1000,
+            1000
+        );
+
+        vm.prank(address(buyer));
+        vm.expectRevert("fillAsk _fillCurrency must match ask currency");
+        asks.fillAsk(address(token), 0, address(0), 1 ether, address(finder));
+    }
+
+    function testRevert_FillAmountMustMatchAsk() public {
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            1 ether,
+            address(weth),
+            address(sellerFundsRecipient),
+            address(listingFeeRecipient),
+            1000,
+            1000
+        );
+
+        vm.prank(address(buyer));
+        vm.expectRevert("fillAsk _fillCurrency must match ask currency");
+        asks.fillAsk(address(token), 0, address(0), 0.5 ether, address(finder));
     }
 }

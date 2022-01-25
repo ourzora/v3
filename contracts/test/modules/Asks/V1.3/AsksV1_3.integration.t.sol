@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import {DSTest} from "ds-test/test.sol";
 
-import {AsksV1_1} from "../../../../modules/Asks/V1.1/AsksV1_1.sol";
+import {AsksV1_3} from "../../../../modules/Asks/V1.3/AsksV1_3.sol";
 import {Zorb} from "../../../utils/users/Zorb.sol";
 import {ZoraRegistrar} from "../../../utils/users/ZoraRegistrar.sol";
 import {ZoraModuleManager} from "../../../../ZoraModuleManager.sol";
@@ -16,9 +16,9 @@ import {TestERC721} from "../../../utils/tokens/TestERC721.sol";
 import {WETH} from "../../../utils/tokens/WETH.sol";
 import {VM} from "../../../utils/VM.sol";
 
-/// @title AsksV1_1IntegrationTest
-/// @notice Integration Tests for Asks v1.1
-contract AsksV1_1IntegrationTest is DSTest {
+/// @title AsksV1_3IntegrationTest
+/// @notice Integration Tests for Asks v1.3
+contract AsksV1_3IntegrationTest is DSTest {
     VM internal vm;
 
     ZoraRegistrar internal registrar;
@@ -28,7 +28,7 @@ contract AsksV1_1IntegrationTest is DSTest {
     ERC721TransferHelper internal erc721TransferHelper;
     RoyaltyEngine internal royaltyEngine;
 
-    AsksV1_1 internal asks;
+    AsksV1_3 internal asks;
     TestERC721 internal token;
     WETH internal weth;
 
@@ -56,7 +56,6 @@ contract AsksV1_1IntegrationTest is DSTest {
 
         // Create users
         seller = new Zorb(address(ZMM));
-        sellerFundsRecipient = new Zorb(address(ZMM));
         operator = new Zorb(address(ZMM));
         buyer = new Zorb(address(ZMM));
         finder = new Zorb(address(ZMM));
@@ -67,8 +66,8 @@ contract AsksV1_1IntegrationTest is DSTest {
         token = new TestERC721();
         weth = new WETH();
 
-        // Deploy Asks v1.1
-        asks = new AsksV1_1(
+        // Deploy Asks v1.3
+        asks = new AsksV1_3(
             address(erc20TransferHelper),
             address(erc721TransferHelper),
             address(royaltyEngine),
@@ -103,7 +102,7 @@ contract AsksV1_1IntegrationTest is DSTest {
 
     function runETH() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(0), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(0), 1000);
 
         vm.prank(address(buyer));
         asks.fillAsk{value: 1 ether}(address(token), 0, address(0), 1 ether, address(finder));
@@ -111,7 +110,7 @@ contract AsksV1_1IntegrationTest is DSTest {
 
     function test_ETHIntegration() public {
         uint256 beforeBuyerBalance = address(buyer).balance;
-        uint256 beforeSellerFundsRecipientBalance = address(sellerFundsRecipient).balance;
+        uint256 beforeSellerBalance = address(seller).balance;
         uint256 beforeRoyaltyRecipientBalance = address(royaltyRecipient).balance;
         uint256 beforeFinderBalance = address(finder).balance;
         address beforeTokenOwner = token.ownerOf(0);
@@ -119,7 +118,7 @@ contract AsksV1_1IntegrationTest is DSTest {
         runETH();
 
         uint256 afterBuyerBalance = address(buyer).balance;
-        uint256 afterSellerFundsRecipientBalance = address(sellerFundsRecipient).balance;
+        uint256 afterSellerBalance = address(seller).balance;
         uint256 afterRoyaltyRecipientBalance = address(royaltyRecipient).balance;
         uint256 afterFinderBalance = address(finder).balance;
         address afterTokenOwner = token.ownerOf(0);
@@ -131,7 +130,7 @@ contract AsksV1_1IntegrationTest is DSTest {
         // 0.095 ETH finders fee paid to finder (remaining 0.95 ETH * 1000 bps finders fee)
         require((afterFinderBalance - beforeFinderBalance) == 0.095 ether);
         // Final 0.855 ETH is paid to seller
-        require((afterSellerFundsRecipientBalance - beforeSellerFundsRecipientBalance) == 0.855 ether);
+        require((afterSellerBalance - beforeSellerBalance) == 0.855 ether);
         // NFT transferred to buyer
         require((beforeTokenOwner == address(seller)) && afterTokenOwner == address(buyer));
     }
@@ -140,14 +139,14 @@ contract AsksV1_1IntegrationTest is DSTest {
 
     function runERC20() public {
         vm.prank(address(seller));
-        asks.createAsk(address(token), 0, 1 ether, address(weth), address(sellerFundsRecipient), 1000);
+        asks.createAsk(address(token), 0, 1 ether, address(weth), 1000);
 
         vm.prank(address(buyer));
         asks.fillAsk(address(token), 0, address(weth), 1 ether, address(finder));
     }
 
     function test_ERC20Integration() public {
-        uint256 beforeSellerBalance = weth.balanceOf(address(sellerFundsRecipient));
+        uint256 beforeSellerBalance = weth.balanceOf(address(seller));
         uint256 beforeBuyerBalance = weth.balanceOf(address(buyer));
         uint256 beforeRoyaltyRecipientBalance = weth.balanceOf(address(royaltyRecipient));
         uint256 beforeFinderBalance = weth.balanceOf(address(finder));
@@ -155,7 +154,7 @@ contract AsksV1_1IntegrationTest is DSTest {
 
         runERC20();
 
-        uint256 afterSellerBalance = weth.balanceOf(address(sellerFundsRecipient));
+        uint256 afterSellerBalance = weth.balanceOf(address(seller));
         uint256 afterBuyerBalance = weth.balanceOf(address(buyer));
         uint256 afterRoyaltyRecipientBalance = weth.balanceOf(address(royaltyRecipient));
         uint256 afterFinderBalance = weth.balanceOf(address(finder));
