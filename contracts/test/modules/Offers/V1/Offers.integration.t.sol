@@ -100,10 +100,10 @@ contract OffersV1IntegrationTest is DSTest {
 
     function runETH() public {
         vm.prank(address(seller));
-        uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, 1 ether, address(0), 1000);
+        uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(buyer));
-        offers.fillNFTOffer(address(token), 0, id, address(finder));
+        offers.fillNFTOffer(address(token), 0, id, address(0), 1 ether, address(finder));
     }
 
     function test_ETHIntegration() public {
@@ -137,10 +137,10 @@ contract OffersV1IntegrationTest is DSTest {
 
     function runERC20() public {
         vm.prank(address(seller));
-        uint256 id = offers.createNFTOffer(address(token), 0, 1 ether, address(weth), 1000);
+        uint256 id = offers.createNFTOffer(address(token), 0, address(weth), 1 ether, 1000);
 
         vm.prank(address(buyer));
-        offers.fillNFTOffer(address(token), 0, id, address(finder));
+        offers.fillNFTOffer(address(token), 0, id, address(weth), 1 ether, address(finder));
     }
 
     function test_ERC20Integration() public {
@@ -158,15 +158,15 @@ contract OffersV1IntegrationTest is DSTest {
         uint256 afterFinderBalance = weth.balanceOf(address(finder));
         address afterTokenOwner = token.ownerOf(0);
 
-        // 1 WETH is withdrawn from seller
+        // 1 WETH withdrawn from seller
         require((beforeSellerBalance - afterSellerBalance) == 1 ether);
-        // 0.05 WETH creator royalty is paid
+        // 0.05 WETH creator royalty
         require((afterRoyaltyRecipientBalance - beforeRoyaltyRecipientBalance) == 0.05 ether);
-        // 0.095 WETH finders fee (0.95 WETH * 10% finders fee) is paid
+        // 0.095 WETH finders fee (0.95 WETH * 10% finders fee)
         require((afterFinderBalance - beforeFinderBalance) == 0.095 ether);
-        // Remaining 0.855 WETH is paid to buyer
+        // Remaining 0.855 WETH paid to buyer
         require((afterBuyerBalance - beforeBuyerBalance) == 0.855 ether);
-        // NFT is transferred to seller
+        // NFT transferred to seller
         require((beforeTokenOwner == address(buyer)) && afterTokenOwner == address(seller));
     }
 }
