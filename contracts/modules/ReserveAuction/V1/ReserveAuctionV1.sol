@@ -49,9 +49,9 @@ contract ReserveAuctionV1 is
     struct Auction {
         address seller;
         address auctionCurrency;
-        address payable sellerFundsRecipient;
-        address payable bidder;
-        address payable finder;
+        address sellerFundsRecipient;
+        address bidder;
+        address finder;
         uint16 findersFeeBps;
         uint256 amount;
         uint256 duration;
@@ -164,13 +164,12 @@ contract ReserveAuctionV1 is
         uint256 _tokenId,
         uint256 _duration,
         uint256 _reservePrice,
-        address payable _sellerFundsRecipient,
+        address _sellerFundsRecipient,
         uint16 _findersFeeBps,
         address _auctionCurrency,
         uint256 _startTime
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
-
         require(
             msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
             "createAuction must be token owner or operator"
@@ -190,7 +189,6 @@ contract ReserveAuctionV1 is
         if (auctionForNFT[_tokenContract][_tokenId].seller != address(0)) {
             _cancelAuction(_tokenContract, _tokenId);
         }
-
         if (_startTime == 0) {
             _startTime = block.timestamp;
         }
@@ -199,8 +197,8 @@ contract ReserveAuctionV1 is
             seller: tokenOwner,
             auctionCurrency: _auctionCurrency,
             sellerFundsRecipient: _sellerFundsRecipient,
-            bidder: payable(address(0)),
-            finder: payable(address(0)),
+            bidder: address(0),
+            finder: address(0),
             findersFeeBps: _findersFeeBps,
             amount: 0,
             duration: _duration,
@@ -256,12 +254,15 @@ contract ReserveAuctionV1 is
             "createBid must send more than 10% of last bid amount"
         );
 
-        // If first bid, store time and transfer NFT into escrow
+        // If first bid --
         bool firstBid;
         if (auction.firstBidTime == 0) {
+            // Store time of bid
             auction.firstBidTime = block.timestamp;
             firstBid = true;
+            // Transfer NFT into escrow
             erc721TransferHelper.transferFrom(_tokenContract, auction.seller, address(this), _tokenId);
+
             // Else refund previous bidder
         } else {
             _handleOutgoingTransfer(auction.bidder, auction.amount, auction.auctionCurrency, USE_ALL_GAS_FLAG);
@@ -271,12 +272,12 @@ contract ReserveAuctionV1 is
         _handleIncomingTransfer(_amount, auction.auctionCurrency);
 
         auction.amount = _amount;
-        auction.bidder = payable(msg.sender);
-        auction.finder = payable(_finder);
+        auction.bidder = msg.sender;
+        auction.finder = _finder;
 
         emit AuctionBid(_tokenContract, _tokenId, _amount, msg.sender, firstBid, auction);
 
-        // If a bid is placed within 15 minutes of the auction ending
+        // If a bid is placed within 15 minutes of the auction ending --
         uint256 auctionTimeRemaining = auction.firstBidTime + auction.duration - block.timestamp;
         if (auctionTimeRemaining < TIME_BUFFER) {
             // Extend the auction by 15 minutes from the time of bid
