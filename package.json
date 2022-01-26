@@ -32,6 +32,7 @@
     "*.sol": "solhint"
   },
   "scripts": {
+    "install": "forge update",
     "build": "forge build && yarn typechain",
     "clean": "forge clean && rm -rf dist/typechain",
     "prepare": "husky install",
