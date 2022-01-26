@@ -1,6 +1,6 @@
 # V3 𓀨
 
-This repoository contains the core contracts that compose the ZORA V3 Protocol.
+This repository contains the core contracts that compose the ZORA V3 Protocol.
 
 This protocol is a [Hyperstructure](https://www.jacob.energy/hyperstructures.html). It is unstoppable, free, expansive, permissionless, and credibly neutral.
 
@@ -46,6 +46,7 @@ Once registered, anyone is able to use the market module by approving it via the
 
 ## Local Development
 
-1. Install dependencies with `yarn`
-2. Compile the contracts with `yarn build`
-3. Run tests with `yarn test`
+1. Install [Foundry](https://github.com/gakonst/foundry#installation)
+2. Install dependencies with `yarn` & `forge update`
+3. Compile the contracts with `yarn build`
+4. Run tests with `yarn test`
