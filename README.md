@@ -46,6 +46,7 @@ Once registered, anyone is able to use the market module by approving it via the
 
 ## Local Development
 
-1. Install dependencies with `yarn`
-2. Compile the contracts with `yarn build`
-3. Run tests with `yarn test`
+1. Install [Foundry](https://github.com/gakonst/foundry#installation)
+2. Install dependencies with `yarn` & `forge update`
+3. Compile the contracts with `yarn build`
+4. Run tests with `yarn test`
