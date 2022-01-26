@@ -1,6 +1,6 @@
 # V3 𓀨
 
-This repoository contains the core contracts that compose the ZORA V3 Protocol.
+This repository contains the core contracts that compose the ZORA V3 Protocol.
 
 This protocol is a [Hyperstructure](https://www.jacob.energy/hyperstructures.html). It is unstoppable, free, expansive, permissionless, and credibly neutral.
 
