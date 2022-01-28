@@ -119,7 +119,7 @@ contract OffersV1Test is DSTest {
 
         vm.warp(1 hours);
 
-        offers.setOffer{value: 1 ether}(address(token), 0, 1, address(0), 2 ether);
+        offers.setOfferAmount{value: 1 ether}(address(token), 0, 1, address(0), 2 ether);
 
         vm.stopPrank();
 
@@ -136,7 +136,7 @@ contract OffersV1Test is DSTest {
 
         vm.warp(1 hours);
 
-        offers.setOffer(address(token), 0, 1, address(0), 0.5 ether);
+        offers.setOfferAmount(address(token), 0, 1, address(0), 0.5 ether);
 
         vm.stopPrank();
 
@@ -153,7 +153,7 @@ contract OffersV1Test is DSTest {
 
         vm.warp(1 hours);
 
-        offers.setOffer(address(token), 0, 1, address(weth), 2 ether);
+        offers.setOfferAmount(address(token), 0, 1, address(weth), 2 ether);
 
         vm.stopPrank();
 
@@ -171,7 +171,7 @@ contract OffersV1Test is DSTest {
 
         vm.warp(1 hours);
 
-        offers.setOffer(address(token), 0, 1, address(weth), 0.5 ether);
+        offers.setOfferAmount(address(token), 0, 1, address(weth), 0.5 ether);
 
         vm.stopPrank();
 
@@ -186,8 +186,8 @@ contract OffersV1Test is DSTest {
         vm.prank(address(maker));
         offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
-        vm.expectRevert("setOffer must be maker");
-        offers.setOffer(address(token), 0, 1, address(0), 0.5 ether);
+        vm.expectRevert("setOfferAmount must be maker");
+        offers.setOfferAmount(address(token), 0, 1, address(0), 0.5 ether);
     }
 
     function testRevert_CannotIncreaseOfferWithoutAttachingFunds() public {
@@ -195,7 +195,7 @@ contract OffersV1Test is DSTest {
 
         offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
         vm.expectRevert("_handleIncomingTransfer msg value less than expected amount");
-        offers.setOffer(address(token), 0, 1, address(0), 2 ether);
+        offers.setOfferAmount(address(token), 0, 1, address(0), 2 ether);
 
         vm.stopPrank();
     }
@@ -208,8 +208,8 @@ contract OffersV1Test is DSTest {
         offers.fillOffer(address(token), 0, 1, address(0), 1 ether, address(finder));
 
         vm.prank(address(maker));
-        vm.expectRevert("setOffer must be maker");
-        offers.setOffer(address(token), 0, 1, address(0), 0.5 ether);
+        vm.expectRevert("setOfferAmount must be maker");
+        offers.setOfferAmount(address(token), 0, 1, address(0), 0.5 ether);
     }
 
     /// ------------ CANCEL NFT OFFER ------------ ///

@@ -143,7 +143,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _offerId The ID of the offer
     /// @param _currency The address of the ERC-20 token offering, or address(0) for ETH
     /// @param _amount The new amount offering
-    function setOffer(
+    function setOfferAmount(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _offerId,
@@ -152,14 +152,14 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     ) external payable nonReentrant {
         Offer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
-        require(offer.maker == msg.sender, "setOffer must be maker");
+        require(offer.maker == msg.sender, "setOfferAmount must be maker");
 
         // If same currency --
         if (_currency == offer.currency) {
             // Get initial amount
             uint256 prevAmount = offer.amount;
             // Ensure valid update
-            require(_amount > 0 && _amount != prevAmount, "setOffer invalid _amount");
+            require(_amount > 0 && _amount != prevAmount, "setOfferAmount invalid _amount");
 
             // If offer increase --
             if (_amount > prevAmount) {
