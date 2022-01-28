@@ -94,10 +94,10 @@ contract OffersV1IntegrationTest is DSTest {
 
     function runETH() public {
         vm.prank(address(seller));
-        uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        uint256 id = offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(buyer));
-        offers.fillNFTOffer(address(token), 0, id, address(0), 1 ether, address(finder));
+        offers.fillOffer(address(token), 0, id, address(0), 1 ether, address(finder));
     }
 
     function test_ETHIntegration() public {
@@ -131,10 +131,10 @@ contract OffersV1IntegrationTest is DSTest {
 
     function runERC20() public {
         vm.prank(address(seller));
-        uint256 id = offers.createNFTOffer(address(token), 0, address(weth), 1 ether, 1000);
+        uint256 id = offers.createOffer(address(token), 0, address(weth), 1 ether, 1000);
 
         vm.prank(address(buyer));
-        offers.fillNFTOffer(address(token), 0, id, address(weth), 1 ether, address(finder));
+        offers.fillOffer(address(token), 0, id, address(weth), 1 ether, address(finder));
     }
 
     function test_ERC20Integration() public {

@@ -54,21 +54,21 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param tokenId The ERC-721 token ID of the created offer
     /// @param id The ID of the created offer
     /// @param offer The metadata of the created offer
-    event NFTOfferCreated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
+    event OfferCreated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
     /// @notice Emitted when an offer is updated
     /// @param tokenContract The ERC-721 token address of the updated offer
     /// @param tokenId The ERC-721 token ID of the updated offer
     /// @param id The ID of the updated offer
     /// @param offer The metadata of the updated offer
-    event NFTOfferUpdated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
+    event OfferUpdated(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
     /// @notice Emitted when an offer is canceled
     /// @param tokenContract The ERC-721 token address of the canceled offer
     /// @param tokenId The ERC-721 token ID of the canceled offer
     /// @param id The ID of the canceled offer
     /// @param offer The metadata of the canceled offer
-    event NFTOfferCanceled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
+    event OfferCanceled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, Offer offer);
 
     /// @notice Emitted when an offer is filled
     /// @param tokenContract The ERC-721 token address of the filled offer
@@ -77,7 +77,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param buyer The address of the buyer who filled the offer
     /// @param finder The address of the finder who referred the offer
     /// @param offer The metadata of the filled offer
-    event NFTOfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address buyer, address finder, Offer offer);
+    event OfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address buyer, address finder, Offer offer);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -109,14 +109,14 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _amount The amount offering
     /// @param _findersFeeBps The bps of the amount (post-royalties) to send to a referrer of the sale
     /// @return The ID of the created offer
-    function createNFTOffer(
+    function createOffer(
         address _tokenContract,
         uint256 _tokenId,
         address _currency,
         uint256 _amount,
         uint16 _findersFeeBps
     ) external payable nonReentrant returns (uint256) {
-        require(_findersFeeBps <= 10000, "createNFTOffer finders fee bps must be less than or equal to 10000");
+        require(_findersFeeBps <= 10000, "createOffer finders fee bps must be less than or equal to 10000");
 
         // Validate offer and take custody
         _handleIncomingTransfer(_amount, _currency);
@@ -132,7 +132,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
         offersForNFT[_tokenContract][_tokenId].push(offerCount);
 
-        emit NFTOfferCreated(_tokenContract, _tokenId, offerCount, offers[_tokenContract][_tokenId][offerCount]);
+        emit OfferCreated(_tokenContract, _tokenId, offerCount, offers[_tokenContract][_tokenId][offerCount]);
 
         return offerCount;
     }
@@ -143,7 +143,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _offerId The ID of the offer
     /// @param _currency The address of the ERC-20 token offering, or address(0) for ETH
     /// @param _amount The new amount offering
-    function setNFTOffer(
+    function setOffer(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _offerId,
@@ -152,14 +152,14 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     ) external payable nonReentrant {
         Offer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
-        require(offer.maker == msg.sender, "setNFTOffer must be maker");
+        require(offer.maker == msg.sender, "setOffer must be maker");
 
         // If same currency --
         if (_currency == offer.currency) {
             // Get initial amount
             uint256 prevAmount = offer.amount;
             // Ensure valid update
-            require(_amount > 0 && _amount != prevAmount, "setNFTOffer invalid _amount");
+            require(_amount > 0 && _amount != prevAmount, "setOffer invalid _amount");
 
             // If offer increase --
             if (_amount > prevAmount) {
@@ -191,26 +191,26 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
             offer.amount = _amount;
         }
 
-        emit NFTOfferUpdated(_tokenContract, _tokenId, _offerId, offer);
+        emit OfferUpdated(_tokenContract, _tokenId, _offerId, offer);
     }
 
     /// @notice Cancels and refunds the given offer for an NFT
     /// @param _tokenContract The ERC-721 token address of the offer
     /// @param _tokenId The ERC-721 token ID of the offer
     /// @param _offerId The ID of the offer
-    function cancelNFTOffer(
+    function cancelOffer(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _offerId
     ) external nonReentrant {
         Offer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
-        require(offer.maker == msg.sender, "cancelNFTOffer must be maker");
+        require(offer.maker == msg.sender, "cancelOffer must be maker");
 
         // Refund offer
         _handleOutgoingTransfer(offer.maker, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
 
-        emit NFTOfferCanceled(_tokenContract, _tokenId, _offerId, offer);
+        emit OfferCanceled(_tokenContract, _tokenId, _offerId, offer);
 
         delete offers[_tokenContract][_tokenId][_offerId];
     }
@@ -224,7 +224,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param _currency The address of the ERC-20 to take, or address(0) for ETH
     /// @param _amount The amount to take
     /// @param _finder The address of the offer referrer
-    function fillNFTOffer(
+    function fillOffer(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _offerId,
@@ -234,9 +234,9 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     ) external nonReentrant {
         Offer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
-        require(offer.maker != address(0), "fillNFTOffer must be active offer");
-        require(IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender, "fillNFTOffer must be token owner");
-        require(offer.currency == _currency && offer.amount == _amount, "fillNFTOffer _currency & _amount must match offer");
+        require(offer.maker != address(0), "fillOffer must be active offer");
+        require(IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender, "fillOffer must be token owner");
+        require(offer.currency == _currency && offer.amount == _amount, "fillOffer _currency & _amount must match offer");
 
         // Payout respective parties, ensuring royalties are honored
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
@@ -262,7 +262,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
 
         emit ExchangeExecuted(offer.maker, msg.sender, userAExchangeDetails, userBExchangeDetails);
-        emit NFTOfferFilled(_tokenContract, _tokenId, _offerId, msg.sender, _finder, offer);
+        emit OfferFilled(_tokenContract, _tokenId, _offerId, msg.sender, _finder, offer);
 
         delete offers[_tokenContract][_tokenId][_offerId];
     }

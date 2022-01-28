@@ -93,12 +93,12 @@ contract OffersV1Test is DSTest {
     /// ------------ CREATE NFT OFFER ------------ ///
 
     function testGas_CreateOffer() public {
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
     }
 
     function test_CreateOffer() public {
         vm.prank(address(maker));
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         (address offeror, , , ) = offers.offers(address(token), 0, 1);
 
@@ -107,7 +107,7 @@ contract OffersV1Test is DSTest {
 
     function testFail_CannotCreateOfferWithoutAttachingFunds() public {
         vm.prank(address(maker));
-        offers.createNFTOffer(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer(address(token), 0, address(0), 1 ether, 1000);
     }
 
     /// ------------ SET NFT OFFER ------------ ///
@@ -115,11 +115,11 @@ contract OffersV1Test is DSTest {
     function test_IncreaseETHOffer() public {
         vm.startPrank(address(maker));
 
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.warp(1 hours);
 
-        offers.setNFTOffer{value: 1 ether}(address(token), 0, 1, address(0), 2 ether);
+        offers.setOffer{value: 1 ether}(address(token), 0, 1, address(0), 2 ether);
 
         vm.stopPrank();
 
@@ -132,11 +132,11 @@ contract OffersV1Test is DSTest {
     function test_DecreaseETHOffer() public {
         vm.startPrank(address(maker));
 
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.warp(1 hours);
 
-        offers.setNFTOffer(address(token), 0, 1, address(0), 0.5 ether);
+        offers.setOffer(address(token), 0, 1, address(0), 0.5 ether);
 
         vm.stopPrank();
 
@@ -149,11 +149,11 @@ contract OffersV1Test is DSTest {
     function test_IncreaseETHOfferWithERC20() public {
         vm.startPrank(address(maker));
 
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.warp(1 hours);
 
-        offers.setNFTOffer(address(token), 0, 1, address(weth), 2 ether);
+        offers.setOffer(address(token), 0, 1, address(weth), 2 ether);
 
         vm.stopPrank();
 
@@ -167,11 +167,11 @@ contract OffersV1Test is DSTest {
     function test_DecreaseETHOfferWithERC20() public {
         vm.startPrank(address(maker));
 
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.warp(1 hours);
 
-        offers.setNFTOffer(address(token), 0, 1, address(weth), 0.5 ether);
+        offers.setOffer(address(token), 0, 1, address(weth), 0.5 ether);
 
         vm.stopPrank();
 
@@ -184,32 +184,32 @@ contract OffersV1Test is DSTest {
 
     function testRevert_OnlySellerCanUpdateOffer() public {
         vm.prank(address(maker));
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
-        vm.expectRevert("setNFTOffer must be maker");
-        offers.setNFTOffer(address(token), 0, 1, address(0), 0.5 ether);
+        vm.expectRevert("setOffer must be maker");
+        offers.setOffer(address(token), 0, 1, address(0), 0.5 ether);
     }
 
     function testRevert_CannotIncreaseOfferWithoutAttachingFunds() public {
         vm.startPrank(address(maker));
 
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
         vm.expectRevert("_handleIncomingTransfer msg value less than expected amount");
-        offers.setNFTOffer(address(token), 0, 1, address(0), 2 ether);
+        offers.setOffer(address(token), 0, 1, address(0), 2 ether);
 
         vm.stopPrank();
     }
 
     function testRevert_CannotUpdateInactiveOffer() public {
         vm.prank(address(maker));
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(taker));
-        offers.fillNFTOffer(address(token), 0, 1, address(0), 1 ether, address(finder));
+        offers.fillOffer(address(token), 0, 1, address(0), 1 ether, address(finder));
 
         vm.prank(address(maker));
-        vm.expectRevert("setNFTOffer must be maker");
-        offers.setNFTOffer(address(token), 0, 1, address(0), 0.5 ether);
+        vm.expectRevert("setOffer must be maker");
+        offers.setOffer(address(token), 0, 1, address(0), 0.5 ether);
     }
 
     /// ------------ CANCEL NFT OFFER ------------ ///
@@ -217,12 +217,12 @@ contract OffersV1Test is DSTest {
     function test_CancelNFTOffer() public {
         vm.startPrank(address(maker));
 
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         (, , , uint256 beforeAmount) = offers.offers(address(token), 0, 1);
         require(beforeAmount == 1 ether);
 
-        offers.cancelNFTOffer(address(token), 0, 1);
+        offers.cancelOffer(address(token), 0, 1);
 
         (, , , uint256 afterAmount) = offers.offers(address(token), 0, 1);
         require(afterAmount == 0);
@@ -232,34 +232,34 @@ contract OffersV1Test is DSTest {
 
     function testRevert_CannotCancelInactiveOffer() public {
         vm.prank(address(maker));
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(taker));
-        offers.fillNFTOffer(address(token), 0, 1, address(0), 1 ether, address(finder));
+        offers.fillOffer(address(token), 0, 1, address(0), 1 ether, address(finder));
 
         vm.prank(address(maker));
-        vm.expectRevert("cancelNFTOffer must be maker");
-        offers.cancelNFTOffer(address(token), 0, 1);
+        vm.expectRevert("cancelOffer must be maker");
+        offers.cancelOffer(address(token), 0, 1);
     }
 
     function testRevert_OnlySellerCanCancelOffer() public {
         vm.prank(address(maker));
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
-        vm.expectRevert("cancelNFTOffer must be maker");
-        offers.cancelNFTOffer(address(token), 0, 1);
+        vm.expectRevert("cancelOffer must be maker");
+        offers.cancelOffer(address(token), 0, 1);
     }
 
     /// ------------ FILL NFT OFFER ------------ ///
 
     function test_FillNFTOffer() public {
         vm.prank(address(maker));
-        offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         address beforeTokenOwner = token.ownerOf(0);
 
         vm.prank(address(taker));
-        offers.fillNFTOffer(address(token), 0, 1, address(0), 1 ether, address(finder));
+        offers.fillOffer(address(token), 0, 1, address(0), 1 ether, address(finder));
 
         address afterTokenOwner = token.ownerOf(0);
 
@@ -268,39 +268,39 @@ contract OffersV1Test is DSTest {
 
     function testRevert_OnlyTokenHolderCanFillOffer() public {
         vm.prank(address(maker));
-        uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        uint256 id = offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
-        vm.expectRevert("fillNFTOffer must be token owner");
-        offers.fillNFTOffer(address(token), 0, id, address(0), 1 ether, address(finder));
+        vm.expectRevert("fillOffer must be token owner");
+        offers.fillOffer(address(token), 0, id, address(0), 1 ether, address(finder));
     }
 
     function testRevert_CannotFillInactiveOffer() public {
         vm.prank(address(maker));
-        uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        uint256 id = offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(taker));
-        offers.fillNFTOffer(address(token), 0, id, address(0), 1 ether, address(finder));
+        offers.fillOffer(address(token), 0, id, address(0), 1 ether, address(finder));
 
         vm.prank(address(taker));
-        vm.expectRevert("fillNFTOffer must be active offer");
-        offers.fillNFTOffer(address(token), 0, id, address(0), 1 ether, address(finder));
+        vm.expectRevert("fillOffer must be active offer");
+        offers.fillOffer(address(token), 0, id, address(0), 1 ether, address(finder));
     }
 
     function testRevert_AcceptCurrencyMustMatchOffer() public {
         vm.prank(address(maker));
-        uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        uint256 id = offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(taker));
-        vm.expectRevert("fillNFTOffer _currency & _amount must match offer");
-        offers.fillNFTOffer(address(token), 0, id, address(weth), 1 ether, address(finder));
+        vm.expectRevert("fillOffer _currency & _amount must match offer");
+        offers.fillOffer(address(token), 0, id, address(weth), 1 ether, address(finder));
     }
 
     function testRevert_AcceptAmountMustMatchOffer() public {
         vm.prank(address(maker));
-        uint256 id = offers.createNFTOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+        uint256 id = offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
 
         vm.prank(address(taker));
-        vm.expectRevert("fillNFTOffer _currency & _amount must match offer");
-        offers.fillNFTOffer(address(token), 0, id, address(0), 0.5 ether, address(finder));
+        vm.expectRevert("fillOffer _currency & _amount must match offer");
+        offers.fillOffer(address(token), 0, id, address(0), 0.5 ether, address(finder));
     }
 }
