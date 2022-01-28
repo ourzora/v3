@@ -110,6 +110,11 @@ contract OffersV1Test is DSTest {
         offers.createOffer(address(token), 0, address(0), 1 ether, 1000);
     }
 
+    function testFail_CannotCreateOfferWithInvalidFindersFeeBps() public {
+        vm.prank(address(maker));
+        offers.createOffer(address(token), 0, address(0), 1 ether, 10001);
+    }
+
     /// ------------ SET NFT OFFER ------------ ///
 
     function test_IncreaseETHOffer() public {
