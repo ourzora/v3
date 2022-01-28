@@ -26,7 +26,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     ERC721TransferHelper public immutable erc721TransferHelper;
 
     /// @notice The metadata of an offer
-    /// @param maker The address of the user that made the offer
+    /// @param maker The address of the user who made the offer
     /// @param currency The address of the ERC-20 offered, or address(0) for ETH
     /// @param findersFeeBps The fee to the referrer of the offer
     /// @param amount The amount of ETH/ERC-20 tokens offered
@@ -44,7 +44,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     mapping(address => mapping(uint256 => mapping(uint256 => Offer))) public offers;
 
     /// @notice The offers for a given NFT
-    /// @dev ERC-721 token address => ERC-721 token ID => offer IDs
+    /// @dev ERC-721 token address => ERC-721 token ID => Offer IDs
     mapping(address => mapping(uint256 => uint256[])) public offersForNFT;
 
     /// ------------ EVENTS ------------
@@ -74,10 +74,10 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     /// @param tokenContract The ERC-721 token address of the filled offer
     /// @param tokenId The ERC-721 token ID of the filled offer
     /// @param id The ID of the filled offer
-    /// @param buyer The address of the buyer who filled the offer
+    /// @param taker The address of the taker who filled the offer
     /// @param finder The address of the finder who referred the offer
     /// @param offer The metadata of the filled offer
-    event OfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address buyer, address finder, Offer offer);
+    event OfferFilled(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed id, address taker, address finder, Offer offer);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -181,9 +181,9 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
             }
             // Else other currency --
         } else {
-            // Refund previous
+            // Refund previous offer
             _handleOutgoingTransfer(offer.maker, offer.amount, offer.currency, USE_ALL_GAS_FLAG);
-            // Custody new
+            // Custody new offer
             _handleIncomingTransfer(_amount, _currency);
 
             // Update storage
