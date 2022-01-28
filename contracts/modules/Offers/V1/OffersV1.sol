@@ -102,6 +102,46 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
     /// ------------ MAKER FUNCTIONS ------------
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------.               ,-------------------.
+    //     / \            |OffersV1|               |ERC20TransferHelper|
+    //   Caller           `---+----'               `---------+---------'
+    //     |   createOffer()  |                              |
+    //     | ----------------->                              |
+    //     |                  |                              |
+    //     |                  |        transferFrom()        |
+    //     |                  | ----------------------------->
+    //     |                  |                              |
+    //     |                  |                              |----.
+    //     |                  |                              |    | transfer tokens into escrow
+    //     |                  |                              |<---'
+    //     |                  |                              |
+    //     |                  |----.                         |
+    //     |                  |    | offer count ++          |
+    //     |                  |<---'                         |
+    //     |                  |                              |
+    //     |                  |----.                         |
+    //     |                  |    | create offer            |
+    //     |                  |<---'                         |
+    //     |                  |                              |
+    //     |                  |----.
+    //     |                  |    | offersFor[NFT].append(id)
+    //     |                  |<---'
+    //     |                  |                              |
+    //     |                  |----.                         |
+    //     |                  |    | emit OfferCreated()     |
+    //     |                  |<---'                         |
+    //     |                  |                              |
+    //     |        id        |                              |
+    //     | <-----------------                              |
+    //   Caller           ,---+----.               ,---------+---------.
+    //     ,-.            |OffersV1|               |ERC20TransferHelper|
+    //     `-'            `--------'               `-------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Creates an offer for an NFT
     /// @param _tokenContract The address of the desired ERC-721 token
     /// @param _tokenId The ID of the desired ERC-721 token
@@ -137,6 +177,39 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         return offerCount;
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------.                     ,-------------------.
+    //     / \            |OffersV1|                     |ERC20TransferHelper|
+    //   Caller           `---+----'                     `---------+---------'
+    //     | setOfferAmount() |                                    |
+    //     | ----------------->                                    |
+    //     |                  |                                    |
+    //     |                  |                                    |
+    //     |    _______________________________________________________________________
+    //     |    ! ALT  /  same token?                              |                   !
+    //     |    !_____/       |                                    |                   !
+    //     |    !             | retrieve increase / refund decrease|                   !
+    //     |    !             | ----------------------------------->                   !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |    ! [different token]                                |                   !
+    //     |    !             |        refund previous offer       |                   !
+    //     |    !             | ----------------------------------->                   !
+    //     |    !             |                                    |                   !
+    //     |    !             |         retrieve new offer         |                   !
+    //     |    !             | ----------------------------------->                   !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |                  |                                    |
+    //     |                  |----.                               |
+    //     |                  |    | emit OfferUpdated()           |
+    //     |                  |<---'                               |
+    //   Caller           ,---+----.                     ,---------+---------.
+    //     ,-.            |OffersV1|                     |ERC20TransferHelper|
+    //     `-'            `--------'                     `-------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Updates the given offer for an NFT
     /// @param _tokenContract The address of the offer ERC-721 token
     /// @param _tokenId The ID of the offer ERC-721 token
@@ -194,6 +267,35 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         emit OfferUpdated(_tokenContract, _tokenId, _offerId, offer);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------.          ,-------------------.
+    //     / \            |OffersV1|          |ERC20TransferHelper|
+    //   Caller           `---+----'          `---------+---------'
+    //     |   cancelOffer()  |                         |
+    //     | ----------------->                         |
+    //     |                  |                         |
+    //     |                  |      transferFrom()     |
+    //     |                  | ------------------------>
+    //     |                  |                         |
+    //     |                  |                         |----.
+    //     |                  |                         |    | refund tokens from escrow
+    //     |                  |                         |<---'
+    //     |                  |                         |
+    //     |                  |----.
+    //     |                  |    | emit OfferCanceled()
+    //     |                  |<---'
+    //     |                  |                         |
+    //     |                  |----.                    |
+    //     |                  |    | delete offer       |
+    //     |                  |<---'                    |
+    //   Caller           ,---+----.          ,---------+---------.
+    //     ,-.            |OffersV1|          |ERC20TransferHelper|
+    //     `-'            `--------'          `-------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Cancels and refunds the given offer for an NFT
     /// @param _tokenContract The ERC-721 token address of the offer
     /// @param _tokenId The ERC-721 token ID of the offer
@@ -217,6 +319,57 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
     /// ------------ TAKER FUNCTIONS ------------
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------.                ,--------------------.
+    //     / \            |OffersV1|                |ERC721TransferHelper|
+    //   Caller           `---+----'                `---------+----------'
+    //     |    fillOffer()   |                               |
+    //     | ----------------->                               |
+    //     |                  |                               |
+    //     |                  |----.                          |
+    //     |                  |    | validate token owner     |
+    //     |                  |<---'                          |
+    //     |                  |                               |
+    //     |                  |----.                          |
+    //     |                  |    | handle royalty payouts   |
+    //     |                  |<---'                          |
+    //     |                  |                               |
+    //     |                  |                               |
+    //     |    __________________________________________________
+    //     |    ! ALT  /  finders fee configured for this offer?  !
+    //     |    !_____/       |                               |   !
+    //     |    !             |----.                          |   !
+    //     |    !             |    | handle finders fee payout|   !
+    //     |    !             |<---'                          |   !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |                  |                               |
+    //     |                  |         transferFrom()        |
+    //     |                  | ------------------------------>
+    //     |                  |                               |
+    //     |                  |                               |----.
+    //     |                  |                               |    | transfer NFT from taker to maker
+    //     |                  |                               |<---'
+    //     |                  |                               |
+    //     |                  |----.                          |
+    //     |                  |    | emit ExchangeExecuted()  |
+    //     |                  |<---'                          |
+    //     |                  |                               |
+    //     |                  |----.                          |
+    //     |                  |    | emit OfferFilled()       |
+    //     |                  |<---'                          |
+    //     |                  |                               |
+    //     |                  |----.
+    //     |                  |    | delete offer from contract
+    //     |                  |<---'
+    //   Caller           ,---+----.                ,---------+----------.
+    //     ,-.            |OffersV1|                |ERC721TransferHelper|
+    //     `-'            `--------'                `--------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Fills a given offer for an owned NFT, in exchange for ETH/ERC-20 tokens
     /// @param _tokenContract The address of the ERC-721 token to transfer
     /// @param _tokenId The ID of the ERC-721 token to transfer
