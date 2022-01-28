@@ -68,14 +68,18 @@ In this stage, the ZORA community is able to give design feedback and start disc
 
 Once a module has been designed, built, tested and documented, the module can undergo community audits. If the module has been audited by a third party, the audit report can be included in the PR.
 
-Modules that are written by the ZORA core team are open to our bug bounty program, which allows community auditors to claim up to 25 ETH for vulnerabilities that may have been missed during development. The rubric we use to determine bug bounties is as follows:
+Modules that are written by the ZORA core team are open to our bug bounty program, which allows community auditors to claim up to 25 ETH for vulnerabilities that may have been missed during development. The rubric we use to determine bug bounties is inspired by [ImmuneFi](https://immunefi.com/severity-updated/) and is as follows:
 
-| **Metric**                                                                | **Maximum Bug Bounty** |
-| ------------------------------------------------------------------------- | ---------------------- |
-| Can the vulnerability result in lost funds / assets for all ZORA users?   | Up to 25 ETH           |
-| Can the vulnerability result in lost funds / assets for individual users? | Up to 5 ETH            |
-| Can the vulnerability cause unexpected or undesirable outcomes?           | Up to 1 ETH            |
-| Not sure?                                                                 | Let's talk :~)         |
+| **Level**   | **Example**                                                                                                                                                             | **Maximum Bug Bounty** |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| 5. Critical | - Empty or freeze the protocol's holdings (e.g. economic attacks, flash loans, reentrancy, MEV, logic errors)                                                           | Up to 25 ETH           |
+| 4. High     | - Token holders temporarily unable to transfer holdings<br>- Users spoof each other<br>- Transient Consensus Failures                                                   | Up to 10 ETH           |
+| 3. Medium   | - Contract consumes unbounded gas<br>- Block stuffing<br>- Griefing denial of service (i.e. attacker spends as much in gas as damage to the contract)<br>- Gas griefing | Up to 5 ETH            |
+| 2. Low      | - Contract fails to deliver promised returns, but doesn't lose value                                                                                                    | Up to 1 ETH            |
+| 1. None     | - Best practices                                                                                                                                                        |                        |
+| Not sure?   |                                                                                                                                                                         | Let's talk :~)         |
+
+The ZORA Core team will commit to publicly disclosing all bug bounty payouts for applicable modules, as defined above.
 
 Although not required, developers outside the ZORA core team are able to create and fund their own bug bounty programs, if desired. Feel free to outline your audit program in your PR description.
 
