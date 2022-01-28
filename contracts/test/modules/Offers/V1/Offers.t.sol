@@ -205,6 +205,20 @@ contract OffersV1Test is DSTest {
         vm.stopPrank();
     }
 
+    function testRevert_CannotUpdateOfferWithPreviousAmount() public {
+        vm.startPrank(address(maker));
+
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+
+        vm.warp(1 hours);
+
+        vm.expectRevert("setOfferAmount invalid _amount");
+
+        offers.setOfferAmount{value: 1 ether}(address(token), 0, 1, address(0), 1 ether);
+
+        vm.stopPrank();
+    }
+
     function testRevert_CannotUpdateInactiveOffer() public {
         vm.prank(address(maker));
         offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
