@@ -305,7 +305,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         uint256 _tokenId,
         uint256 _offerId
     ) external nonReentrant {
-        Offer storage offer = offers[_tokenContract][_tokenId][_offerId];
+        Offer memory offer = offers[_tokenContract][_tokenId][_offerId];
 
         require(offer.maker == msg.sender, "cancelOffer must be maker");
 
@@ -385,7 +385,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         uint256 _amount,
         address _finder
     ) external nonReentrant {
-        Offer storage offer = offers[_tokenContract][_tokenId][_offerId];
+        Offer memory offer = offers[_tokenContract][_tokenId][_offerId];
 
         require(offer.maker != address(0), "fillOffer must be active offer");
         require(IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender, "fillOffer must be token owner");
