@@ -110,6 +110,11 @@ contract OffersV1Test is DSTest {
         offers.createOffer(address(token), 0, address(0), 1 ether, 1000);
     }
 
+    function testFail_CannotCreateOfferWithInvalidFindersFeeBps() public {
+        vm.prank(address(maker));
+        offers.createOffer(address(token), 0, address(0), 1 ether, 10001);
+    }
+
     /// ------------ SET NFT OFFER ------------ ///
 
     function test_IncreaseETHOffer() public {
@@ -196,6 +201,20 @@ contract OffersV1Test is DSTest {
         offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
         vm.expectRevert("_handleIncomingTransfer msg value less than expected amount");
         offers.setOfferAmount(address(token), 0, 1, address(0), 2 ether);
+
+        vm.stopPrank();
+    }
+
+    function testRevert_CannotUpdateOfferWithPreviousAmount() public {
+        vm.startPrank(address(maker));
+
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 1000);
+
+        vm.warp(1 hours);
+
+        vm.expectRevert("setOfferAmount invalid _amount");
+
+        offers.setOfferAmount{value: 1 ether}(address(token), 0, 1, address(0), 1 ether);
 
         vm.stopPrank();
     }
