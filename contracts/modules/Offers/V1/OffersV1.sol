@@ -161,7 +161,10 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         // Validate offer and take custody
         _handleIncomingTransfer(_amount, _currency);
 
-        offerCount++;
+        // "the sun will devour the earth before it could ever overflow" - @transmissions11
+        unchecked {
+            offerCount++;
+        }
 
         offers[_tokenContract][_tokenId][offerCount] = Offer({
             maker: msg.sender,
@@ -236,21 +239,24 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
 
             // If offer increase --
             if (_amount > prevAmount) {
-                // Get delta
-                uint256 increaseAmount = _amount - prevAmount;
-                // Custody increase
-                _handleIncomingTransfer(increaseAmount, offer.currency);
-                // Update storage
-                offer.amount += increaseAmount;
-
+                unchecked {
+                    // Get delta
+                    uint256 increaseAmount = _amount - prevAmount;
+                    // Custody increase
+                    _handleIncomingTransfer(increaseAmount, offer.currency);
+                    // Update storage
+                    offer.amount += increaseAmount;
+                }
                 // Else offer decrease --
             } else {
-                // Get delta
-                uint256 decreaseAmount = prevAmount - _amount;
-                // Refund difference
-                _handleOutgoingTransfer(offer.maker, decreaseAmount, offer.currency, USE_ALL_GAS_FLAG);
-                // Update storage
-                offer.amount -= decreaseAmount;
+                unchecked {
+                    // Get delta
+                    uint256 decreaseAmount = prevAmount - _amount;
+                    // Refund difference
+                    _handleOutgoingTransfer(offer.maker, decreaseAmount, offer.currency, USE_ALL_GAS_FLAG);
+                    // Update storage
+                    offer.amount -= decreaseAmount;
+                }
             }
             // Else other currency --
         } else {
