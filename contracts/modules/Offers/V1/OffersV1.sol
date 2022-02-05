@@ -119,7 +119,7 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
     //     |                  |                              |<---'
     //     |                  |                              |
     //     |                  |----.                         |
-    //     |                  |    | offer count ++          |
+    //     |                  |    | ++offerCount            |
     //     |                  |<---'                         |
     //     |                  |                              |
     //     |                  |----.                         |
@@ -162,9 +162,20 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         _handleIncomingTransfer(_amount, _currency);
 
         // "the sun will devour the earth before it could ever overflow" - @transmissions11
-        unchecked {
-            offerCount++;
-        }
+        // offerCount++ --> unchecked { offerCount++ }
+
+        // "Although the increment part is cheaper with unchecked, the opcodes after become more expensive for some reason" - @joshieDo
+        // unchecked { offerCount++ } --> offerCount++
+
+        // TURNS OUT:
+        //                 UNCHECKED       CHECKED
+        // NON-OPTIMIZED   130,037 gas  <  130,149 gas
+        // OPTIMIZED       127,932 gas  >  *127,298 gas*
+
+        // "Earlier today while reviewing c4rena findings I learned that doing ++offerCount would save 5 gas per increment here" - @devtooligan
+        // offerCount++ --> ++offerCount
+
+        ++offerCount;
 
         offers[_tokenContract][_tokenId][offerCount] = Offer({
             maker: msg.sender,
