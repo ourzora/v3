@@ -167,13 +167,12 @@ contract OffersV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransfer
         // "Although the increment part is cheaper with unchecked, the opcodes after become more expensive for some reason" - @joshieDo
         // unchecked { offerCount++ } --> offerCount++
 
-        // TURNS OUT:
-        //                 UNCHECKED       CHECKED
-        // NON-OPTIMIZED   130,037 gas  <  130,149 gas
-        // OPTIMIZED       127,932 gas  >  *127,298 gas*
-
         // "Earlier today while reviewing c4rena findings I learned that doing ++offerCount would save 5 gas per increment here" - @devtooligan
         // offerCount++ --> ++offerCount
+
+        // TLDR;           unchecked       checked
+        // non-optimized   130,037 gas  <  130,149 gas
+        // optimized       127,932 gas  >  *127,298 gas*
 
         ++offerCount;
 
