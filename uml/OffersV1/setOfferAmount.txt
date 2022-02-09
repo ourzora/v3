@@ -1,0 +1,21 @@
+@startuml
+actor Caller
+participant OffersV1
+participant ERC20TransferHelper
+
+Caller -> OffersV1 : setOfferAmount()
+
+alt same token?
+
+    OffersV1 -> ERC20TransferHelper : retrieve increase / refund decrease
+
+else  different token
+
+    OffersV1 -> ERC20TransferHelper : refund previous offer
+
+    OffersV1 -> ERC20TransferHelper : retrieve new offer
+end
+
+OffersV1 -> OffersV1 : emit OfferUpdated()
+
+@enduml
