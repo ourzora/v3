@@ -66,7 +66,7 @@ In this stage, the ZORA community is able to give design feedback and start disc
 
 #### Community Audit
 
-Once a module has been designed, built, tested and documented, the module can undergo community audits. If the module has been audited by a third party, the audit report can be included in the PR.
+Once a module has been designed, built, tested and documented, the module can undergo community audits. If a vulnerability is found during this phase, feel free to leave a comment directly in the PR. If the module has been audited by a third party, the audit report can be included in the PR.
 
 Modules that are written by the ZORA core team are open to our bug bounty program, which allows community auditors to claim up to 25 ETH for vulnerabilities that may have been missed during development. The rubric we use to determine bug bounties is inspired by [ImmuneFi](https://immunefi.com/severity-updated/) and is as follows:
 
@@ -83,7 +83,7 @@ The ZORA Core team will commit to publicly disclosing all bug bounty payouts for
 
 Although not required, developers outside the ZORA core team are able to create and fund their own bug bounty programs, if desired. Feel free to outline your audit program in your PR description.
 
-After a module has undergone a community audit (ideally about 3-7 days), the module can be deployed and registered
+After a module has undergone a community audit (ideally about 3-7 days), the module can be deployed and registered. If a vulnerability is found post-deployment, you can email [t@zora.co](mailto:t@zora.co) directly.
 
 #### Registering a Module
 
