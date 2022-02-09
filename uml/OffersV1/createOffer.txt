@@ -1,0 +1,16 @@
+@startuml
+actor Caller
+participant OffersV1
+participant ERC20TransferHelper
+
+Caller -> OffersV1 : createOffer()
+OffersV1 -> ERC20TransferHelper : transferFrom()
+ERC20TransferHelper -> ERC20TransferHelper : transfer tokens into escrow
+OffersV1 -> OffersV1 : offer count ++
+OffersV1 -> OffersV1 : create offer
+OffersV1 -> OffersV1 : offersFor[NFT].append(id)
+OffersV1 -> OffersV1 : emit OfferCreated()
+OffersV1 -> Caller :id
+
+@enduml
+

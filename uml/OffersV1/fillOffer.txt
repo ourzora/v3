@@ -1,0 +1,27 @@
+@startuml
+actor Caller
+participant OffersV1
+participant ERC721TransferHelper
+
+Caller -> OffersV1 : fillOffer()
+
+OffersV1 -> OffersV1 : validate token owner
+
+OffersV1 -> OffersV1 : handle royalty payouts
+
+alt finders fee configured for this offer?
+
+    OffersV1 -> OffersV1 : handle finders fee payout
+
+else noop
+
+end
+
+OffersV1 -> ERC721TransferHelper : transferFrom()
+ERC721TransferHelper -> ERC721TransferHelper : transfer NFT from taker to maker
+
+OffersV1 -> OffersV1 : emit ExchangeExecuted()
+OffersV1 -> OffersV1 : emit OfferFilled()
+OffersV1 -> OffersV1 : delete offer from contract
+
+@enduml

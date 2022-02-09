@@ -48,7 +48,7 @@ contract ZoraModuleManagerTest is DSTest {
         module = batchModules[0];
     }
 
-    /// ------------ APPROVE MODULE ------------
+    /// ------------ APPROVE MODULE ------------ ///
 
     function test_SetApproval() public {
         registrar.registerModule(module);
@@ -62,7 +62,7 @@ contract ZoraModuleManagerTest is DSTest {
         bob.setApprovalForModule(module, true);
     }
 
-    /// ------------ APPROVE MODULE BATCH ------------
+    /// ------------ APPROVE MODULE BATCH ------------ ///
 
     function test_SetBatchApproval() public {
         for (uint256 i = 0; i < 3; i++) {
