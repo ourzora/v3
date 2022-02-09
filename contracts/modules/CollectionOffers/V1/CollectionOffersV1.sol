@@ -16,7 +16,7 @@ import {CollectionOfferBookV1} from "./CollectionOfferBookV1.sol";
 
 /// @title Collection Offers V1
 /// @author kulkarohan <rohan@zora.co>
-/// @notice This module allows users to sell ETH for any ERC-721 token in a specified collection
+/// @notice This module allows users to offer ETH for any ERC-721 token in a specified collection
 contract CollectionOffersV1 is
     ReentrancyGuard,
     UniversalExchangeEventV1,
@@ -29,6 +29,8 @@ contract CollectionOffersV1 is
     address private constant ETH = address(0);
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
+    /// @notice The finders fee bps configured by the DAO
+    uint16 public findersFeeBps;
 
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
@@ -38,156 +40,295 @@ contract CollectionOffersV1 is
     /// @notice Emitted when a collection offer is created
     /// @param collection The ERC-721 token address of the created offer
     /// @param id The ID of the created offer
-    /// @param offer The metadata of the created offer
-    event CollectionOfferCreated(address indexed collection, uint256 indexed id, Offer offer);
+    /// @param maker The address of the offer maker
+    /// @param amount The amount of the created offer
+    event CollectionOfferCreated(address indexed collection, uint256 indexed id, address maker, uint256 amount);
 
     /// @notice Emitted when a collection offer is updated
     /// @param collection The ERC-721 token address of the updated offer
     /// @param id The ID of the updated offer
-    /// @param offer The metadata of the updated offer
-    event CollectionOfferPriceUpdated(address indexed collection, uint256 indexed id, Offer offer);
-
-    /// @notice Emitted when the finders fee for a collection offer is updated
-    /// @param collection The ERC-721 token address of the updated offer
-    /// @param id The ID of the updated offer
-    /// @param findersFeeBps The bps of the updated finders fee
-    /// @param offer The metadata of the updated offer
-    event CollectionOfferFindersFeeUpdated(address indexed collection, uint256 indexed id, uint16 indexed findersFeeBps, Offer offer);
+    /// @param maker The address of the offer maker
+    /// @param amount The amount of the updated offer
+    event CollectionOfferUpdated(address indexed collection, uint256 indexed id, address maker, uint256 amount);
 
     /// @notice Emitted when a collection offer is canceled
     /// @param collection The ERC-721 token address of the canceled offer
     /// @param id The ID of the canceled offer
-    /// @param offer The metadata of the canceled offer
-    event CollectionOfferCanceled(address indexed collection, uint256 indexed id, Offer offer);
+    /// @param maker The address of the offer maker
+    /// @param amount The amount of the canceled offer
+    event CollectionOfferCanceled(address indexed collection, uint256 indexed id, address maker, uint256 amount);
 
     /// @notice Emitted when a collection offer is filled
     /// @param collection The ERC-721 token address of the filled offer
+    /// @param tokenId The ERC-721 token ID of the filled offer
     /// @param id The ID of the filled offer
-    /// @param buyer The address of the buyer who filled the offer
+    /// @param taker The address of the taker who filled the offer
     /// @param finder The address of the finder who referred the sale
-    /// @param offer The metadata of the canceled offer
-    event CollectionOfferFilled(address indexed collection, uint256 indexed id, address buyer, address finder, Offer offer);
+    event CollectionOfferFilled(address indexed collection, uint256 indexed tokenId, uint256 indexed id, address taker, address finder);
+
+    /// @notice Emitted when the finders fee is updated by the DAO
+    /// @param findersFeeBps The bps of the updated finders fee
+    event FindersFeeUpdated(uint16 indexed findersFeeBps);
 
     /// ------------ CONSTRUCTOR ------------
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
-    /// @param _wethAddress WETH token address
+    /// @param _weth The WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
         address _royaltyEngine,
         address _protocolFeeSettings,
-        address _wethAddress
+        address _weth
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
-        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _weth, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Collection Offers: v1.0")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
+        findersFeeBps = 100;
     }
 
-    /// ------------ SELLER FUNCTIONS ------------
+    /// ------------ MAKER FUNCTIONS ------------
 
-    /// @notice Places an offer for any NFT in a collection
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------.              ,-------------------.
+    //     / \            |CollectionOffersV1|              |ERC20TransferHelper|
+    //   Caller           `--------+---------'              `---------+---------'
+    //     |     createOffer()     |                                  |
+    //     | ---------------------->                                  |
+    //     |                       |                                  |
+    //     |                       |             msg.value            |
+    //     |                       | --------------------------------->
+    //     |                       |                                  |
+    //     |                       |                                  |----.
+    //     |                       |                                  |    | transfer ETH into escrow
+    //     |                       |                                  |<---'
+    //     |                       |                                  |
+    //     |                       |----.                             |
+    //     |                       |    | _addOffer()                 |
+    //     |                       |<---'                             |
+    //     |                       |                                  |
+    //     |                       |----.
+    //     |                       |    | emit CollectionOfferCreated()
+    //     |                       |<---'
+    //     |                       |                                  |
+    //     |           id          |                                  |
+    //     | <----------------------                                  |
+    //   Caller           ,--------+---------.              ,---------+---------.
+    //     ,-.            |CollectionOffersV1|              |ERC20TransferHelper|
+    //     `-'            `------------------'              `-------------------'
+    //     /|\
+    //      |
+    //     / \
+    /// @notice Creates an offer for any NFT in a collection
     /// @param _tokenContract The ERC-721 collection address
     /// @return The ID of the created offer
-    function createCollectionOffer(address _tokenContract) external payable nonReentrant returns (uint256) {
-        require(msg.value > 0, "createCollectionOffer msg value must be greater than 0");
-
+    function createOffer(address _tokenContract) external payable nonReentrant returns (uint32) {
         // Ensure offer is valid and take custody
         _handleIncomingTransfer(msg.value, ETH);
 
-        uint256 offerId = _addOffer(_tokenContract, msg.value, msg.sender);
+        // Add to collection's offer book
+        uint32 offerId = _addOffer(_tokenContract, msg.value, msg.sender);
 
-        emit CollectionOfferCreated(_tokenContract, offerId, offers[_tokenContract][offerId]);
+        emit CollectionOfferCreated(_tokenContract, offerId, msg.sender, msg.value);
 
         return offerId;
     }
 
-    /// @notice Updates the price of a collection offer
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------.              ,-------------------.
+    //     / \            |CollectionOffersV1|              |ERC20TransferHelper|
+    //   Caller           `--------+---------'              `---------+---------'
+    //     |    setOfferAmount()   |                                  |
+    //     | ---------------------->                                  |
+    //     |                       |                                  |
+    //     |                       |                                  |
+    //     |    __________________________________________________________________________
+    //     |    ! ALT  /  increase offer?                             |                   !
+    //     |    !_____/            |                                  |                   !
+    //     |    !                  |   transfer msg.value to escrow   |                   !
+    //     |    !                  | --------------------------------->                   !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |    ! [decrease offer] |                                  |                   !
+    //     |    !                  |      refund decrease amount      |                   !
+    //     |    !                  | --------------------------------->                   !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |                       |                                  |
+    //     |                       |----.                             |
+    //     |                       |    | _updateOffer()              |
+    //     |                       |<---'                             |
+    //     |                       |                                  |
+    //     |                       |----.
+    //     |                       |    | emit CollectionOfferUpdated()
+    //     |                       |<---'
+    //   Caller           ,--------+---------.              ,---------+---------.
+    //     ,-.            |CollectionOffersV1|              |ERC20TransferHelper|
+    //     `-'            `------------------'              `-------------------'
+    //     /|\
+    //      |
+    //     / \
+    /// @notice Updates the amount of a collection offer
     /// @param _tokenContract The address of the ERC-721 collection
-    /// @param _offerId The ID of the created offer
-    /// @param _newAmount The new offer
-    function setCollectionOfferAmount(
+    /// @param _offerId The ID of the collection offer
+    /// @param _amount The new offer amount
+    function setOfferAmount(
         address _tokenContract,
-        uint256 _offerId,
-        uint256 _newAmount
+        uint32 _offerId,
+        uint256 _amount
     ) external payable nonReentrant {
-        require(msg.sender == offers[_tokenContract][_offerId].seller, "setCollectionOfferAmount offer must be active & msg sender must be seller");
-        require(
-            (_newAmount > 0) && (_newAmount != offers[_tokenContract][_offerId].amount),
-            "setCollectionOfferAmount _newAmount must be greater than 0 and not equal to previous offer"
-        );
-        uint256 prevAmount = offers[_tokenContract][_offerId].amount;
+        Offer storage offer = offers[_tokenContract][_offerId];
 
-        if (_newAmount > prevAmount) {
-            uint256 increaseAmount = _newAmount - prevAmount;
-            require(msg.value == increaseAmount, "setCollectionOfferAmount must send exact increase amount");
+        require(msg.sender == offer.maker, "setOfferAmount must be maker");
+        require(_amount > 0 && _amount != offer.amount, "setOfferAmount _amount cannot be 0 or previous offer");
 
-            _handleIncomingTransfer(increaseAmount, ETH);
-            _updateOffer(_tokenContract, _offerId, _newAmount, true);
-        } else if (_newAmount < prevAmount) {
-            uint256 decreaseAmount = prevAmount - _newAmount;
+        uint256 prevAmount = offer.amount;
 
-            _handleOutgoingTransfer(msg.sender, decreaseAmount, ETH, USE_ALL_GAS_FLAG);
-            _updateOffer(_tokenContract, _offerId, _newAmount, false);
+        if (_amount > prevAmount) {
+            unchecked {
+                uint256 increaseAmount = _amount - prevAmount;
+                _handleIncomingTransfer(increaseAmount, ETH);
+                _updateOffer(offer, _tokenContract, _offerId, _amount, true);
+            }
+        } else {
+            unchecked {
+                uint256 decreaseAmount = prevAmount - _amount;
+                _handleOutgoingTransfer(msg.sender, decreaseAmount, ETH, USE_ALL_GAS_FLAG);
+                _updateOffer(offer, _tokenContract, _offerId, _amount, false);
+            }
         }
 
-        emit CollectionOfferPriceUpdated(_tokenContract, _offerId, offers[_tokenContract][_offerId]);
+        emit CollectionOfferUpdated(_tokenContract, _offerId, msg.sender, _amount);
     }
 
-    /// @notice Updates the finders fee of a collection offer
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------.               ,-------------------.
+    //     / \            |CollectionOffersV1|               |ERC20TransferHelper|
+    //   Caller           `--------+---------'               `---------+---------'
+    //     |     cancelOffer()     |                                   |
+    //     | ---------------------->                                   |
+    //     |                       |                                   |
+    //     |                       |               call()              |
+    //     |                       | ---------------------------------->
+    //     |                       |                                   |
+    //     |                       |                                   |----.
+    //     |                       |                                   |    | refund ETH from escrow
+    //     |                       |                                   |<---'
+    //     |                       |                                   |
+    //     |                       |----.
+    //     |                       |    | emit CollectionOfferCanceled()
+    //     |                       |<---'
+    //     |                       |                                   |
+    //     |                       |----.                              |
+    //     |                       |    | _removeOffer()               |
+    //     |                       |<---'                              |
+    //   Caller           ,--------+---------.               ,---------+---------.
+    //     ,-.            |CollectionOffersV1|               |ERC20TransferHelper|
+    //     `-'            `------------------'               `-------------------'
+    //     /|\
+    //      |
+    //     / \
+    /// @notice Cancels and refunds a collection offer
     /// @param _tokenContract The address of the ERC-721 collection
-    /// @param _offerId The ID of the created offer
-    /// @param _findersFeeBps The new finders fee bps
-    function setCollectionOfferFindersFee(
-        address _tokenContract,
-        uint256 _offerId,
-        uint16 _findersFeeBps
-    ) external nonReentrant {
-        require(msg.sender == offers[_tokenContract][_offerId].seller, "setCollectionOfferFindersFee msg sender must be seller");
-        require((_findersFeeBps > 1) && (_findersFeeBps <= 10000), "setCollectionOfferFindersFee must be less than or equal to 10000 bps");
+    /// @param _offerId The ID of the collection offer
+    function cancelOffer(address _tokenContract, uint32 _offerId) external nonReentrant {
+        Offer memory offer = offers[_tokenContract][_offerId];
 
-        findersFeeOverrides[_tokenContract][_offerId] = _findersFeeBps;
+        require(msg.sender == offer.maker, "cancelOffer must be maker");
 
-        emit CollectionOfferFindersFeeUpdated(_tokenContract, _offerId, _findersFeeBps, offers[_tokenContract][_offerId]);
-    }
+        // Refund offer
+        _handleOutgoingTransfer(msg.sender, offer.amount, ETH, USE_ALL_GAS_FLAG);
 
-    /// @notice Cancels a collection offer
-    /// @param _tokenContract The address of the ERC-721 collection
-    /// @param _offerId The ID of the created offer
-    function cancelCollectionOffer(address _tokenContract, uint256 _offerId) external nonReentrant {
-        require(msg.sender == offers[_tokenContract][_offerId].seller, "cancelCollectionOffer offer must be active & msg sender must be seller");
-
-        // Refund offered amount
-        _handleOutgoingTransfer(msg.sender, offers[_tokenContract][_offerId].amount, ETH, USE_ALL_GAS_FLAG);
-
-        emit CollectionOfferCanceled(_tokenContract, _offerId, offers[_tokenContract][_offerId]);
+        emit CollectionOfferCanceled(_tokenContract, _offerId, msg.sender, offer.amount);
 
         _removeOffer(_tokenContract, _offerId);
     }
 
-    /// ------------ BUYER FUNCTIONS ------------
+    /// ------------ TAKER FUNCTIONS ------------
 
-    /// @notice Fills the highest collection offer available, if above the desired minimum
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------.             ,--------------------.
+    //     / \            |CollectionOffersV1|             |ERC721TransferHelper|
+    //   Caller           `--------+---------'             `---------+----------'
+    //     |      fillOffer()      |                                 |
+    //     | ---------------------->                                 |
+    //     |                       |                                 |
+    //     |                       |----.                            |
+    //     |                       |    | validate token owner       |
+    //     |                       |<---'                            |
+    //     |                       |                                 |
+    //     |                       |----.                            |
+    //     |                       |    | _getMatchingOffer()        |
+    //     |                       |<---'                            |
+    //     |                       |                                 |
+    //     |                       |                                 |
+    //     |    ________________________________________             |
+    //     |    ! ALT  /  offer exists satisfying minimum?           |
+    //     |    !_____/            |                    !            |
+    //     |    !                  |----.               !            |
+    //     |    !                  |    | (continue)    !            |
+    //     |    !                  |<---'               !            |
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!            |
+    //     |    !~[revert]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!            |
+    //     |                       |                                 |
+    //     |                       |----.                            |
+    //     |                       |    | handle royalty payouts     |
+    //     |                       |<---'                            |
+    //     |                       |                                 |
+    //     |                       |----.                            |
+    //     |                       |    | handle finders fee payout  |
+    //     |                       |<---'                            |
+    //     |                       |                                 |
+    //     |                       |          transferFrom()         |
+    //     |                       | -------------------------------->
+    //     |                       |                                 |
+    //     |                       |                                 |----.
+    //     |                       |                                 |    | transfer NFT from taker to maker
+    //     |                       |                                 |<---'
+    //     |                       |                                 |
+    //     |                       |----.                            |
+    //     |                       |    | emit ExchangeExecuted()    |
+    //     |                       |<---'                            |
+    //     |                       |                                 |
+    //     |                       |----.
+    //     |                       |    | emit CollectionOfferFilled()
+    //     |                       |<---'
+    //     |                       |                                 |
+    //     |                       |----.                            |
+    //     |                       |    | _removeOffer()             |
+    //     |                       |<---'                            |
+    //   Caller           ,--------+---------.             ,---------+----------.
+    //     ,-.            |CollectionOffersV1|             |ERC721TransferHelper|
+    //     `-'            `------------------'             `--------------------'
+    //     /|\
+    //      |
+    //     / \
+    /// @notice Fills the highest collection offer above a specified minimum, if exists
     /// @param _tokenContract The address of the ERC-721 collection
     /// @param _tokenId The ID of the ERC-721 token
     /// @param _minAmount The minimum amount willing to accept
-    /// @param _finder The address of the referrer for this sale
-    function fillCollectionOffer(
+    /// @param _finder The address of the offer referrer
+    function fillOffer(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _minAmount,
         address _finder
     ) external nonReentrant {
-        require(_finder != address(0), "fillCollectionOffer _finder must not be 0 address");
-        require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "fillCollectionOffer msg sender must own specified token");
+        require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "fillOffer must own specified token");
 
         // Get matching offer (if exists)
-        uint256 offerId = _getMatchingOffer(_tokenContract, _minAmount);
-        require(offerId > 0, "fillCollectionOffer offer satisfying specified _minAmount not found");
+        uint32 offerId = _getMatchingOffer(_tokenContract, _minAmount);
+        require(offerId != 0, "fillOffer offer satisfying _minAmount not found");
 
         Offer memory offer = offers[_tokenContract][offerId];
 
@@ -200,34 +341,61 @@ contract CollectionOffersV1 is
         // Payout optional finder fee
         if (_finder != address(0)) {
             uint256 findersFee;
-
-            // If override exists --
-            if (findersFeeOverrides[_tokenContract][offerId] != 0) {
-                // Calculate with override
-                findersFee = (remainingProfit * findersFeeOverrides[_tokenContract][offerId]) / 10000;
-
-                // Else default 100 bps finders fee
-            } else {
-                findersFee = (remainingProfit * 100) / 10000;
-            }
-
+            // Calculate payout
+            findersFee = (remainingProfit * findersFeeBps) / 10000;
+            // Transfer to finder
             _handleOutgoingTransfer(_finder, findersFee, ETH, USE_ALL_GAS_FLAG);
-
+            // Update remaining profit
             remainingProfit -= findersFee;
         }
 
-        // Transfer remaining ETH to buyer
+        // Transfer remaining ETH to taker
         _handleOutgoingTransfer(msg.sender, remainingProfit, ETH, USE_ALL_GAS_FLAG);
 
-        // Transfer NFT to seller
-        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.seller, _tokenId);
+        // Transfer NFT to maker
+        erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.maker, _tokenId);
 
         ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ETH, tokenId: 0, amount: offer.amount});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
 
-        emit ExchangeExecuted(offer.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
-        emit CollectionOfferFilled(_tokenContract, offerId, msg.sender, _finder, offer);
+        emit ExchangeExecuted(offer.maker, msg.sender, userAExchangeDetails, userBExchangeDetails);
+        emit CollectionOfferFilled(_tokenContract, _tokenId, offerId, msg.sender, _finder);
 
         _removeOffer(_tokenContract, offerId);
+    }
+
+    /// ------------ DAO FUNCTIONS ------------
+
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |              ,------------------.
+    //     / \             |CollectionOffersV1|
+    //   zoraDAO           `--------+---------'
+    //      |   setFindersFee()     |
+    //      |---------------------->|
+    //      |                       |
+    //      |                       |----.
+    //      |                       |    | update finders fee
+    //      |                       |<---'
+    //      |                       |
+    //      |                       |----.
+    //      |                       |    | emit FindersFeeUpdated()
+    //      |                       |<---'
+    //   zoraDAO           ,--------+---------.
+    //     ,-.             |CollectionOffersV1|
+    //     `-'             `------------------'
+    //     /|\
+    //      |
+    //     / \
+    /// @notice Updates the finders fee for collection offers
+    /// @param _findersFeeBps The new finders fee bps
+    function setFindersFee(uint16 _findersFeeBps) external nonReentrant {
+        require(msg.sender == registrar, "setFindersFee only registrar");
+        require(_findersFeeBps <= 10000, "setFindersFee bps must be <= 10000");
+
+        findersFeeBps = _findersFeeBps;
+
+        emit FindersFeeUpdated(_findersFeeBps);
     }
 }

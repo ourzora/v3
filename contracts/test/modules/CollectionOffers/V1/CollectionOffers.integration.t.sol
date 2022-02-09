@@ -92,15 +92,15 @@ contract CollectionOffersV1IntegrationTest is DSTest {
 
     function offer() public {
         vm.prank(address(seller));
-        offers.createCollectionOffer{value: 1 ether}(address(token));
+        offers.createOffer{value: 1 ether}(address(token));
     }
 
     function fill() public {
         vm.prank(address(seller));
-        offers.createCollectionOffer{value: 1 ether}(address(token));
+        offers.createOffer{value: 1 ether}(address(token));
 
         vm.prank(address(buyer));
-        offers.fillCollectionOffer(address(token), 0, 1 ether, address(finder));
+        offers.fillOffer(address(token), 0, 1 ether, address(finder));
     }
 
     function test_WithdrawOfferFromSeller() public {
@@ -118,7 +118,7 @@ contract CollectionOffersV1IntegrationTest is DSTest {
 
         // Increase initial offer to 2 ETH
         vm.prank(address(seller));
-        offers.setCollectionOfferAmount{value: 1 ether}(address(token), 1, 2 ether);
+        offers.setOfferAmount{value: 1 ether}(address(token), 1, 2 ether);
 
         uint256 afterBalance = address(seller).balance;
 
@@ -132,7 +132,7 @@ contract CollectionOffersV1IntegrationTest is DSTest {
 
         // Decrease initial offer to 0.5 ETH
         vm.prank(address(seller));
-        offers.setCollectionOfferAmount(address(token), 1, 0.5 ether);
+        offers.setOfferAmount(address(token), 1, 0.5 ether);
 
         uint256 afterBalance = address(seller).balance;
 

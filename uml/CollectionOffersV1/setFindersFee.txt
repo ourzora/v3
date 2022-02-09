@@ -1,0 +1,9 @@
+@startuml
+actor zoraDAO
+participant CollectionOffersV1
+
+zoraDAO -> CollectionOffersV1 : setFindersFee()
+CollectionOffersV1 -> CollectionOffersV1 : update finders fee
+CollectionOffersV1 -> CollectionOffersV1 : emit FindersFeeUpdated()
+
+@enduml
