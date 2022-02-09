@@ -327,7 +327,7 @@ contract CollectionOffersV1 is
         require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "fillOffer must own specified token");
 
         // Get matching offer (if exists)
-        uint32 offerId = _getMatchingOffer(_tokenContract, _minAmount);
+        uint256 offerId = _getMatchingOffer(_tokenContract, _minAmount);
         require(offerId != 0, "fillOffer offer satisfying _minAmount not found");
 
         Offer memory offer = offers[_tokenContract][offerId];
