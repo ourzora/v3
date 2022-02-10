@@ -396,9 +396,11 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             erc721TransferHelper.transferFrom(_tokenContract, auction.seller, address(this), _tokenId);
 
             // Else refund previous bidder
-        } else {
-            _handleOutgoingTransfer(auction.bidder, auction.amount, auction.currency, USE_ALL_GAS_FLAG);
         }
+
+        // TODO: gas optimize but maintain that _handleOutgoingTransfer is called last or given safe amount of gas
+        address prevBidder = auction.bidder;
+        uint256 prevAmount = auction.amount;
 
         // Ensure incoming bid payment is valid and take custody
         _handleIncomingTransfer(_amount, auction.currency);
@@ -420,6 +422,10 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
                 auction.duration += (TIME_BUFFER - auctionTimeRemaining);
                 emit AuctionDurationExtended(_tokenContract, _tokenId, auction.duration, auction);
             }
+        }
+
+        if (!firstBid) {
+            _handleOutgoingTransfer(prevBidder, prevAmount, auction.currency, USE_ALL_GAS_FLAG);
         }
     }
 
