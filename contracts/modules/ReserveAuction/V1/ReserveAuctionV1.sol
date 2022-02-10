@@ -397,7 +397,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
 
             // Else refund previous bidder
         } else {
-            _handleOutgoingTransfer(auction.bidder, auction.amount, auction.currency, USE_ALL_GAS_FLAG);
+            _handleOutgoingTransfer(auction.bidder, auction.amount, auction.currency, 30000);
         }
 
         // Ensure incoming bid payment is valid and take custody
@@ -488,7 +488,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         }
 
         // Payout respective parties, ensuring royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.amount, auction.currency, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.amount, auction.currency, 200000);
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, auction.currency);
@@ -496,13 +496,13 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         // Payout optional finders fee
         if (auction.finder != address(0)) {
             uint256 finderFee = (remainingProfit * auction.findersFeeBps) / 10000;
-            _handleOutgoingTransfer(auction.finder, finderFee, auction.currency, USE_ALL_GAS_FLAG);
+            _handleOutgoingTransfer(auction.finder, finderFee, auction.currency, 30000);
 
             remainingProfit -= finderFee;
         }
 
         // Transfer remaining funds to seller
-        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, auction.currency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, auction.currency, 30000);
 
         // Transfer NFT to winning bidder
         IERC721(_tokenContract).transferFrom(address(this), auction.bidder, _tokenId);
