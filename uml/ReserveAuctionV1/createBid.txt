@@ -23,15 +23,14 @@ end
 ReserveAuctionV1 -> ERC20TransferHelper : handle incoming bid
 ERC20TransferHelper -> ERC20TransferHelper : transfer tokens to escrow
 
-ReserveAuctionV1 -> ReserveAuctionV1 : emit AuctionBid()
-
 alt Bid placed within 15 min of end?
     
     ReserveAuctionV1 ->  ReserveAuctionV1 : extend auction
-    ReserveAuctionV1 ->  ReserveAuctionV1 : emit AuctionDurationExtended()
 
 else noop
 
 end
+
+ReserveAuctionV1 -> ReserveAuctionV1 : emit AuctionBid()
 
 @enduml

@@ -79,15 +79,17 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     /// @param amount The bid on the auction
     /// @param bidder The address of the bidder
     /// @param firstBid Whether the bid started the auction
-    /// @param auction The metadata of the auction
-    event AuctionBid(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed amount, address bidder, bool firstBid, Auction auction);
-
-    /// @notice Emitted when the duration of an auction is extended
-    /// @param tokenContract The ERC-721 token address of the auction
-    /// @param tokenId The ERC-721 token ID of the auction
-    /// @param duration The updated duration of the auction
-    /// @param auction The metadata of the extended auction
-    event AuctionDurationExtended(address indexed tokenContract, uint256 indexed tokenId, uint256 indexed duration, Auction auction);
+    /// @param extended Whether the bid extended the auction
+    /// @param duration The duration of the auction
+    event AuctionBid(
+        address indexed tokenContract,
+        uint256 indexed tokenId,
+        uint256 indexed amount,
+        address bidder,
+        bool firstBid,
+        bool extended,
+        uint256 duration
+    );
 
     /// @notice Emitted when an auction has ended
     /// @param tokenContract The ERC-721 token address of the auction
@@ -301,63 +303,59 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
     //     ,-.
     //     `-'
     //     /|\
-    //      |             ,----------------.                ,--------------------.                  ,-------------------.
-    //     / \            |ReserveAuctionV1|                |ERC721TransferHelper|                  |ERC20TransferHelper|
-    //   Caller           `-------+--------'                `---------+----------'                  `---------+---------'
-    //     |      createBid()     |                                   |                                       |
-    //     | --------------------->                                   |                                       |
-    //     |                      |                                   |                                       |
-    //     |                      |                                   |                                       |
-    //     |    __________________________________________________________________________________________________________________________________
-    //     |    ! ALT  /  First bid?                                  |                                       |                                   !
-    //     |    !_____/           |                                   |                                       |                                   !
-    //     |    !                 |----.                              |                                       |                                   !
-    //     |    !                 |    | start auction                |                                       |                                   !
-    //     |    !                 |<---'                              |                                       |                                   !
-    //     |    !                 |                                   |                                       |                                   !
-    //     |    !                 |           transferFrom()          |                                       |                                   !
-    //     |    !                 | ---------------------------------->                                       |                                   !
-    //     |    !                 |                                   |                                       |                                   !
-    //     |    !                 |                                   |----.                                                                      !
-    //     |    !                 |                                   |    | transfer NFT from seller to escrow                                   !
-    //     |    !                 |                                   |<---'                                                                      !
-    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
-    //     |    ! [refund previous bidder]                            |                                       |                                   !
-    //     |    !                 |                           handle outgoing refund                          |                                   !
-    //     |    !                 | -------------------------------------------------------------------------->                                   !
-    //     |    !                 |                                   |                                       |                                   !
-    //     |    !                 |                                   |                                       |----.                              !
-    //     |    !                 |                                   |                                       |    | transfer tokens to bidder    !
-    //     |    !                 |                                   |                                       |<---'                              !
-    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
-    //     |                      |                                   |                                       |
-    //     |                      |                            handle incoming bid                            |
-    //     |                      | -------------------------------------------------------------------------->
-    //     |                      |                                   |                                       |
-    //     |                      |                                   |                                       |----.
-    //     |                      |                                   |                                       |    | transfer tokens to escrow
-    //     |                      |                                   |                                       |<---'
-    //     |                      |                                   |                                       |
-    //     |                      |----.                              |                                       |
-    //     |                      |    | emit AuctionBid()            |                                       |
-    //     |                      |<---'                              |                                       |
-    //     |                      |                                   |                                       |
-    //     |                      |                                   |                                       |
-    //     |    ___________________________________________________________                                   |
-    //     |    ! ALT  /  Bid placed within 15 min of end?            |    !                                  |
-    //     |    !_____/           |                                   |    !                                  |
-    //     |    !                 |----.                              |    !                                  |
-    //     |    !                 |    | extend auction               |    !                                  |
-    //     |    !                 |<---'                              |    !                                  |
-    //     |    !                 |                                   |    !                                  |
-    //     |    !                 |----.                                   !                                  |
-    //     |    !                 |    | emit AuctionDurationExtended()    !                                  |
-    //     |    !                 |<---'                                   !                                  |
-    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!                                  |
-    //     |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!                                  |
-    //   Caller           ,-------+--------.                ,---------+----------.                  ,---------+---------.
-    //     ,-.            |ReserveAuctionV1|                |ERC721TransferHelper|                  |ERC20TransferHelper|
-    //     `-'            `----------------'                `--------------------'                  `-------------------'
+    //      |             ,----------------.          ,--------------------.                  ,-------------------.
+    //     / \            |ReserveAuctionV1|          |ERC721TransferHelper|                  |ERC20TransferHelper|
+    //   Caller           `-------+--------'          `---------+----------'                  `---------+---------'
+    //     |      createBid()     |                             |                                       |
+    //     | --------------------->                             |                                       |
+    //     |                      |                             |                                       |
+    //     |                      |                             |                                       |
+    //     |    ____________________________________________________________________________________________________________________________
+    //     |    ! ALT  /  First bid?                            |                                       |                                   !
+    //     |    !_____/           |                             |                                       |                                   !
+    //     |    !                 |----.                        |                                       |                                   !
+    //     |    !                 |    | start auction          |                                       |                                   !
+    //     |    !                 |<---'                        |                                       |                                   !
+    //     |    !                 |                             |                                       |                                   !
+    //     |    !                 |        transferFrom()       |                                       |                                   !
+    //     |    !                 | ---------------------------->                                       |                                   !
+    //     |    !                 |                             |                                       |                                   !
+    //     |    !                 |                             |----.                                                                      !
+    //     |    !                 |                             |    | transfer NFT from seller to escrow                                   !
+    //     |    !                 |                             |<---'                                                                      !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |    ! [refund previous bidder]                      |                                       |                                   !
+    //     |    !                 |                        handle outgoing refund                       |                                   !
+    //     |    !                 | -------------------------------------------------------------------->                                   !
+    //     |    !                 |                             |                                       |                                   !
+    //     |    !                 |                             |                                       |----.                              !
+    //     |    !                 |                             |                                       |    | transfer tokens to bidder    !
+    //     |    !                 |                             |                                       |<---'                              !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |                      |                             |                                       |
+    //     |                      |                         handle incoming bid                         |
+    //     |                      | -------------------------------------------------------------------->
+    //     |                      |                             |                                       |
+    //     |                      |                             |                                       |----.
+    //     |                      |                             |                                       |    | transfer tokens to escrow
+    //     |                      |                             |                                       |<---'
+    //     |                      |                             |                                       |
+    //     |                      |                             |                                       |
+    //     |    ___________________________________________     |                                       |
+    //     |    ! ALT  /  Bid placed within 15 min of end? !    |                                       |
+    //     |    !_____/           |                        !    |                                       |
+    //     |    !                 |----.                   !    |                                       |
+    //     |    !                 |    | extend auction    !    |                                       |
+    //     |    !                 |<---'                   !    |                                       |
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!    |                                       |
+    //     |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!    |                                       |
+    //     |                      |                             |                                       |
+    //     |                      |----.                        |                                       |
+    //     |                      |    | emit AuctionBid()      |                                       |
+    //     |                      |<---'                        |                                       |
+    //   Caller           ,-------+--------.          ,---------+----------.                  ,---------+---------.
+    //     ,-.            |ReserveAuctionV1|          |ERC721TransferHelper|                  |ERC20TransferHelper|
+    //     `-'            `----------------'          `--------------------'                  `-------------------'
     //     /|\
     //      |
     //     / \
@@ -385,8 +383,10 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             );
         }
 
-        // If first bid --
         bool firstBid;
+        bool extended;
+
+        // If first bid --
         if (auction.firstBidTime == 0) {
             // Store time of bid
             auction.firstBidTime = block.timestamp;
@@ -408,8 +408,6 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         auction.bidder = msg.sender;
         auction.finder = _finder;
 
-        emit AuctionBid(_tokenContract, _tokenId, _amount, msg.sender, firstBid, auction);
-
         unchecked {
             // Get remaining time
             uint256 auctionTimeRemaining = auction.firstBidTime + auction.duration - block.timestamp;
@@ -418,9 +416,12 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
             if (auctionTimeRemaining < TIME_BUFFER) {
                 // Extend auction so 15 minutes are left from time of bid
                 auction.duration += (TIME_BUFFER - auctionTimeRemaining);
-                emit AuctionDurationExtended(_tokenContract, _tokenId, auction.duration, auction);
+                // Mark as extended
+                extended = true;
             }
         }
+
+        emit AuctionBid(_tokenContract, _tokenId, _amount, msg.sender, firstBid, extended, auction.duration);
     }
 
     //     ,-.
