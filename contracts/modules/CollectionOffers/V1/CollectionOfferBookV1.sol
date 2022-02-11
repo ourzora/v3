@@ -57,38 +57,51 @@ contract CollectionOfferBookV1 {
         uint256 _amount,
         address _maker
     ) internal returns (uint256) {
+        uint256 _offerCount;
         unchecked {
-            ++offerCount;
+            _offerCount = ++offerCount;
         }
 
         // If first offer for a collection, mark as both floor and ceiling
         if (_isFirstOffer(_collection)) {
-            offers[_collection][offerCount] = Offer({maker: _maker, amount: _amount, id: offerCount, prevId: 0, nextId: 0});
+            offers[_collection][_offerCount] = Offer({maker: _maker, amount: _amount, id: uint32(_offerCount), prevId: 0, nextId: 0});
 
-            floorOfferId[_collection] = offerCount;
+            floorOfferId[_collection] = _offerCount;
             floorOfferAmount[_collection] = _amount;
 
-            ceilingOfferId[_collection] = offerCount;
+            ceilingOfferId[_collection] = _offerCount;
             ceilingOfferAmount[_collection] = _amount;
 
             // Else if offer is greater than current ceiling, mark as new ceiling
         } else if (_isNewCeiling(_collection, _amount)) {
             uint256 prevCeilingId = ceilingOfferId[_collection];
 
-            offers[_collection][prevCeilingId].nextId = uint32(offerCount);
-            offers[_collection][offerCount] = Offer({maker: _maker, amount: _amount, id: offerCount, prevId: uint32(prevCeilingId), nextId: 0});
+            offers[_collection][prevCeilingId].nextId = uint32(_offerCount);
+            offers[_collection][_offerCount] = Offer({
+                maker: _maker,
+                amount: _amount,
+                id: uint32(_offerCount),
+                prevId: uint32(prevCeilingId),
+                nextId: 0
+            });
 
-            ceilingOfferId[_collection] = offerCount;
+            ceilingOfferId[_collection] = _offerCount;
             ceilingOfferAmount[_collection] = _amount;
 
             // Else if offer is less than or equal to current floor, mark as new floor
         } else if (_isNewFloor(_collection, _amount)) {
             uint256 prevFloorId = floorOfferId[_collection];
 
-            offers[_collection][prevFloorId].prevId = uint32(offerCount);
-            offers[_collection][offerCount] = Offer({maker: _maker, amount: _amount, id: offerCount, prevId: 0, nextId: uint32(prevFloorId)});
+            offers[_collection][prevFloorId].prevId = uint32(_offerCount);
+            offers[_collection][_offerCount] = Offer({
+                maker: _maker,
+                amount: _amount,
+                id: uint32(_offerCount),
+                prevId: 0,
+                nextId: uint32(prevFloorId)
+            });
 
-            floorOfferId[_collection] = offerCount;
+            floorOfferId[_collection] = _offerCount;
             floorOfferAmount[_collection] = _amount;
 
             // Else offer is between floor and ceiling --
@@ -102,14 +115,20 @@ contract CollectionOfferBookV1 {
             }
 
             // Insert new offer before (time priority)
-            offers[_collection][offerCount] = Offer({maker: _maker, amount: _amount, id: offerCount, prevId: offer.prevId, nextId: offer.id});
+            offers[_collection][_offerCount] = Offer({
+                maker: _maker,
+                amount: _amount,
+                id: uint32(_offerCount),
+                prevId: offer.prevId,
+                nextId: offer.id
+            });
 
             // Update neighboring pointers
-            offers[_collection][offer.id].prevId = uint32(offerCount);
-            offers[_collection][offer.prevId].nextId = uint32(offerCount);
+            offers[_collection][offer.id].prevId = uint32(_offerCount);
+            offers[_collection][offer.prevId].nextId = uint32(_offerCount);
         }
 
-        return offerCount;
+        return _offerCount;
     }
 
     /// @notice Updates an offer and (if needed) its location relative to other offers in the collection
