@@ -14,8 +14,6 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to list and bid on ERC-721 tokens with timed reserve auctions
 contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
-    /// @dev The indicator to pass all remaining gas when paying out royalties
-    uint256 private constant USE_ALL_GAS_FLAG = 0;
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint256 constant TIME_BUFFER = 15 minutes;
     /// @notice The minimum percentage difference between the last bid amount and the current bid.
