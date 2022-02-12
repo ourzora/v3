@@ -14,6 +14,7 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to list and bid on ERC-721 tokens with timed reserve auctions
 contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+    uint256 private constant OUTGOING_TRANSFER_GAS_LIMIT = 30000;
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint256 constant TIME_BUFFER = 15 minutes;
     /// @notice The minimum percentage difference between the last bid amount and the current bid.
@@ -395,7 +396,7 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
 
             // Else refund previous bidder
         } else {
-            _handleOutgoingTransfer(auction.bidder, auction.amount, auction.currency, 30000);
+            _handleOutgoingTransfer(auction.bidder, auction.amount, auction.currency, OUTGOING_TRANSFER_GAS_LIMIT);
         }
 
         // Ensure incoming bid payment is valid and take custody
@@ -495,13 +496,13 @@ contract ReserveAuctionV1 is ReentrancyGuard, UniversalExchangeEventV1, Incoming
         // Payout optional finders fee
         if (auction.finder != address(0)) {
             uint256 finderFee = (remainingProfit * auction.findersFeeBps) / 10000;
-            _handleOutgoingTransfer(auction.finder, finderFee, auction.currency, 30000);
+            _handleOutgoingTransfer(auction.finder, finderFee, auction.currency, OUTGOING_TRANSFER_GAS_LIMIT);
 
             remainingProfit -= finderFee;
         }
 
         // Transfer remaining funds to seller
-        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, auction.currency, 30000);
+        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, auction.currency, OUTGOING_TRANSFER_GAS_LIMIT);
 
         // Transfer NFT to winning bidder
         IERC721(_tokenContract).transferFrom(address(this), auction.bidder, _tokenId);
