@@ -10,22 +10,24 @@ import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport
 import {FeePayoutSupportV1} from "../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
 import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
 
-/// @title Covered Calls V1
+/// @title Covered Calls V2
 /// @author kulkarohan <rohan@zora.co>
-/// @notice This module allows sellers to place ETH covered call options on their NFTs
-contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+/// @notice This module allows sellers to place ERC20 covered call options on their NFTs
+contract CoveredCallsV2 is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
     /// @notice The metadata of a covered call option
     /// @param seller The address of the seller that created the call option
     /// @param buyer The address of the buyer, or address(0) if not purchased, that purchased the option
+    /// @param currency The address of the ERC-20 denominating the strike and premium
     /// @param premium The premium price to purchase the call option
     /// @param strike The strike price to exercise the call option
     /// @param expiration The expiration time of the call option
     struct Call {
         address seller;
         address buyer;
+        address currency;
         uint256 premium;
         uint256 strike;
         uint256 expiration;
@@ -81,7 +83,7 @@ contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayout
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
         FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
-        ModuleNamingSupportV1("Covered Calls: v1.0")
+        ModuleNamingSupportV1("Covered Calls: v2.0")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
@@ -94,12 +96,14 @@ contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayout
     /// @param _premiumPrice The premium price to purchase the call option
     /// @param _strikePrice The strike price to exercise the call option
     /// @param _expiration The expiration time of the call option
+    /// @param _currency The address of the ERC-20 to accept the strike and premium
     function createCall(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _premiumPrice,
         uint256 _strikePrice,
-        uint256 _expiration
+        uint256 _expiration,
+        address _currency
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         require(
@@ -120,6 +124,7 @@ contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayout
         callForNFT[_tokenContract][_tokenId] = Call({
             seller: tokenOwner,
             buyer: address(0),
+            currency: _currency,
             premium: _premiumPrice,
             strike: _strikePrice,
             expiration: _expiration
@@ -169,11 +174,13 @@ contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayout
     /// @notice Purchases a call option -- transferring the NFT to the contract and premium to the seller
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ERC-721 token ID
+    /// @param _currency The ERC-20 address of the strike and premium, or address(0) for ETH
     /// @param _premium The premium price to pay for the call option
     /// @param _strike The strike price to exercise the call option
     function buyCall(
         address _tokenContract,
         uint256 _tokenId,
+        address _currency,
         uint256 _premium,
         uint256 _strike
     ) external payable nonReentrant {
@@ -182,17 +189,18 @@ contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayout
         require(call.seller != address(0), "buyCall call does not exist");
         require(call.buyer == address(0), "buyCall call already purchased");
         require(call.expiration > block.timestamp, "buyCall call expired");
+        require(call.currency == _currency, "buyCall _currency must match call");
         require(call.premium == _premium, "buyCall _premium must match call");
         require(call.strike == _strike, "buyCall _strike must match call");
 
         // Ensure premium payment is valid and take custody
-        _handleIncomingTransfer(call.premium, address(0));
+        _handleIncomingTransfer(call.premium, call.currency);
 
         // Transfer NFT to escrow from seller
         erc721TransferHelper.transferFrom(_tokenContract, call.seller, address(this), _tokenId);
 
         // Transfer premium to seller
-        _handleOutgoingTransfer(call.seller, call.premium, address(0), 30000);
+        _handleOutgoingTransfer(call.seller, call.premium, call.currency, 30000);
 
         // Mark option as purchased
         call.buyer = msg.sender;
@@ -210,16 +218,16 @@ contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayout
         require(call.expiration > block.timestamp, "exerciseCall call expired");
 
         // Ensure strike payment is valid and take custody
-        _handleIncomingTransfer(call.strike, address(0));
+        _handleIncomingTransfer(call.strike, call.currency);
 
         // Payout respective parties, ensuring NFT royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, call.strike, address(0), 75000);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, call.strike, call.currency, 75000);
 
         // Payout optional protocol fee
-        remainingProfit = _handleProtocolFeePayout(remainingProfit, address(0));
+        remainingProfit = _handleProtocolFeePayout(remainingProfit, call.currency);
 
         // Transfer strike (post royalties) to seller
-        _handleOutgoingTransfer(call.seller, remainingProfit, address(0), 30000);
+        _handleOutgoingTransfer(call.seller, remainingProfit, call.currency, 30000);
 
         // Transfer NFT to buyer
         IERC721(_tokenContract).transferFrom(address(this), msg.sender, _tokenId);

@@ -73,10 +73,6 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         // Mint seller token
         token.mint(address(seller), 0);
 
-        // Buyer swap 50 ETH <> 50 WETH
-        vm.prank(address(buyer));
-        weth.deposit{value: 50 ether}();
-
         // Users approve CoveredCalls module
         seller.setApprovalForModule(address(calls), true);
         buyer.setApprovalForModule(address(calls), true);
@@ -84,22 +80,18 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         // Seller approve ERC721TransferHelper
         vm.prank(address(seller));
         token.setApprovalForAll(address(erc721TransferHelper), true);
-
-        // Buyer approve ERC20TransferHelper
-        vm.prank(address(buyer));
-        weth.approve(address(erc20TransferHelper), 50 ether);
     }
 
     /// ------------ ETH PURCHASED CALL OPTION ------------ ///
 
     function runETHPurchase() public {
         vm.prank(address(seller));
-        calls.createCall(address(token), 0, 0.5 ether, 1 ether, 1 days, address(0));
+        calls.createCall(address(token), 0, 0.5 ether, 1 ether, 1 days);
 
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, 0.5 ether, 1 ether);
     }
 
     function test_ETHPurchaseIntegration() public {
@@ -122,12 +114,12 @@ contract CoveredCallsV1IntegrationTest is DSTest {
 
     function runETHExercise() public {
         vm.prank(address(seller));
-        calls.createCall(address(token), 0, 0.5 ether, 1 ether, 1 days, address(0));
+        calls.createCall(address(token), 0, 0.5 ether, 1 ether, 1 days);
 
         vm.warp(1 hours);
 
         vm.prank(address(buyer));
-        calls.buyCall{value: 0.5 ether}(address(token), 0, address(0), 0.5 ether, 1 ether);
+        calls.buyCall{value: 0.5 ether}(address(token), 0, 0.5 ether, 1 ether);
 
         vm.warp(10 hours);
 
@@ -146,70 +138,6 @@ contract CoveredCallsV1IntegrationTest is DSTest {
         uint256 afterSellerBalance = address(seller).balance;
         uint256 afterBuyerBalance = address(buyer).balance;
         uint256 afterRoyaltyRecipientBalance = address(royaltyRecipient).balance;
-        address afterTokenOwner = token.ownerOf(0);
-
-        require(beforeBuyerBalance - afterBuyerBalance == 1.5 ether);
-        require(afterRoyaltyRecipientBalance - beforeRoyaltyRecipientBalance == 0.05 ether);
-        require(afterSellerBalance - beforeSellerBalance == 1.45 ether);
-        require(beforeTokenOwner == address(seller) && afterTokenOwner == address(buyer));
-    }
-
-    /// ------------ ERC-20 PURCHASED CALL OPTION ------------ ///
-
-    function runERC20Purchase() public {
-        vm.prank(address(seller));
-        calls.createCall(address(token), 0, 0.5 ether, 1 ether, 1 days, address(weth));
-
-        vm.warp(1 hours);
-
-        vm.prank(address(buyer));
-        calls.buyCall(address(token), 0, address(weth), 0.5 ether, 1 ether);
-    }
-
-    function test_ERC20PurchaseIntegration() public {
-        uint256 beforeSellerBalance = weth.balanceOf(address(seller));
-        uint256 beforeBuyerBalance = weth.balanceOf(address(buyer));
-        address beforeTokenOwner = token.ownerOf(0);
-
-        runERC20Purchase();
-
-        uint256 afterSellerBalance = weth.balanceOf(address(seller));
-        uint256 afterBuyerBalance = weth.balanceOf(address(buyer));
-        address afterTokenOwner = token.ownerOf(0);
-
-        require(afterSellerBalance - beforeSellerBalance == 0.5 ether);
-        require(beforeBuyerBalance - afterBuyerBalance == 0.5 ether);
-        require(beforeTokenOwner == address(seller) && afterTokenOwner == address(calls));
-    }
-
-    /// ------------ ERC-20 EXERCISED CALL OPTION ------------ ///
-
-    function runERC20Exercise() public {
-        vm.prank(address(seller));
-        calls.createCall(address(token), 0, 0.5 ether, 1 ether, 1 days, address(weth));
-
-        vm.warp(1 hours);
-
-        vm.prank(address(buyer));
-        calls.buyCall(address(token), 0, address(weth), 0.5 ether, 1 ether);
-
-        vm.warp(10 hours);
-
-        vm.prank(address(buyer));
-        calls.exerciseCall(address(token), 0);
-    }
-
-    function test_ERC20ExerciseIntegration() public {
-        uint256 beforeSellerBalance = weth.balanceOf(address(seller));
-        uint256 beforeBuyerBalance = weth.balanceOf(address(buyer));
-        uint256 beforeRoyaltyRecipientBalance = weth.balanceOf(address(royaltyRecipient));
-        address beforeTokenOwner = token.ownerOf(0);
-
-        runERC20Exercise();
-
-        uint256 afterSellerBalance = weth.balanceOf(address(seller));
-        uint256 afterBuyerBalance = weth.balanceOf(address(buyer));
-        uint256 afterRoyaltyRecipientBalance = weth.balanceOf(address(royaltyRecipient));
         address afterTokenOwner = token.ownerOf(0);
 
         require(beforeBuyerBalance - afterBuyerBalance == 1.5 ether);
