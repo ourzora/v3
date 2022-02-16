@@ -14,10 +14,7 @@ import {ModuleNamingSupportV1} from "../../../common/ModuleNamingSupport/ModuleN
 /// @title Covered Calls V1
 /// @author kulkarohan <rohan@zora.co>
 /// @notice This module allows sellers to place covered call options on their NFTs
-contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
-    /// @dev The indicator to pass all remaining gas when paying out royalties
-    uint256 private constant USE_ALL_GAS_FLAG = 0;
-
+contract CoveredCallsV1 is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
@@ -48,32 +45,27 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @notice Emitted when a covered call option is created
     /// @param tokenContract The ERC-721 token address of the created call option
     /// @param tokenId The ERC-721 token ID of the created call option
-    /// @param call The metadata of the created call option
-    event CallCreated(address indexed tokenContract, uint256 indexed tokenId, Call call);
+    event CallCreated(address tokenContract, uint256 tokenId);
 
     /// @notice Emitted when a covered call option is canceled
     /// @param tokenContract The ERC-721 token address of the canceled call option
     /// @param tokenId The ERC-721 token ID of the canceled call option
-    /// @param call The metadata of the canceled call option
-    event CallCanceled(address indexed tokenContract, uint256 indexed tokenId, Call call);
+    event CallCanceled(address tokenContract, uint256 tokenId);
 
     /// @notice Emitted when the NFT from an expired call option is reclaimed
     /// @param tokenContract The ERC-721 token address of the reclaimed call option
     /// @param tokenId The ERC-721 token ID of the reclaimed call option
-    /// @param call The metadata of the reclaimed call option
-    event CallReclaimed(address indexed tokenContract, uint256 indexed tokenId, Call call);
+    event CallReclaimed(address tokenContract, uint256 tokenId);
 
     /// @notice Emitted when a covered call option is purchased
     /// @param tokenContract The ERC-721 token address of the purchased call option
     /// @param tokenId The ERC-721 token ID of the purchased call option
-    /// @param call The metadata of the purchased call option
-    event CallPurchased(address indexed tokenContract, uint256 indexed tokenId, Call call);
+    event CallPurchased(address tokenContract, uint256 tokenId);
 
     /// @notice Emitted when a covered call option is exercised
     /// @param tokenContract The ERC-721 token address of the exercised call option
     /// @param tokenId The ERC-721 token ID of the exercised call option
-    /// @param call The metadata of the exercised call option
-    event CallExercised(address indexed tokenContract, uint256 indexed tokenId, Call call);
+    event CallExercised(address tokenContract, uint256 tokenId);
 
     /// ------------ CONSTRUCTOR ------------
 
@@ -138,14 +130,14 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
             expiration: _expiration
         });
 
-        emit CallCreated(_tokenContract, _tokenId, callForNFT[_tokenContract][_tokenId]);
+        emit CallCreated(_tokenContract, _tokenId);
     }
 
     /// @notice Cancels a non-purchased call option for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ID of the ERC-721 token
     function cancelCall(address _tokenContract, uint256 _tokenId) external {
-        Call storage call = callForNFT[_tokenContract][_tokenId];
+        Call memory call = callForNFT[_tokenContract][_tokenId];
 
         require(call.seller != address(0), "cancelCall call does not exist");
         require(call.buyer == address(0), "cancelCall call has been purchased");
@@ -163,7 +155,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @param _tokenContract The address of the ERC-721 token to reclaim
     /// @param _tokenId The ID of the ERC-721 token to reclaim
     function reclaimCall(address _tokenContract, uint256 _tokenId) external nonReentrant {
-        Call storage call = callForNFT[_tokenContract][_tokenId];
+        Call memory call = callForNFT[_tokenContract][_tokenId];
 
         require(msg.sender == call.seller, "reclaimCall must be seller");
         require(call.buyer != address(0), "reclaimCall call not purchased");
@@ -172,7 +164,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         // Transfer NFT back to seller
         IERC721(_tokenContract).transferFrom(address(this), call.seller, _tokenId);
 
-        emit CallReclaimed(_tokenContract, _tokenId, call);
+        emit CallReclaimed(_tokenContract, _tokenId);
 
         delete callForNFT[_tokenContract][_tokenId];
     }
@@ -208,19 +200,19 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         erc721TransferHelper.transferFrom(_tokenContract, call.seller, address(this), _tokenId);
 
         // Transfer premium to seller
-        _handleOutgoingTransfer(call.seller, call.premium, call.currency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(call.seller, call.premium, call.currency, 30000);
 
         // Mark option as purchased
         call.buyer = msg.sender;
 
-        emit CallPurchased(_tokenContract, _tokenId, call);
+        emit CallPurchased(_tokenContract, _tokenId);
     }
 
     /// @notice Exercises a call option -- transferring the NFT to the buyer and strike to the seller
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ERC-721 token ID
     function exerciseCall(address _tokenContract, uint256 _tokenId) external payable nonReentrant {
-        Call storage call = callForNFT[_tokenContract][_tokenId];
+        Call memory call = callForNFT[_tokenContract][_tokenId];
 
         require(call.buyer == msg.sender, "exerciseCall must be buyer");
         require(call.expiration > block.timestamp, "exerciseCall call expired");
@@ -229,22 +221,18 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
         _handleIncomingTransfer(call.strike, call.currency);
 
         // Payout respective parties, ensuring NFT royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, call.strike, call.currency, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, call.strike, call.currency, 75000);
 
         // Payout optional protocol fee
         remainingProfit = _handleProtocolFeePayout(remainingProfit, call.currency);
 
         // Transfer strike (post royalties) to seller
-        _handleOutgoingTransfer(call.seller, remainingProfit, call.currency, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(call.seller, remainingProfit, call.currency, 30000);
 
         // Transfer NFT to buyer
         IERC721(_tokenContract).transferFrom(address(this), msg.sender, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
-        ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: call.currency, tokenId: 0, amount: call.strike});
-
-        emit ExchangeExecuted(call.seller, call.buyer, userAExchangeDetails, userBExchangeDetails);
-        emit CallExercised(_tokenContract, _tokenId, call);
+        emit CallExercised(_tokenContract, _tokenId);
 
         delete callForNFT[_tokenContract][_tokenId];
     }
@@ -255,7 +243,7 @@ contract CoveredCallsV1 is ReentrancyGuard, UniversalExchangeEventV1, IncomingTr
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The ID of the ERC-721 token
     function _cancelCall(address _tokenContract, uint256 _tokenId) private {
-        emit CallCanceled(_tokenContract, _tokenId, callForNFT[_tokenContract][_tokenId]);
+        emit CallCanceled(_tokenContract, _tokenId);
 
         delete callForNFT[_tokenContract][_tokenId];
     }
