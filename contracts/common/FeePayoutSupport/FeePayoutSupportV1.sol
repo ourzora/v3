@@ -11,9 +11,14 @@ import {OutgoingTransferSupportV1} from "../OutgoingTransferSupport/V1/OutgoingT
 /// @author tbtstl <t@zora.co>
 /// @notice This contract extension supports paying out protocol fees and royalties
 contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
-    IRoyaltyEngineV1 royaltyEngine;
-    ZoraProtocolFeeSettings immutable protocolFeeSettings;
+    /// @notice The ZORA Module Registrar
     address public immutable registrar;
+
+    /// @notice The ZORA Protocol Fee Settings
+    ZoraProtocolFeeSettings immutable protocolFeeSettings;
+
+    /// @notice The Manifold Royalty Engine
+    IRoyaltyEngineV1 royaltyEngine;
 
     /// @notice Emitted when royalties are paid
     /// @param tokenContract The ERC-721 token address of the royalty payout
@@ -57,13 +62,19 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     function _handleProtocolFeePayout(uint256 _amount, address _payoutCurrency) internal returns (uint256) {
         uint256 protocolFee = protocolFeeSettings.getFeeAmount(address(this), _amount);
 
-        if (protocolFee != 0) {
-            (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
-            _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 0);
-
-            return _amount - protocolFee;
-        } else {
+        // If fee switch off --
+        if (protocolFee == 0) {
+            // Return initial amount
             return _amount;
+
+            // Else fee switch on --
+        } else {
+            // Get fee recipient
+            (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
+            // Payout protocol fee
+            _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 50000);
+            // Return remaining amount
+            return _amount - protocolFee;
         }
     }
 
@@ -112,17 +123,29 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
 
         (address payable[] memory recipients, uint256[] memory amounts) = royaltyEngine.getRoyalty(_tokenContract, _tokenId, _amount);
 
-        for (uint256 i = 0; i < recipients.length; i++) {
+        for (uint256 i = 0; i < recipients.length; i = increment(i)) {
             // Ensure that we aren't somehow paying out more than we have
             require(remainingAmount >= amounts[i], "insolvent");
+
             // Payout each royalty recipient
-            _handleOutgoingTransfer(recipients[i], amounts[i], _payoutCurrency, 0);
+            _handleOutgoingTransfer(recipients[i], amounts[i], _payoutCurrency, 50000);
 
             emit RoyaltyPayout(_tokenContract, _tokenId, recipients[i], amounts[i]);
 
-            remainingAmount -= amounts[i];
+            // Cannot underflow as remaining amount is ensured to be greater than or equal to royalty amount
+            unchecked {
+                remainingAmount -= amounts[i];
+            }
         }
 
         return remainingAmount;
+    }
+
+    /// @notice Unchecks for loop post condition
+    /// @param _i The value to increment
+    function increment(uint256 _i) internal pure returns (uint256) {
+        unchecked {
+            return _i + 1;
+        }
     }
 }
