@@ -66,16 +66,14 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
         if (protocolFee == 0) {
             // Return initial amount
             return _amount;
-
-            // Else fee switch on --
-        } else {
-            // Get fee recipient
-            (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
-            // Payout protocol fee
-            _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 50000);
-            // Return remaining amount
-            return _amount - protocolFee;
         }
+
+        // Get fee recipient
+        (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
+        // Payout protocol fee
+        _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 50000);
+        // Return remaining amount
+        return _amount - protocolFee;
     }
 
     /// @notice Pays out royalties for given NFTs
