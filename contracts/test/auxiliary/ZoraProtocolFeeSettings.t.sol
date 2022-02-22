@@ -135,10 +135,10 @@ contract ZoraProtocolFeeSettingsTest is DSTest {
         vm.prank(address(registrar));
         ZPFS.setFeeParams(address(module), address(feeRecipient), 1);
 
-        (uint16 feeBps, address reciever) = ZPFS.moduleFeeSetting(address(module));
+        (uint16 feeBps, address receiver) = ZPFS.moduleFeeSetting(address(module));
 
         require(feeBps == 1);
-        require(reciever == address(feeRecipient));
+        require(receiver == address(feeRecipient));
     }
 
     function test_ResetParamsToZero() public {
@@ -148,10 +148,10 @@ contract ZoraProtocolFeeSettingsTest is DSTest {
         vm.prank(address(registrar));
         ZPFS.setFeeParams(address(module), address(feeRecipient), 0);
 
-        (uint16 feeBps, address reciever) = ZPFS.moduleFeeSetting(address(module));
+        (uint16 feeBps, address receiver) = ZPFS.moduleFeeSetting(address(module));
 
         require(feeBps == 0);
-        require(reciever == address(feeRecipient));
+        require(receiver == address(feeRecipient));
     }
 
     function testRevert_SetParamsOnlyOwner() public {
