@@ -33,14 +33,13 @@ contract OutgoingTransferSupportV1 {
             return;
         }
 
-        // If no gas limit was provided or provided gas limit greater than gas left, just use the remaining gas.
-
         // Handle ETH payment
         if (_currency == address(0)) {
             require(address(this).balance >= _amount, "_handleOutgoingTransfer insolvent");
 
+            // If no gas limit was provided or provided gas limit greater than gas left, just use the remaining gas.
             uint256 gas = (_gasLimit == 0 || _gasLimit > gasleft()) ? gasleft() : _gasLimit;
-            (bool success, ) = _dest.call{value: _amount, gas: gas}(new bytes(0));
+            (bool success, ) = _dest.call{value: _amount, gas: gas}("");
             // If the ETH transfer fails (sigh), wrap the ETH and try send it as WETH.
             if (!success) {
                 weth.deposit{value: _amount}();
