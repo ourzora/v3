@@ -25,10 +25,6 @@ contract CollectionOffersV1 is
     ModuleNamingSupportV1,
     CollectionOfferBookV1
 {
-    /// @dev The indicator to denominate all transfers in ETH
-    address private constant ETH = address(0);
-    /// @dev The indicator to pass all remaining gas when paying out royalties
-    uint256 private constant USE_ALL_GAS_FLAG = 0;
     /// @notice The finders fee bps configured by the DAO
     uint16 public findersFeeBps;
 
@@ -130,7 +126,7 @@ contract CollectionOffersV1 is
     /// @return The ID of the created offer
     function createOffer(address _tokenContract) external payable nonReentrant returns (uint256) {
         // Ensure offer is valid and take custody
-        _handleIncomingTransfer(msg.value, ETH);
+        _handleIncomingTransfer(msg.value, address(0));
 
         // Add to collection's offer book
         uint256 offerId = _addOffer(_tokenContract, msg.value, msg.sender);
@@ -193,13 +189,13 @@ contract CollectionOffersV1 is
         if (_amount > prevAmount) {
             unchecked {
                 uint256 increaseAmount = _amount - prevAmount;
-                _handleIncomingTransfer(increaseAmount, ETH);
+                _handleIncomingTransfer(increaseAmount, address(0));
                 _updateOffer(offer, _tokenContract, _offerId, _amount, true);
             }
         } else {
             unchecked {
                 uint256 decreaseAmount = prevAmount - _amount;
-                _handleOutgoingTransfer(msg.sender, decreaseAmount, ETH, USE_ALL_GAS_FLAG);
+                _handleOutgoingTransfer(msg.sender, decreaseAmount, address(0), 50000);
                 _updateOffer(offer, _tokenContract, _offerId, _amount, false);
             }
         }
@@ -245,7 +241,7 @@ contract CollectionOffersV1 is
         require(msg.sender == offer.maker, "cancelOffer must be maker");
 
         // Refund offer
-        _handleOutgoingTransfer(msg.sender, offer.amount, ETH, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(msg.sender, offer.amount, address(0), 50000);
 
         emit CollectionOfferCanceled(_tokenContract, _offerId, msg.sender, offer.amount);
 
@@ -333,10 +329,10 @@ contract CollectionOffersV1 is
         Offer memory offer = offers[_tokenContract][offerId];
 
         // Ensure royalties are honored
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, ETH, USE_ALL_GAS_FLAG);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, offer.amount, address(0), 300000);
 
         // Payout optional protocol fee
-        remainingProfit = _handleProtocolFeePayout(remainingProfit, ETH);
+        remainingProfit = _handleProtocolFeePayout(remainingProfit, address(0));
 
         // Payout optional finder fee
         if (_finder != address(0)) {
@@ -344,18 +340,18 @@ contract CollectionOffersV1 is
             // Calculate payout
             findersFee = (remainingProfit * findersFeeBps) / 10000;
             // Transfer to finder
-            _handleOutgoingTransfer(_finder, findersFee, ETH, USE_ALL_GAS_FLAG);
+            _handleOutgoingTransfer(_finder, findersFee, address(0), 50000);
             // Update remaining profit
             remainingProfit -= findersFee;
         }
 
         // Transfer remaining ETH to taker
-        _handleOutgoingTransfer(msg.sender, remainingProfit, ETH, USE_ALL_GAS_FLAG);
+        _handleOutgoingTransfer(msg.sender, remainingProfit, address(0), 50000);
 
         // Transfer NFT to maker
         erc721TransferHelper.transferFrom(_tokenContract, msg.sender, offer.maker, _tokenId);
 
-        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: ETH, tokenId: 0, amount: offer.amount});
+        ExchangeDetails memory userAExchangeDetails = ExchangeDetails({tokenContract: address(0), tokenId: 0, amount: offer.amount});
         ExchangeDetails memory userBExchangeDetails = ExchangeDetails({tokenContract: _tokenContract, tokenId: _tokenId, amount: 1});
 
         emit ExchangeExecuted(offer.maker, msg.sender, userAExchangeDetails, userBExchangeDetails);
