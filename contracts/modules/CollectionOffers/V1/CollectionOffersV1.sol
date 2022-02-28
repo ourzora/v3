@@ -35,32 +35,32 @@ contract CollectionOffersV1 is
 
     /// @notice Emitted when a collection offer is created
     /// @param collection The ERC-721 token address of the created offer
-    /// @param id The ID of the created offer
+    /// @param offerId The ID of the created offer
     /// @param maker The address of the offer maker
     /// @param amount The amount of the created offer
-    event CollectionOfferCreated(address indexed collection, uint256 indexed id, address maker, uint256 amount);
+    event CollectionOfferCreated(address indexed collection, uint256 indexed offerId, address maker, uint256 amount);
 
     /// @notice Emitted when a collection offer is updated
     /// @param collection The ERC-721 token address of the updated offer
-    /// @param id The ID of the updated offer
+    /// @param offerId The ID of the updated offer
     /// @param maker The address of the offer maker
     /// @param amount The amount of the updated offer
-    event CollectionOfferUpdated(address indexed collection, uint256 indexed id, address maker, uint256 amount);
+    event CollectionOfferUpdated(address indexed collection, uint256 indexed offerId, address maker, uint256 amount);
 
     /// @notice Emitted when a collection offer is canceled
     /// @param collection The ERC-721 token address of the canceled offer
-    /// @param id The ID of the canceled offer
+    /// @param offerId The ID of the canceled offer
     /// @param maker The address of the offer maker
     /// @param amount The amount of the canceled offer
-    event CollectionOfferCanceled(address indexed collection, uint256 indexed id, address maker, uint256 amount);
+    event CollectionOfferCanceled(address indexed collection, uint256 indexed offerId, address maker, uint256 amount);
 
     /// @notice Emitted when a collection offer is filled
     /// @param collection The ERC-721 token address of the filled offer
     /// @param tokenId The ERC-721 token ID of the filled offer
-    /// @param id The ID of the filled offer
+    /// @param offerId The ID of the filled offer
     /// @param taker The address of the taker who filled the offer
     /// @param finder The address of the finder who referred the sale
-    event CollectionOfferFilled(address indexed collection, uint256 indexed tokenId, uint256 indexed id, address taker, address finder);
+    event CollectionOfferFilled(address indexed collection, uint256 indexed tokenId, uint256 indexed offerId, address taker, address finder);
 
     /// @notice Emitted when the finders fee is updated by the DAO
     /// @param findersFeeBps The bps of the updated finders fee
