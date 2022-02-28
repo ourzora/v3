@@ -128,12 +128,12 @@ contract CollectionOffersV1 is
     /// @notice Creates an offer for any NFT in a collection
     /// @param _tokenContract The ERC-721 collection address
     /// @return The ID of the created offer
-    function createOffer(address _tokenContract) external payable nonReentrant returns (uint32) {
+    function createOffer(address _tokenContract) external payable nonReentrant returns (uint256) {
         // Ensure offer is valid and take custody
         _handleIncomingTransfer(msg.value, ETH);
 
         // Add to collection's offer book
-        uint32 offerId = _addOffer(_tokenContract, msg.value, msg.sender);
+        uint256 offerId = _addOffer(_tokenContract, msg.value, msg.sender);
 
         emit CollectionOfferCreated(_tokenContract, offerId, msg.sender, msg.value);
 
@@ -327,7 +327,7 @@ contract CollectionOffersV1 is
         require(msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "fillOffer must own specified token");
 
         // Get matching offer (if exists)
-        uint32 offerId = _getMatchingOffer(_tokenContract, _minAmount);
+        uint256 offerId = _getMatchingOffer(_tokenContract, _minAmount);
         require(offerId != 0, "fillOffer offer satisfying _minAmount not found");
 
         Offer memory offer = offers[_tokenContract][offerId];

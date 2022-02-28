@@ -141,9 +141,9 @@ contract CollectionOffersV1Test is DSTest {
         require(_prevId == 0);
         require(_nextId == 0);
 
-        uint32 floorId = offers.floorOfferId(address(token));
+        uint256 floorId = offers.floorOfferId(address(token));
         uint256 floorAmt = offers.floorOfferAmount(address(token));
-        uint32 ceilingId = offers.ceilingOfferId(address(token));
+        uint256 ceilingId = offers.ceilingOfferId(address(token));
         uint256 ceilingAmt = offers.ceilingOfferAmount(address(token));
 
         require(floorId == 1);
@@ -170,9 +170,9 @@ contract CollectionOffersV1Test is DSTest {
         // Ensure floor nextId is ceiling id and ceiling prevId is floor id
         require(_nextId1 == 2 && _prevId2 == 1);
 
-        uint32 floorId = offers.floorOfferId(address(token));
+        uint256 floorId = offers.floorOfferId(address(token));
         uint256 floorAmt = offers.floorOfferAmount(address(token));
-        uint32 ceilingId = offers.ceilingOfferId(address(token));
+        uint256 ceilingId = offers.ceilingOfferId(address(token));
         uint256 ceilingAmt = offers.ceilingOfferAmount(address(token));
 
         require(floorId == id1);
@@ -205,9 +205,9 @@ contract CollectionOffersV1Test is DSTest {
         require(_nextId3 == id1 && _prevId1 == id3);
         require(_nextId1 == id2 && _prevId2 == id1);
 
-        uint32 floorId = offers.floorOfferId(address(token));
+        uint256 floorId = offers.floorOfferId(address(token));
         uint256 floorAmt = offers.floorOfferAmount(address(token));
-        uint32 ceilingId = offers.ceilingOfferId(address(token));
+        uint256 ceilingId = offers.ceilingOfferId(address(token));
         uint256 ceilingAmt = offers.ceilingOfferAmount(address(token));
 
         require(floorId == id3);
@@ -222,8 +222,8 @@ contract CollectionOffersV1Test is DSTest {
 
         (address offeror4, , uint32 _prevId4, uint32 _nextId4, uint256 amount4) = offers.offers(address(token), 4);
 
-        uint32 floorId = offers.floorOfferId(address(token));
-        uint32 ceilingId = offers.ceilingOfferId(address(token));
+        uint256 floorId = offers.floorOfferId(address(token));
+        uint256 ceilingId = offers.ceilingOfferId(address(token));
 
         require(offeror4 == address(seller4));
         require(amount4 == 1 ether);
@@ -244,7 +244,7 @@ contract CollectionOffersV1Test is DSTest {
         offers.setOfferAmount{value: 3 ether}(address(token), 2, 5 ether);
 
         (, , uint32 _prevId2, uint32 _nextId2, uint256 amount2) = offers.offers(address(token), 2);
-        uint32 ceilingId = offers.ceilingOfferId(address(token));
+        uint256 ceilingId = offers.ceilingOfferId(address(token));
 
         require(ceilingId == 2);
         require(_prevId2 == 1 && _nextId2 == 0);
@@ -308,8 +308,8 @@ contract CollectionOffersV1Test is DSTest {
 
         // Updated Order: id4 --> id1 --> id2 --> id3
         (, , uint32 _prevId3, uint256 _nextId3, uint256 amount3) = offers.offers(address(token), 3);
-        uint32 floorId = offers.floorOfferId(address(token));
-        uint32 ceilingId = offers.ceilingOfferId(address(token));
+        uint256 floorId = offers.floorOfferId(address(token));
+        uint256 ceilingId = offers.ceilingOfferId(address(token));
 
         // Ensure book is updated with floor as new ceiling
         require(ceilingId == 3 && floorId == 4);
@@ -328,8 +328,8 @@ contract CollectionOffersV1Test is DSTest {
         // Updated Order: id4 --> id1 --> id3 --> id2
         (, , uint32 _prevId3, uint32 _nextId3, uint256 amount3) = offers.offers(address(token), 3);
 
-        uint32 floorId = offers.floorOfferId(address(token));
-        uint32 ceilingId = offers.ceilingOfferId(address(token));
+        uint256 floorId = offers.floorOfferId(address(token));
+        uint256 ceilingId = offers.ceilingOfferId(address(token));
 
         // Ensure book is updated wrt time priority
         require(ceilingId == 2 && floorId == 4);
