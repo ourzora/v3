@@ -36,6 +36,7 @@ contract CollectionOffersV1IntegrationTest is DSTest {
     Zorb internal buyer;
     Zorb internal finder;
     Zorb internal royaltyRecipient;
+    Zorb internal protocolFeeRecipient;
 
     function setUp() public {
         // Cheatcodes
@@ -45,6 +46,7 @@ contract CollectionOffersV1IntegrationTest is DSTest {
         registrar = new ZoraRegistrar();
         ZPFS = new ZoraProtocolFeeSettings();
         ZMM = new ZoraModuleManager(address(registrar), address(ZPFS));
+        protocolFeeRecipient = new Zorb(address(ZMM));
         erc20TransferHelper = new ERC20TransferHelper(address(ZMM));
         erc721TransferHelper = new ERC721TransferHelper(address(ZMM));
 
@@ -72,6 +74,10 @@ contract CollectionOffersV1IntegrationTest is DSTest {
             address(weth)
         );
         registrar.registerModule(address(offers));
+
+        // Set fee parameters for Collection Offers v1.0
+        vm.prank(address(registrar));
+        ZPFS.setFeeParams(address(offers), address(protocolFeeRecipient), 1);
 
         // Set seller balance
         vm.deal(address(seller), 100 ether);
@@ -144,6 +150,7 @@ contract CollectionOffersV1IntegrationTest is DSTest {
         uint256 beforeBuyerBalance = address(buyer).balance;
         uint256 beforeRoyaltyRecipientBalance = address(royaltyRecipient).balance;
         uint256 beforeFinderBalance = address(finder).balance;
+        uint256 beforeProtocolFeeRecipient = address(protocolFeeRecipient).balance;
         address beforeTokenOwner = token.ownerOf(0);
 
         fill();
@@ -152,16 +159,19 @@ contract CollectionOffersV1IntegrationTest is DSTest {
         uint256 afterSellerBalance = address(seller).balance;
         uint256 afterRoyaltyRecipientBalance = address(royaltyRecipient).balance;
         uint256 afterFinderBalance = address(finder).balance;
+        uint256 afterProtocolFeeRecipient = address(protocolFeeRecipient).balance;
         address afterTokenOwner = token.ownerOf(0);
 
         // 1 ETH withdrawn from seller
         require((beforeSellerBalance - afterSellerBalance) == 1 ether);
         // 0.05 ETH creator royalty
         require((afterRoyaltyRecipientBalance - beforeRoyaltyRecipientBalance) == 0.05 ether);
-        // 100 bps finders fee (Remaining 0.95 ETH * 10% finders fee = 0.0095 ETH)
-        require((afterFinderBalance - beforeFinderBalance) == 0.0095 ether);
-        // Remaining 0.9405 ETH paid to buyer
-        require((afterBuyerBalance - beforeBuyerBalance) == 0.9405 ether);
+        // 1 bps protocol fee (Remaining 0.95 ETH * 0.01% protocol fee = 0.000095 ETH)
+        require((afterProtocolFeeRecipient - beforeProtocolFeeRecipient) == 0.000095 ether);
+        // 100 bps finders fee (Remaining 0.949905 ETH * 1% finders fee = 0.00949905 ETH)
+        require((afterFinderBalance - beforeFinderBalance) == 0.00949905 ether);
+        // Remaining 0.94040595 ETH paid to buyer
+        require((afterBuyerBalance - beforeBuyerBalance) == 0.94040595 ether);
         // NFT transferred to seller
         require((beforeTokenOwner == address(buyer)) && afterTokenOwner == address(seller));
     }
