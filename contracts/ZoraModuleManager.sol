@@ -5,13 +5,13 @@ import {ZoraProtocolFeeSettings} from "./auxiliary/ZoraProtocolFeeSettings/ZoraP
 
 /// @title ZoraModuleManager
 /// @author tbtstl <t@zora.co>
-/// @notice This contract allows users to add & access modules on ZORA V3, plus utilize the ZORA transfer helpers
+/// @notice This contract allows users to approve registered modules on ZORA V3
 contract ZoraModuleManager {
     /// @notice The EIP-712 type for a signed approval
     /// @dev keccak256("SignedApproval(address module,address user,bool approved,uint256 deadline,uint256 nonce)")
     bytes32 private constant SIGNED_APPROVAL_TYPEHASH = 0x8413132cc7aa5bd2ce1a1b142a3f09e2baeda86addf4f9a5dacd4679f56e7cec;
 
-    /// @notice the EIP-712 domain separator
+    /// @notice The EIP-712 domain separator
     bytes32 private immutable EIP_712_DOMAIN_SEPARATOR =
         keccak256(
             abi.encode(
@@ -23,31 +23,41 @@ contract ZoraModuleManager {
             )
         );
 
-    /// @notice The signature nonces for 3rd party module approvals
-    mapping(address => uint256) public sigNonces;
+    /// @notice The module fee NFT contract to mint from upon module registration
+    ZoraProtocolFeeSettings public immutable moduleFeeToken;
 
     /// @notice The registrar address that can register modules
     address public registrar;
 
-    /// @notice The module fee NFT contract to mint from upon module registration
-    ZoraProtocolFeeSettings public moduleFeeToken;
-
-    /// @notice Mapping of each user to module approval in the ZORA registry
+    /// @notice Mapping of users and modules to approved status
     /// @dev User address => Module address => Approved
     mapping(address => mapping(address => bool)) public userApprovals;
 
-    /// @notice A mapping of module addresses to module data
+    /// @notice Mapping of modules to registered status
+    /// @dev Module address => Registered
     mapping(address => bool) public moduleRegistered;
 
+    /// @notice The signature nonces for 3rd party module approvals
+    mapping(address => uint256) public sigNonces;
+
+    /// @notice Ensures only the registrar can register modules
     modifier onlyRegistrar() {
         require(msg.sender == registrar, "ZMM::onlyRegistrar must be registrar");
         _;
     }
 
-    event ModuleRegistered(address indexed module);
-
+    /// @notice Emitted when a user's module approval is updated
+    /// @param user The address of the user
+    /// @param module The address of the module
+    /// @param approved Whether the user added or removed approval
     event ModuleApprovalSet(address indexed user, address indexed module, bool approved);
 
+    /// @notice Emitted when a module is registered
+    /// @param module The address of the module
+    event ModuleRegistered(address indexed module);
+
+    /// @notice Emitted when the registrar address is updated
+    /// @param newRegistrar The address of the new registrar
     event RegistrarChanged(address indexed newRegistrar);
 
     /// @param _registrar The initial registrar for the manager
@@ -127,7 +137,7 @@ contract ZoraModuleManager {
     /// @param _modules The list of module addresses to set approvals for
     /// @param _approved A boolean, whether or not to approve the modules
     function setBatchApprovalForModules(address[] memory _modules, bool _approved) public {
-        for (uint256 i = 0; i < _modules.length; i++) {
+        for (uint256 i = 0; i < _modules.length; i = increment(i)) {
             _setApprovalForModule(_modules[i], msg.sender, _approved);
         }
     }
@@ -263,12 +273,10 @@ contract ZoraModuleManager {
         emit RegistrarChanged(_registrar);
     }
 
-    function _chainID() private view returns (uint256 id) {
-        assembly {
-            id := chainid()
-        }
-    }
-
+    /// @notice Updates a module approval for a user
+    /// @param _module The address of the module
+    /// @param _user The address of the user
+    /// @param _approved Whether the user is adding or removing approval
     function _setApprovalForModule(
         address _module,
         address _user,
@@ -279,5 +287,21 @@ contract ZoraModuleManager {
         userApprovals[_user][_module] = _approved;
 
         emit ModuleApprovalSet(msg.sender, _module, _approved);
+    }
+
+    /// @notice The EIP-155 chain id
+    function _chainID() private view returns (uint256 id) {
+        assembly {
+            id := chainid()
+        }
+    }
+
+    /// @notice Unchecks for loop post condition in `setBatchApprovalForModules`
+    /// @param _i The value to increment
+    /// @return The incremented value
+    function increment(uint256 _i) private pure returns (uint256) {
+        unchecked {
+            return _i + 1;
+        }
     }
 }
