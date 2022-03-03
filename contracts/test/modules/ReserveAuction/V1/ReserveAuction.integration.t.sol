@@ -38,6 +38,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
     Zorb internal royaltyRecipient;
     Zorb internal bidder;
     Zorb internal otherBidder;
+    Zorb internal protocolFeeRecipient;
 
     function setUp() public {
         // Cheatcodes
@@ -47,6 +48,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         registrar = new ZoraRegistrar();
         ZPFS = new ZoraProtocolFeeSettings();
         ZMM = new ZoraModuleManager(address(registrar), address(ZPFS));
+        protocolFeeRecipient = new Zorb(address(ZMM));
         erc20TransferHelper = new ERC20TransferHelper(address(ZMM));
         erc721TransferHelper = new ERC721TransferHelper(address(ZMM));
 
@@ -76,6 +78,10 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
             address(weth)
         );
         registrar.registerModule(address(auctions));
+
+        // Set fee parameters for Reserve Auction v1.0
+        vm.prank(address(registrar));
+        ZPFS.setFeeParams(address(auctions), address(protocolFeeRecipient), 1);
 
         // Set balances
         vm.deal(address(seller), 100 ether);
@@ -139,6 +145,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         uint256 beforeOtherBidderBalance = address(otherBidder).balance;
         uint256 beforeRoyaltyRecipientBalance = address(royaltyRecipient).balance;
         uint256 beforeFinderBalance = address(finder).balance;
+        uint256 beforeProtocolFeeRecipient = address(protocolFeeRecipient).balance;
         address beforeTokenOwner = token.ownerOf(0);
 
         runETH();
@@ -148,6 +155,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         uint256 afterOtherBidderBalance = address(otherBidder).balance;
         uint256 afterRoyaltyRecipientBalance = address(royaltyRecipient).balance;
         uint256 afterFinderBalance = address(finder).balance;
+        uint256 afterProtocolFeeRecipient = address(protocolFeeRecipient).balance;
         address afterTokenOwner = token.ownerOf(0);
 
         // 1 ETH withdrawn from winning bidder
@@ -156,10 +164,12 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         require(beforeOtherBidderBalance == afterOtherBidderBalance);
         // 0.05 ETH creator royalty
         require((afterRoyaltyRecipientBalance - beforeRoyaltyRecipientBalance) == 0.05 ether);
-        // 1000 bps finders fee (Remaining 0.95 ETH * 10% finders fee = 0.095 ETH)
-        require((afterFinderBalance - beforeFinderBalance) == 0.095 ether);
-        // Remaining 0.855 ETH paid to seller
-        require((afterSellerBalance - beforeSellerBalance) == 0.855 ether);
+        // 1 bps protocol fee (Remaining 0.95 ETH * 0.01% protocol fee = 0.000095 ETH)
+        require((afterProtocolFeeRecipient - beforeProtocolFeeRecipient) == 0.000095 ether);
+        // 1000 bps finders fee (Remaining 0.949905 ETH * 10% finders fee = 0.0949905 ETH)
+        require((afterFinderBalance - beforeFinderBalance) == 0.0949905 ether);
+        // Remaining 0.8549145 ETH paid to seller
+        require((afterSellerBalance - beforeSellerBalance) == 0.8549145 ether);
         // NFT transferred to winning bidder
         require(beforeTokenOwner == address(seller) && afterTokenOwner == address(bidder));
     }
@@ -192,6 +202,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         uint256 beforeOtherBidderBalance = weth.balanceOf(address(otherBidder));
         uint256 beforeRoyaltyRecipientBalance = weth.balanceOf(address(royaltyRecipient));
         uint256 beforeFinderBalance = weth.balanceOf(address(finder));
+        uint256 beforeProtocolFeeRecipient = weth.balanceOf(address(protocolFeeRecipient));
         address beforeTokenOwner = token.ownerOf(0);
 
         runERC20();
@@ -201,6 +212,7 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         uint256 afterOtherBidderBalance = weth.balanceOf(address(otherBidder));
         uint256 afterRoyaltyRecipientBalance = weth.balanceOf(address(royaltyRecipient));
         uint256 afterFinderBalance = weth.balanceOf(address(finder));
+        uint256 afterProtocolFeeRecipient = weth.balanceOf(address(protocolFeeRecipient));
         address afterTokenOwner = token.ownerOf(0);
 
         // 1 WETH withdrawn from winning bidder
@@ -209,10 +221,12 @@ contract ReserveAuctionV1IntegrationTest is DSTest {
         require(beforeOtherBidderBalance == afterOtherBidderBalance);
         // 0.05 WETH creator royalty
         require((afterRoyaltyRecipientBalance - beforeRoyaltyRecipientBalance) == 0.05 ether);
-        // 1000 bps finders fee (Remaining 0.95 WETH * 10% finders fee = 0.095 WETH)
-        require((afterFinderBalance - beforeFinderBalance) == 0.095 ether);
-        // Remaining 0.855 WETH paid to seller
-        require((afterSellerBalance - beforeSellerBalance) == 0.855 ether);
+        // 1 bps protocol fee (Remaining 0.95 ETH * 0.01% protocol fee = 0.000095 ETH)
+        require((afterProtocolFeeRecipient - beforeProtocolFeeRecipient) == 0.000095 ether);
+        // 1000 bps finders fee (Remaining 0.949905 ETH * 10% finders fee = 0.0949905 ETH)
+        require((afterFinderBalance - beforeFinderBalance) == 0.0949905 ether);
+        // Remaining 0.8549145 ETH paid to seller
+        require((afterSellerBalance - beforeSellerBalance) == 0.8549145 ether);
         // NFT transferred to winning bidder
         require(beforeTokenOwner == address(seller) && afterTokenOwner == address(bidder));
     }
