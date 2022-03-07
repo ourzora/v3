@@ -76,4 +76,11 @@ contract GaslessAsksV1 is ReentrancyGuard, UniversalExchangeEventV1, OutgoingTra
         emit ExchangeExecuted(ask.seller, msg.sender, userAExchangeDetails, userBExchangeDetails);
         emit AskFilled(_tokenContract, _tokenId, _askPrice, msg.sender, _seller);
     }
+
+    /// @notice The EIP-155 chain id
+    function _chainID() private view returns (uint256 id) {
+        assembly {
+            id := chainid()
+        }
+    }
 }
