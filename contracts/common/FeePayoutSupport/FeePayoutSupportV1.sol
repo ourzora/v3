@@ -131,11 +131,15 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
         // Store the initial amount
         uint256 amountRemaining = _amount;
 
+        // Store the variables that cache each recipient and amount
+        address recipient;
+        uint256 amount;
+
         // Payout each royalty
-        for (uint256 i = 0; i < numRecipients; i = increment(i)) {
+        for (uint256 i = 0; i < numRecipients; ) {
             // Cache the recipient and amount
-            address recipient = recipients[i];
-            uint256 amount = amounts[i];
+            recipient = recipients[i];
+            amount = amounts[i];
 
             // Ensure that we aren't somehow paying out more than we have
             require(amountRemaining >= amount, "insolvent");
@@ -148,17 +152,10 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
             // Cannot underflow as remaining amount is ensured to be greater than or equal to royalty amount
             unchecked {
                 amountRemaining -= amount;
+                ++i;
             }
         }
 
         return amountRemaining;
-    }
-
-    /// @notice Unchecks for loop post condition
-    /// @param _i The value to increment
-    function increment(uint256 _i) internal pure returns (uint256) {
-        unchecked {
-            return _i + 1;
-        }
     }
 }

@@ -137,8 +137,18 @@ contract ZoraModuleManager {
     /// @param _modules The list of module addresses to set approvals for
     /// @param _approved A boolean, whether or not to approve the modules
     function setBatchApprovalForModules(address[] memory _modules, bool _approved) public {
-        for (uint256 i = 0; i < _modules.length; i = increment(i)) {
+        // Store the number of module addresses provided
+        uint256 numModules = _modules.length;
+
+        // Loop through each address
+        for (uint256 i = 0; i < numModules; ) {
+            // Ensure that it's a registered module and set the approval
             _setApprovalForModule(_modules[i], msg.sender, _approved);
+
+            // Cannot overflow as array length cannot exceed uint256 max
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -293,15 +303,6 @@ contract ZoraModuleManager {
     function _chainID() private view returns (uint256 id) {
         assembly {
             id := chainid()
-        }
-    }
-
-    /// @notice Unchecks for loop post condition in `setBatchApprovalForModules`
-    /// @param _i The value to increment
-    /// @return The incremented value
-    function increment(uint256 _i) private pure returns (uint256) {
-        unchecked {
-            return _i + 1;
         }
     }
 }
