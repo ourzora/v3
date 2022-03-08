@@ -137,11 +137,15 @@ contract ZoraModuleManager {
     /// @param _modules The list of module addresses to set approvals for
     /// @param _approved A boolean, whether or not to approve the modules
     function setBatchApprovalForModules(address[] memory _modules, bool _approved) public {
+        // Store the number of module addresses provided
         uint256 numModules = _modules.length;
 
+        // Loop through each address
         for (uint256 i = 0; i < numModules; ) {
+            // Ensure that it's a registered module and set the approval
             _setApprovalForModule(_modules[i], msg.sender, _approved);
 
+            // Cannot overflow as array length cannot exceed uint256 max
             unchecked {
                 ++i;
             }
