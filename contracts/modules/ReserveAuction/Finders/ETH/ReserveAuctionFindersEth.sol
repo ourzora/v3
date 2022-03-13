@@ -148,7 +148,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         address _tokenContract,
         uint256 _tokenId,
         uint256 _reservePrice
-    ) external {
+    ) external nonReentrant {
         // Get the auction for the specified token
         Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
@@ -167,7 +167,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
     /// @notice Cancels the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
-    function cancelAuction(address _tokenContract, uint256 _tokenId) external {
+    function cancelAuction(address _tokenContract, uint256 _tokenId) external nonReentrant {
         // Get the auction for the specified token
         Auction memory auction = auctionForNFT[_tokenContract][_tokenId];
 
@@ -286,7 +286,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         require(block.timestamp >= (firstBidTime + auction.duration), "settleAuction auction not finished");
 
         // Payout associated token royalties, if any
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.highestBid, address(0), 200000);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.highestBid, address(0), 300000);
 
         // Payout the module fee, if configured by the owner
         remainingProfit = _handleProtocolFeePayout(remainingProfit, address(0));
