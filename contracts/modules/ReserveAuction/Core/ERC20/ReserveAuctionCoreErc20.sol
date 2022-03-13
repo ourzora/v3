@@ -128,16 +128,6 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         // Ensure that a funds recipient is specified
         require(_sellerFundsRecipient != address(0), "createAuction must specify _sellerFundsRecipient");
 
-        // Ensure that bidding can begin immediately or at a future block time
-        require(_startTime == 0 || _startTime > block.timestamp, "createAuction _startTime must be 0 or future time");
-
-        // If the auction should accept bids immediately, update the start time
-        // This is to simplify UX for creating immediate auctions
-        if (_startTime == 0) {
-            // Update the start time to the current block time
-            _startTime = block.timestamp;
-        }
-
         // Store the auction metadata
         auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
         auctionForNFT[_tokenContract][_tokenId].reservePrice = uint96(_reservePrice);

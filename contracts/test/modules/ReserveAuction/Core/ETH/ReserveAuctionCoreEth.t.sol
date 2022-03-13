@@ -161,14 +161,6 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(0)), 0);
     }
 
-    function testRevert_StartTimeMustBeValid() public {
-        vm.warp(1 days);
-
-        vm.prank(address(seller));
-        vm.expectRevert("createAuction _startTime must be 0 or future time");
-        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 5 hours);
-    }
-
     /// ------------ SET AUCTION RESERVE PRICE ------------ ///
 
     function test_SetReservePrice() public {
