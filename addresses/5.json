@@ -1,0 +1,8 @@
+{
+  "RoyaltyEngineV1": "",
+  "WETH": "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6",
+  "ZoraProtocolFeeSettings": "0x5f7072e1fa7c01dfac7cf54289621afaad2184d0",
+  "ZoraModuleManager": "0x9458e29713b98bf452ee9b2c099289f533a5f377",
+  "ERC20TransferHelper": "0x53172d999a299198a935f9e424f9f8544e3d4292",
+  "ERC721TransferHelper": "0xd1adaf05575295710de1145c3c9427c364a70a7f"
+}
