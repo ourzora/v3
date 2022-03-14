@@ -227,7 +227,7 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
             firstBid = true;
 
             // Transfer the NFT from the seller into escrow for the rest of the auction
-            // Reverts if the seller no longer owns the token
+            // Reverts if the seller does not own the token or did not approve the ERC721TransferHelper
             erc721TransferHelper.transferFrom(_tokenContract, seller, address(this), _tokenId);
 
             // Else this is a subsequent bid, so refund the previous bidder
@@ -242,7 +242,9 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
             _handleOutgoingTransfer(auction.highestBidder, highestBid, currency, 50000);
         }
 
-        // Transfer the bid into escrow
+        // Retrieve the bid from the bidder
+        // If ETH, this reverts if the bidder did not attach enough
+        // If ERC-20, this reverts if the bidder does not own the specified amount or did not approve the ERC20TransferHelper
         _handleIncomingTransfer(_amount, currency);
 
         // Store the amount as the highest bid

@@ -212,7 +212,7 @@ contract ReserveAuctionCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNam
             firstBid = true;
 
             // Transfer the NFT from the seller into escrow for the rest of the auction
-            // Reverts if the seller no longer owns the token
+            // Reverts if the seller does not own the token or did not approve the ERC721TransferHelper
             erc721TransferHelper.transferFrom(_tokenContract, seller, address(this), _tokenId);
 
             // Else this is a subsequent bid, so refund the previous bidder
