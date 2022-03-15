@@ -4,5 +4,9 @@
   "ZoraProtocolFeeSettings": "0x53172d999a299198a935f9E424f9f8544e3d4292",
   "ZoraModuleManager": "0xd1adAF05575295710dE1145c3c9427c364A70a7f",
   "ERC20TransferHelper": "0x1E58bE778aCae2744c1185ea1cE542f304860B96",
-  "ERC721TransferHelper": "0x1e009dEC13A2A441b3Aa133Bd320FF5B16B22E71"
+  "ERC721TransferHelper": "0x1e009dEC13A2A441b3Aa133Bd320FF5B16B22E71",
+  "ReserveAuctionCoreEth": "0xfcebe0788d5772df2cbcf5079815de98a4d62b09",
+  "ReserveAuctionCoreErc20": "0x2506d9f5a2b0e1a2619bcce01cd3e7c289a13163",
+  "ReserveAuctionFindersEth": "0x517f7721f3c3762f7048e03919761e027d900082",
+  "ReserveAuctionFindersErc20": "0x1ee71c10e7dd6c7fbdc891de4e902e041e1f5d33"
 }
