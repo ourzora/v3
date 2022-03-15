@@ -99,6 +99,28 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,-----------------------.
+    //     / \            |ReserveAuctionCoreErc20|
+    //   Caller           `-----------+-----------'
+    //     |     createAuction()      |
+    //     | ------------------------>|
+    //     |                          |
+    //     |                          ----.
+    //     |                              | store auction metadata
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | emit AuctionCreated()
+    //     |                          <---'
+    //   Caller           ,-----------+-----------.
+    //     ,-.            |ReserveAuctionCoreErc20|
+    //     `-'            `-----------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Creates an auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -139,6 +161,28 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,-----------------------.
+    //     / \            |ReserveAuctionCoreErc20|
+    //   Caller           `-----------+-----------'
+    //     | setAuctionReservePrice() |
+    //     | ------------------------>|
+    //     |                          |
+    //     |                          ----.
+    //     |                              | update reserve price
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | emit AuctionReservePriceUpdated()
+    //     |                          <---'
+    //   Caller           ,-----------+-----------.
+    //     ,-.            |ReserveAuctionCoreErc20|
+    //     `-'            `-----------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Updates the reserve price for a given auction
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -163,6 +207,28 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         emit AuctionReservePriceUpdated(_tokenContract, _tokenId, auction);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,-----------------------.
+    //     / \            |ReserveAuctionCoreErc20|
+    //   Caller           `-----------+-----------'
+    //     |     cancelAuction()      |
+    //     | ------------------------>|
+    //     |                          |
+    //     |                          ----.
+    //     |                              | emit AuctionCanceled()
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | delete auction
+    //     |                          <---'
+    //   Caller           ,-----------+-----------.
+    //     ,-.            |ReserveAuctionCoreErc20|
+    //     `-'            `-----------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Cancels the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -185,6 +251,65 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         delete auctionForNFT[_tokenContract][_tokenId];
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,-----------------------.          ,--------------------.                  ,-------------------.
+    //     / \            |ReserveAuctionCoreErc20|          |ERC721TransferHelper|                  |ERC20TransferHelper|
+    //   Caller           `-----------+-----------'          `---------+----------'                  `---------+---------'
+    //     |       createBid()        |                                |                                       |
+    //     | ------------------------>|                                |                                       |
+    //     |                          |                                |                                       |
+    //     |                          |                                |                                       |
+    //     |    ___________________________________________________________________________________________________________________________________
+    //     |    ! ALT  /  First bid?  |                                |                                       |                                   !
+    //     |    !_____/               |                                |                                       |                                   !
+    //     |    !                     ----.                            |                                       |                                   !
+    //     |    !                         | start auction              |                                       |                                   !
+    //     |    !                     <---'                            |                                       |                                   !
+    //     |    !                     |                                |                                       |                                   !
+    //     |    !                     |        transferFrom()          |                                       |                                   !
+    //     |    !                     |------------------------------->|                                       |                                   !
+    //     |    !                     |                                |                                       |                                   !
+    //     |    !                     |                                |----.                                                                      !
+    //     |    !                     |                                |    | transfer NFT from seller to escrow                                   !
+    //     |    !                     |                                |<---'                                                                      !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |    ! [refund previous bidder]                             |                                       |                                   !
+    //     |    !                     |                        handle outgoing refund                          |                                   !
+    //     |    !                     |----------------------------------------------------------------------->|                                   !
+    //     |    !                     |                                |                                       |                                   !
+    //     |    !                     |                                |                                       |----.                              !
+    //     |    !                     |                                |                                       |    | transfer tokens to bidder    !
+    //     |    !                     |                                |                                       |<---'                              !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |                          |                                |                                       |
+    //     |                          |                          handle incoming bid                           |
+    //     |                          |----------------------------------------------------------------------->|
+    //     |                          |                                |                                       |
+    //     |                          |                                |                                       |----.
+    //     |                          |                                |                                       |    | transfer tokens to escrow
+    //     |                          |                                |                                       |<---'
+    //     |                          |                                |                                       |
+    //     |                          |                                |                                       |
+    //     |    ______________________________________________         |                                       |
+    //     |    ! ALT  /  Bid placed within 15 min of end?    !        |                                       |
+    //     |    !_____/               |                       !        |                                       |
+    //     |    !                     ----.                   !        |                                       |
+    //     |    !                         | extend auction    !        |                                       |
+    //     |    !                     <---'                   !        |                                       |
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!        |                                       |
+    //     |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!        |                                       |
+    //     |                          |                                |                                       |
+    //     |                          ----.                            |                                       |
+    //     |                              | emit AuctionBid()          |                                       |
+    //     |                          <---'                            |                                       |
+    //   Caller           ,-----------+-----------.          ,---------+----------.                  ,---------+---------.
+    //     ,-.            |ReserveAuctionCoreErc20|          |ERC721TransferHelper|                  |ERC20TransferHelper|
+    //     `-'            `-----------------------'          `--------------------'                  `-------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Places a bid on the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -271,6 +396,44 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         emit AuctionBid(_tokenContract, _tokenId, firstBid, extended, auction);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,-----------------------.
+    //     / \            |ReserveAuctionCoreErc20|
+    //   Caller           `-----------+-----------'
+    //     |     settleAuction()      |
+    //     | ------------------------>|
+    //     |                          |
+    //     |                          ----.
+    //     |                              | validate auction ended
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | handle royalty payouts
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | handle seller funds recipient payout
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | transfer NFT from escrow to winning bidder
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | emit AuctionEnded()
+    //     |                          <---'
+    //     |                          |
+    //     |                          ----.
+    //     |                              | delete auction from contract
+    //     |                          <---'
+    //   Caller           ,-----------+-----------.
+    //     ,-.            |ReserveAuctionCoreErc20|
+    //     `-'            `-----------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Ends the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token

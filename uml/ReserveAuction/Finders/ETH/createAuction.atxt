@@ -1,0 +1,22 @@
+        ,-.                                                     
+        `-'                                                     
+        /|\                                                     
+         |             ,------------------------.               
+        / \            |ReserveAuctionFindersEth|               
+      Caller           `-----------+------------'               
+        |      createAuction()     |                            
+        | ------------------------->                            
+        |                          |                            
+        |                          |----.                       
+        |                          |    | store auction metadata
+        |                          |<---'                       
+        |                          |                            
+        |                          |----.                       
+        |                          |    | emit AuctionCreated() 
+        |                          |<---'                       
+      Caller           ,-----------+------------.               
+        ,-.            |ReserveAuctionFindersEth|               
+        `-'            `------------------------'               
+        /|\                                                     
+         |                                                      
+        / \                                                     

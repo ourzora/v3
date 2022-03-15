@@ -1,0 +1,22 @@
+        ,-.                                                               
+        `-'                                                               
+        /|\                                                               
+         |             ,---------------------.                            
+        / \            |ReserveAuctionCoreEth|                            
+      Caller           `----------+----------'                            
+        | setAuctionReservePrice()|                                       
+        | ------------------------>                                       
+        |                         |                                       
+        |                         |----.                                  
+        |                         |    | update reserve price             
+        |                         |<---'                                  
+        |                         |                                       
+        |                         |----.                                  
+        |                         |    | emit AuctionReservePriceUpdated()
+        |                         |<---'                                  
+      Caller           ,----------+----------.                            
+        ,-.            |ReserveAuctionCoreEth|                            
+        `-'            `---------------------'                            
+        /|\                                                               
+         |                                                                
+        / \                                                               

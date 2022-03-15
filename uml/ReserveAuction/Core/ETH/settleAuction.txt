@@ -1,0 +1,15 @@
+@startuml
+actor Caller
+participant ReserveAuctionCoreEth
+
+Caller -> ReserveAuctionCoreEth : settleAuction()
+
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : validate auction ended
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : handle royalty payouts
+
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : handle seller funds recipient payout
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : transfer NFT from escrow to winning bidder
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : emit AuctionEnded()
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : delete auction from contract
+
+@enduml

@@ -1,0 +1,10 @@
+@startuml
+actor Caller
+participant ReserveAuctionFindersErc20
+
+Caller -> ReserveAuctionFindersErc20 : createAuction()
+
+ReserveAuctionFindersErc20 -> ReserveAuctionFindersErc20 : store auction metadata
+ReserveAuctionFindersErc20 -> ReserveAuctionFindersErc20 : emit AuctionCreated()
+
+@enduml

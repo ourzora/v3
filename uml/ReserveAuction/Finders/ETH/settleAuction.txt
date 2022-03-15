@@ -1,0 +1,24 @@
+@startuml
+actor Caller
+participant ReserveAuctionFindersEth
+
+Caller -> ReserveAuctionFindersEth : settleAuction()
+
+ReserveAuctionFindersEth -> ReserveAuctionFindersEth : validate auction ended
+
+ReserveAuctionFindersEth -> ReserveAuctionFindersEth : handle royalty payouts
+
+alt finders fee configured for this auction?
+
+    ReserveAuctionFindersEth -> ReserveAuctionFindersEth : handle finders fee payout
+
+else noop
+
+end
+
+ReserveAuctionFindersEth -> ReserveAuctionFindersEth : handle seller funds recipient payout
+ReserveAuctionFindersEth -> ReserveAuctionFindersEth : transfer NFT from escrow to winning bidder
+ReserveAuctionFindersEth -> ReserveAuctionFindersEth : emit AuctionEnded()
+ReserveAuctionFindersEth -> ReserveAuctionFindersEth : delete auction from contract
+
+@enduml

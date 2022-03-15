@@ -97,6 +97,28 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------------.
+    //     / \            |ReserveAuctionFindersEth|
+    //   Caller           `-----------+------------'
+    //     |      createAuction()     |
+    //     | ------------------------->
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | store auction metadata
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | emit AuctionCreated()
+    //     |                          |<---'
+    //   Caller           ,-----------+------------.
+    //     ,-.            |ReserveAuctionFindersEth|
+    //     `-'            `------------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Creates an auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -140,6 +162,28 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------------.
+    //     / \            |ReserveAuctionFindersEth|
+    //   Caller           `-----------+------------'
+    //     | setAuctionReservePrice() |
+    //     | ------------------------->
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | update reserve price
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | emit AuctionReservePriceUpdated()
+    //     |                          |<---'
+    //   Caller           ,-----------+------------.
+    //     ,-.            |ReserveAuctionFindersEth|
+    //     `-'            `------------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Updates the reserve price for a given auction
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -164,6 +208,28 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         emit AuctionReservePriceUpdated(_tokenContract, _tokenId, auction);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------------.
+    //     / \            |ReserveAuctionFindersEth|
+    //   Caller           `-----------+------------'
+    //     |      cancelAuction()     |
+    //     | ------------------------->
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | emit AuctionCanceled()
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | delete auction
+    //     |                          |<---'
+    //   Caller           ,-----------+------------.
+    //     ,-.            |ReserveAuctionFindersEth|
+    //     `-'            `------------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Cancels the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -186,6 +252,56 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         delete auctionForNFT[_tokenContract][_tokenId];
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------------.                ,--------------------.
+    //     / \            |ReserveAuctionFindersEth|                |ERC721TransferHelper|
+    //   Caller           `-----------+------------'                `---------+----------'
+    //     |        createBid()       |                                       |
+    //     | ------------------------->                                       |
+    //     |                          |                                       |
+    //     |                          |                                       |
+    //     |    ___________________________________________________________________
+    //     |    ! ALT  /  First bid?  |                                       |    !
+    //     |    !_____/               |                                       |    !
+    //     |    !                     |----.                                  |    !
+    //     |    !                     |    | start auction                    |    !
+    //     |    !                     |<---'                                  |    !
+    //     |    !                     |                                       |    !
+    //     |    !                     |----.                                  |    !
+    //     |    !                     |    | transferFrom()                   |    !
+    //     |    !                     |<---'                                  |    !
+    //     |    !                     |                                       |    !
+    //     |    !                     |----.                                       !
+    //     |    !                     |    | transfer NFT from seller to escrow    !
+    //     |    !                     |<---'                                       !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |    ! [refund previous bidder]                                    |    !
+    //     |    !                     |----.                                  |    !
+    //     |    !                     |    | transfer ETH to bidder           |    !
+    //     |    !                     |<---'                                  |    !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |                          |                                       |
+    //     |                          |                                       |
+    //     |    _______________________________________________               |
+    //     |    ! ALT  /  Bid placed within 15 min of end?     !              |
+    //     |    !_____/               |                        !              |
+    //     |    !                     |----.                   !              |
+    //     |    !                     |    | extend auction    !              |
+    //     |    !                     |<---'                   !              |
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!              |
+    //     |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!              |
+    //     |                          |                                       |
+    //     |                          |----.                                  |
+    //     |                          |    | emit AuctionBid()                |
+    //     |                          |<---'                                  |
+    //   Caller           ,-----------+------------.                ,---------+----------.
+    //     ,-.            |ReserveAuctionFindersEth|                |ERC721TransferHelper|
+    //     `-'            `------------------------'                `--------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Places a bid on the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -269,6 +385,54 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         emit AuctionBid(_tokenContract, _tokenId, firstBid, extended, auction);
     }
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,------------------------.
+    //     / \            |ReserveAuctionFindersEth|
+    //   Caller           `-----------+------------'
+    //     |      settleAuction()     |
+    //     | ------------------------->
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | validate auction ended
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | handle royalty payouts
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |
+    //     |    __________________________________________________________
+    //     |    ! ALT  /  finders fee configured for this auction?        !
+    //     |    !_____/               |                                   !
+    //     |    !                     |----.                              !
+    //     |    !                     |    | handle finders fee payout    !
+    //     |    !                     |<---'                              !
+    //     |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | handle seller funds recipient payout
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | transfer NFT from escrow to winning bidder
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | emit AuctionEnded()
+    //     |                          |<---'
+    //     |                          |
+    //     |                          |----.
+    //     |                          |    | delete auction from contract
+    //     |                          |<---'
+    //   Caller           ,-----------+------------.
+    //     ,-.            |ReserveAuctionFindersEth|
+    //     `-'            `------------------------'
+    //     /|\
+    //      |
+    //     / \
     /// @notice Ends the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token

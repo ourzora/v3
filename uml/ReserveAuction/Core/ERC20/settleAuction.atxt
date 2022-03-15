@@ -1,0 +1,38 @@
+        ,-.                                                                        
+        `-'                                                                        
+        /|\                                                                        
+         |             ,-----------------------.                                   
+        / \            |ReserveAuctionCoreErc20|                                   
+      Caller           `-----------+-----------'                                   
+        |     settleAuction()      |                                               
+        | ------------------------>|                                               
+        |                          |                                               
+        |                          ----.                                           
+        |                              | validate auction ended                    
+        |                          <---'                                           
+        |                          |                                               
+        |                          ----.                                           
+        |                              | handle royalty payouts                    
+        |                          <---'                                           
+        |                          |                                               
+        |                          ----.                                           
+        |                              | handle seller funds recipient payout      
+        |                          <---'                                           
+        |                          |                                               
+        |                          ----.                                           
+        |                              | transfer NFT from escrow to winning bidder
+        |                          <---'                                           
+        |                          |                                               
+        |                          ----.                                           
+        |                              | emit AuctionEnded()                       
+        |                          <---'                                           
+        |                          |                                               
+        |                          ----.                                           
+        |                              | delete auction from contract              
+        |                          <---'                                           
+      Caller           ,-----------+-----------.                                   
+        ,-.            |ReserveAuctionCoreErc20|                                   
+        `-'            `-----------------------'                                   
+        /|\                                                                        
+         |                                                                         
+        / \                                                                        
