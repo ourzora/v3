@@ -4,14 +4,15 @@ pragma solidity 0.8.10;
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-import {ERC721TransferHelper} from "../../../../transferHelpers/ERC721TransferHelper.sol";
-import {FeePayoutSupportV1} from "../../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
-import {ModuleNamingSupportV1} from "../../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
+import {ERC721TransferHelper} from "../../../../../transferHelpers/ERC721TransferHelper.sol";
+import {IncomingTransferSupportV1} from "../../../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
+import {FeePayoutSupportV1} from "../../../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
+import {ModuleNamingSupportV1} from "../../../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
 
-/// @title Reserve Auction Finders ETH
+/// @title Reserve Auction Core: ERC-721 <> ERC-20
 /// @author kulkarohan
-/// @notice Module adding Finders Fee to Reserve Auction Core ETH
-contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupportV1 {
+/// @notice Module for minimal ERC-20 timed reserve auctions for ERC-721 tokens
+contract ReserveAuctionCoreErc721Erc20 is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint256 constant TIME_BUFFER = 15 minutes;
 
@@ -33,9 +34,8 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
     /// @param highestBidder The address of the highest bidder
     /// @param duration The length of time after the first bid the auction is active
     /// @param startTime The first time a bid can be placed
-    /// @param finder The address of the highest bid's referrer
-    /// @param findersFeeBps The fee to the highest bid's referrer
-    /// @param firstBidTime The time of first bid
+    /// @param currency The address of the ERC-20 token, or address(0) for ETH, required to bid
+    /// @param firstBidTime The time of the first bid
     struct Auction {
         address seller;
         uint96 reservePrice;
@@ -44,8 +44,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         address highestBidder;
         uint48 duration;
         uint48 startTime;
-        address finder;
-        uint16 findersFeeBps;
+        address currency;
         uint48 firstBidTime;
     }
 
@@ -81,18 +80,21 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
     /// @param auction The metadata of the settled auction
     event AuctionEnded(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
 
+    /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
-    /// @param _protocolFeeSettings The ZORA Protocol Fee Settings address
-    /// @param _weth The WETH token address
+    /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
+    /// @param _wethAddress The WETH token address
     constructor(
+        address _erc20TransferHelper,
         address _erc721TransferHelper,
         address _royaltyEngine,
         address _protocolFeeSettings,
-        address _weth
+        address _wethAddress
     )
-        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _weth, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
-        ModuleNamingSupportV1("Reserve Auction Finders ETH")
+        IncomingTransferSupportV1(_erc20TransferHelper)
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+        ModuleNamingSupportV1("Reserve Auction Core ERC-20")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
@@ -104,7 +106,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
     /// @param _reservePrice The minimum bid amount to start the auction
     /// @param _sellerFundsRecipient The address to send funds to once the token is sold
     /// @param _startTime The time the auction can begin accepting bids
-    /// @param _findersFeeBps The basis points of the winning bid to be sent to its referrer
+    /// @param _bidCurrency The address of the ERC-20 token that bids must be placed in
     function createAuction(
         address _tokenContract,
         uint256 _tokenId,
@@ -112,7 +114,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         uint256 _reservePrice,
         address _sellerFundsRecipient,
         uint256 _startTime,
-        uint256 _findersFeeBps
+        address _bidCurrency
     ) external nonReentrant {
         // Get the owner of the specified token
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
@@ -126,16 +128,13 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         // Ensure that a funds recipient is specified
         require(_sellerFundsRecipient != address(0), "createAuction must specify _sellerFundsRecipient");
 
-        // Ensure that a finders fee does not exceed 10,000 basis points
-        require(_findersFeeBps <= 10000, "createAuction _findersFeeBps must be <= 10000");
-
         // Store the auction metadata
         auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
         auctionForNFT[_tokenContract][_tokenId].reservePrice = uint96(_reservePrice);
         auctionForNFT[_tokenContract][_tokenId].sellerFundsRecipient = _sellerFundsRecipient;
-        auctionForNFT[_tokenContract][_tokenId].duration = uint32(_duration);
-        auctionForNFT[_tokenContract][_tokenId].startTime = uint32(_startTime);
-        auctionForNFT[_tokenContract][_tokenId].findersFeeBps = uint16(_findersFeeBps);
+        auctionForNFT[_tokenContract][_tokenId].duration = uint48(_duration);
+        auctionForNFT[_tokenContract][_tokenId].startTime = uint48(_startTime);
+        auctionForNFT[_tokenContract][_tokenId].currency = _bidCurrency;
 
         emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
     }
@@ -189,11 +188,11 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
     /// @notice Places a bid on the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
-    /// @param _finder The referrer of the bid
+    /// @param _amount The amount to bid
     function createBid(
         address _tokenContract,
         uint256 _tokenId,
-        address _finder
+        uint256 _amount
     ) external payable nonReentrant {
         // Get the auction for the specified token
         Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
@@ -211,6 +210,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         uint256 highestBid = auction.highestBid;
         uint256 duration = auction.duration;
         uint256 firstBidTime = auction.firstBidTime;
+        address currency = auction.currency;
 
         // Used to emit whether the bid started the auction
         bool firstBid;
@@ -218,10 +218,10 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         // If this is the first bid, start the auction
         if (firstBidTime == 0) {
             // Ensure the bid meets the reserve price
-            require(msg.value >= auction.reservePrice, "createBid must meet reserve price");
+            require(_amount >= auction.reservePrice, "createBid must meet reserve price");
 
             // Store the current time as the first bid time
-            auction.firstBidTime = uint32(block.timestamp);
+            auction.firstBidTime = uint48(block.timestamp);
 
             // Mark this bid as the first
             firstBid = true;
@@ -233,23 +233,25 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
             // Else this is a subsequent bid, so refund the previous bidder
         } else {
             // Ensure the auction has not ended
-            require(block.timestamp < (firstBidTime + duration), "createBid auction expired");
+            require(block.timestamp < firstBidTime + duration, "createBid auction expired");
 
             // Ensure the bid is at least 10% higher than the previous bid
-            require(msg.value >= (highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100)), "createBid must meet minimum bid");
+            require(_amount >= (highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100)), "createBid must meet minimum bid");
 
             // Refund the previous bidder
-            _handleOutgoingTransfer(auction.highestBidder, highestBid, address(0), 50000);
+            _handleOutgoingTransfer(auction.highestBidder, highestBid, currency, 50000);
         }
 
-        // Store the attached ETH as the highest bid
-        auction.highestBid = uint96(msg.value);
+        // Retrieve the bid from the bidder
+        // If ETH, this reverts if the bidder did not attach enough
+        // If ERC-20, this reverts if the bidder does not own the specified amount or did not approve the ERC20TransferHelper
+        _handleIncomingTransfer(_amount, currency);
+
+        // Store the amount as the highest bid
+        auction.highestBid = uint96(_amount);
 
         // Store the caller as the highest bidder
         auction.highestBidder = msg.sender;
-
-        // Store the finder
-        auction.finder = _finder;
 
         // Used to emit whether the bid extended the auction
         bool extended;
@@ -260,7 +262,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         // If the bid is within 15 minutes of the end, extend the auction
         if (auctionTimeRemaining < TIME_BUFFER) {
             // Add (15 minutes - remaining time) to the duration so that 15 minutes are left
-            auction.duration += uint32(TIME_BUFFER - auctionTimeRemaining);
+            auction.duration += uint48(TIME_BUFFER - auctionTimeRemaining);
 
             // Mark the bid as one that extended the auction
             extended = true;
@@ -285,29 +287,17 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         // Ensure the auction has ended
         require(block.timestamp >= (firstBidTime + auction.duration), "settleAuction auction not finished");
 
+        // Cache the auction currency
+        address currency = auction.currency;
+
         // Payout associated token royalties, if any
-        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.highestBid, address(0), 300000);
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, auction.highestBid, currency, 300000);
 
         // Payout the module fee, if configured by the owner
-        remainingProfit = _handleProtocolFeePayout(remainingProfit, address(0));
-
-        // Cache the finder of the winning bid
-        address finder = auction.finder;
-
-        // Payout the finder of the winning bid, if referred
-        if (finder != address(0)) {
-            // Calculate the fee from the remaining profit
-            uint256 finderFee = (remainingProfit * auction.findersFeeBps) / 10000;
-
-            // Transfer the fee to the finder
-            _handleOutgoingTransfer(finder, finderFee, address(0), 50000);
-
-            // Update the remaining profit
-            remainingProfit -= finderFee;
-        }
+        remainingProfit = _handleProtocolFeePayout(remainingProfit, currency);
 
         // Transfer the remaining profit to the funds recipient
-        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, address(0), 50000);
+        _handleOutgoingTransfer(auction.sellerFundsRecipient, remainingProfit, currency, 50000);
 
         // Transfer the NFT to the winning bidder
         IERC721(_tokenContract).transferFrom(address(this), auction.highestBidder, _tokenId);

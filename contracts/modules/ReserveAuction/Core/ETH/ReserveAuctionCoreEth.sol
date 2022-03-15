@@ -79,15 +79,15 @@ contract ReserveAuctionCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNam
 
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
-    /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
-    /// @param _wethAddress The WETH token address
+    /// @param _protocolFeeSettings The ZORA Protocol Fee Settings address
+    /// @param _weth The WETH token address
     constructor(
         address _erc721TransferHelper,
         address _royaltyEngine,
         address _protocolFeeSettings,
-        address _wethAddress
+        address _weth
     )
-        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _weth, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Reserve Auction Core ETH")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);

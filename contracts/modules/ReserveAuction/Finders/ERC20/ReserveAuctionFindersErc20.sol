@@ -87,17 +87,17 @@ contract ReserveAuctionFindersErc20 is ReentrancyGuard, IncomingTransferSupportV
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
-    /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
-    /// @param _wethAddress The WETH token address
+    /// @param _protocolFeeSettings The ZORA Protocol Fee Settings address
+    /// @param _weth The WETH token address
     constructor(
         address _erc20TransferHelper,
         address _erc721TransferHelper,
         address _royaltyEngine,
         address _protocolFeeSettings,
-        address _wethAddress
+        address _weth
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
-        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _wethAddress, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
+        FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _weth, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Reserve Auction Finders ERC-20")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
