@@ -28,14 +28,14 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
     /// @notice The metadata for a given auction
     /// @param seller The address of the seller
     /// @param reservePrice The reserve price to start the auction
-    /// @param sellerFundsRecipient The address funds are sent after the auction
-    /// @param highestBid The highest bid on the auction
+    /// @param sellerFundsRecipient The address where funds are sent after the auction
+    /// @param highestBid The highest bid of the auction
     /// @param highestBidder The address of the highest bidder
-    /// @param duration The length of time after the first bid the auction is active
-    /// @param startTime The first time a bid can be placed
-    /// @param finder The address of the highest bid's referrer
-    /// @param findersFeeBps The fee to the highest bid's referrer
-    /// @param firstBidTime The time of first bid
+    /// @param duration The length of time that the auction runs after the first bid is placed
+    /// @param startTime The time that the first bid can be placed
+    /// @param finder The address that referred the highest bid
+    /// @param findersFeeBps The fee that is sent to the referrer of the highest bid
+    /// @param firstBidTime The time that the first bid is placed
     struct Auction {
         address seller;
         uint96 reservePrice;
@@ -122,11 +122,11 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
     /// @notice Creates an auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
-    /// @param _duration The amount of time the auction should run after an initial bid
+    /// @param _duration The length of time the auction should run after the first bid
     /// @param _reservePrice The minimum bid amount to start the auction
-    /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _startTime The time the auction can begin accepting bids
-    /// @param _findersFeeBps The basis points of the winning bid to be sent to its referrer
+    /// @param _sellerFundsRecipient The address to send funds to once the auction is complete
+    /// @param _startTime The time that users can begin placing bids
+    /// @param _findersFeeBps The fee to send to the referrer of the winning bid
     function createAuction(
         address _tokenContract,
         uint256 _tokenId,
@@ -364,7 +364,7 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         // Store the caller as the highest bidder
         auction.highestBidder = msg.sender;
 
-        // Store the finder
+        // Store the finder of the bid
         auction.finder = _finder;
 
         // Used to emit whether the bid extended the auction
@@ -458,12 +458,12 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         // Cache the finder of the winning bid
         address finder = auction.finder;
 
-        // Payout the finder of the winning bid, if referred
+        // Payout the finder, if referred
         if (finder != address(0)) {
-            // Calculate the fee from the remaining profit
+            // Get the fee from the remaining profit
             uint256 finderFee = (remainingProfit * auction.findersFeeBps) / 10000;
 
-            // Transfer the fee to the finder
+            // Transfer the amount to the finder
             _handleOutgoingTransfer(finder, finderFee, address(0), 50000);
 
             // Update the remaining profit

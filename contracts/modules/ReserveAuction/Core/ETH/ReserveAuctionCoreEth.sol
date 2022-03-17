@@ -28,12 +28,12 @@ contract ReserveAuctionCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNam
     /// @notice The metadata for a given auction
     /// @param seller The address of the seller
     /// @param reservePrice The reserve price to start the auction
-    /// @param sellerFundsRecipient The address funds are sent after the auction
-    /// @param highestBid The highest bid on the auction
+    /// @param sellerFundsRecipient The address where funds are sent after the auction
+    /// @param highestBid The highest bid of the auction
     /// @param highestBidder The address of the highest bidder
-    /// @param duration The length of time after the first bid the auction is active
-    /// @param startTime The first time a bid can be placed
-    /// @param firstBidTime The time of the first bid
+    /// @param duration The length of time that the auction runs after the first bid is placed
+    /// @param startTime The time that the first bid can be placed
+    /// @param firstBidTime The time that the first bid is placed
     struct Auction {
         address seller;
         uint96 reservePrice;
@@ -118,10 +118,10 @@ contract ReserveAuctionCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNam
     /// @notice Creates an auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
-    /// @param _duration The amount of time the auction should run after an initial bid
+    /// @param _duration The length of time the auction should run after the first bid
     /// @param _reservePrice The minimum bid amount to start the auction
-    /// @param _sellerFundsRecipient The address to send funds to once the token is sold
-    /// @param _startTime The time the auction can begin accepting bids
+    /// @param _sellerFundsRecipient The address to send funds to once the auction is complete
+    /// @param _startTime The time that users can begin placing bids
     function createAuction(
         address _tokenContract,
         uint256 _tokenId,
