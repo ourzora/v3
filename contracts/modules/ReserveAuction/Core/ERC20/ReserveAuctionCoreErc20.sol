@@ -14,9 +14,9 @@ import {ModuleNamingSupportV1} from "../../../../common/ModuleNamingSupport/Modu
 /// @notice Module for minimal ERC-20 timed reserve auctions for ERC-721 tokens
 contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @notice The minimum amount of time left in an auction after a new bid is created
-    uint256 constant TIME_BUFFER = 15 minutes;
+    uint16 constant TIME_BUFFER = 15 minutes;
 
-    /// @notice The minimum percentage difference between the last bid amount and the current bid
+    /// @notice The minimum percentage difference between two bids
     uint8 constant MIN_BID_INCREMENT_PERCENTAGE = 10;
 
     /// @notice The ZORA ERC-721 Transfer Helper
@@ -45,7 +45,7 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         uint48 duration;
         uint48 startTime;
         address currency;
-        uint48 firstBidTime;
+        uint96 firstBidTime;
     }
 
     /// @notice Emitted when an auction is created
@@ -142,13 +142,14 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
         // Ensure the caller is the owner or an approved operator
-        require(
-            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
-            "createAuction must be token owner or operator"
-        );
+        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
 
-        // Ensure that a funds recipient is specified
-        require(_sellerFundsRecipient != address(0), "createAuction must specify _sellerFundsRecipient");
+        // Ensure the reserve price can be downcasted to 96 bits for this module
+        // For a higher reserve price, use the supporting module
+        require(_reservePrice <= type(uint96).max, "INVALID_RESERVE_PRICE");
+
+        // Ensure the funds recipient is specified
+        require(_sellerFundsRecipient != address(0), "INVALID_FUNDS_RECIPIENT");
 
         // Store the auction metadata
         auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
@@ -196,10 +197,13 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
         // Ensure the auction has not started
-        require(auction.firstBidTime == 0, "setAuctionReservePrice auction already started");
+        require(auction.firstBidTime == 0, "AUCTION_STARTED");
 
         // Ensure the caller is the seller
-        require(msg.sender == auction.seller, "setAuctionReservePrice must be seller");
+        require(msg.sender == auction.seller, "ONLY_SELLER");
+
+        // Ensure the reserve price can be downcasted to 96 bits
+        require(_reservePrice <= type(uint96).max, "INVALID_RESERVE_PRICE");
 
         // Update the reserve price
         auction.reservePrice = uint96(_reservePrice);
@@ -237,13 +241,10 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         Auction memory auction = auctionForNFT[_tokenContract][_tokenId];
 
         // Ensure the auction has not started
-        require(auction.firstBidTime == 0, "cancelAuction auction already started");
+        require(auction.firstBidTime == 0, "AUCTION_STARTED");
 
         // Ensure the caller is the seller or a new owner of the token
-        require(
-            msg.sender == auction.seller || msg.sender == IERC721(_tokenContract).ownerOf(_tokenId),
-            "cancelAuction must be seller or token owner"
-        );
+        require(msg.sender == auction.seller || msg.sender == IERC721(_tokenContract).ownerOf(_tokenId), "ONLY_SELLER_OR_TOKEN_OWNER");
 
         emit AuctionCanceled(_tokenContract, _tokenId, auction);
 
@@ -326,15 +327,18 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         address seller = auction.seller;
 
         // Ensure the auction exists
-        require(seller != address(0), "createBid auction does not exist");
+        require(seller != address(0), "AUCTION_DOES_NOT_EXIST");
 
         // Ensure the auction has started or is valid to start
-        require(block.timestamp >= auction.startTime, "createBid auction not started");
+        require(block.timestamp >= auction.startTime, "AUCTION_NOT_STARTED");
+
+        // Ensure the bid can be downcasted to 96 bits for this module
+        // For a higher bid, use the supporting module
+        require(_amount <= type(uint96).max, "INVALID_BID");
 
         // Cache more auction metadata
-        uint256 highestBid = auction.highestBid;
-        uint256 duration = auction.duration;
         uint256 firstBidTime = auction.firstBidTime;
+        uint256 duration = auction.duration;
         address currency = auction.currency;
 
         // Used to emit whether the bid started the auction
@@ -343,25 +347,40 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         // If this is the first bid, start the auction
         if (firstBidTime == 0) {
             // Ensure the bid meets the reserve price
-            require(_amount >= auction.reservePrice, "createBid must meet reserve price");
+            require(_amount >= auction.reservePrice, "RESERVE_PRICE_NOT_MET");
 
             // Store the current time as the first bid time
-            auction.firstBidTime = uint48(block.timestamp);
+            auction.firstBidTime = uint96(block.timestamp);
 
             // Mark this bid as the first
             firstBid = true;
 
-            // Transfer the NFT from the seller into escrow for the rest of the auction
-            // Reverts if the seller does not own the token or did not approve the ERC721TransferHelper
+            // Transfer the NFT from the seller into escrow for the duration of the auction
+            // Reverts if the seller did not approve the ERC721TransferHelper or no longer owns the token
             erc721TransferHelper.transferFrom(_tokenContract, seller, address(this), _tokenId);
 
             // Else this is a subsequent bid, so refund the previous bidder
         } else {
             // Ensure the auction has not ended
-            require(block.timestamp < firstBidTime + duration, "createBid auction expired");
+            require(block.timestamp < firstBidTime + duration, "AUCTION_OVER");
 
-            // Ensure the bid is at least 10% higher than the previous bid
-            require(_amount >= (highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100)), "createBid must meet minimum bid");
+            // Cache the highest bid
+            uint256 highestBid = auction.highestBid;
+
+            // Used to store the minimum bid required to outbid the highest bidder
+            uint256 minValidBid;
+
+            // Calculate the minimum bid required (10% higher than the highest bid)
+            // Cannot overflow as `minValidBid` cannot be greater than 104 bits
+            unchecked {
+                minValidBid = highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100);
+            }
+
+            // Ensure the result can be downcasted to 96 bits
+            require(minValidBid <= type(uint96).max, "MAX_BID_PLACED");
+
+            // Ensure the incoming bid meets the minimum
+            require(_amount >= minValidBid, "MINIMUM_BID_NOT_MET");
 
             // Refund the previous bidder
             _handleOutgoingTransfer(auction.highestBidder, highestBid, currency, 50000);
@@ -369,7 +388,7 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
 
         // Retrieve the bid from the bidder
         // If ETH, this reverts if the bidder did not attach enough
-        // If ERC-20, this reverts if the bidder does not own the specified amount or did not approve the ERC20TransferHelper
+        // If ERC-20, this reverts if the bidder did not approve the ERC20TransferHelper or does not own the specified amount
         _handleIncomingTransfer(_amount, currency);
 
         // Store the amount as the highest bid
@@ -381,13 +400,22 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         // Used to emit whether the bid extended the auction
         bool extended;
 
-        // Get the auction time remaining
-        uint256 auctionTimeRemaining = firstBidTime + duration - block.timestamp;
+        // Used to store the auction time remaining
+        uint256 timeRemaining;
 
-        // If the bid is within 15 minutes of the end, extend the auction
-        if (auctionTimeRemaining < TIME_BUFFER) {
-            // Add (15 minutes - remaining time) to the duration so that 15 minutes are left
-            auction.duration += uint48(TIME_BUFFER - auctionTimeRemaining);
+        // Get the auction time remaining
+        // Cannot underflow as `firstBidTime + duration` is ensured to be greater than `block.timestamp`
+        unchecked {
+            timeRemaining = firstBidTime + duration - block.timestamp;
+        }
+
+        // If the bid is placed within 15 minutes of the auction end, extend the auction
+        if (timeRemaining < TIME_BUFFER) {
+            // Add (15 minutes - remaining time) to the duration so that 15 minutes remain
+            // Cannot underflow as `timeRemaining` is ensured to be less than `TIME_BUFFER`
+            unchecked {
+                auction.duration += uint48(TIME_BUFFER - timeRemaining);
+            }
 
             // Mark the bid as one that extended the auction
             extended = true;
@@ -445,10 +473,10 @@ contract ReserveAuctionCoreErc20 is ReentrancyGuard, IncomingTransferSupportV1, 
         uint256 firstBidTime = auction.firstBidTime;
 
         // Ensure the auction had started
-        require(firstBidTime != 0, "settleAuction auction not started");
+        require(firstBidTime != 0, "AUCTION_NOT_STARTED");
 
         // Ensure the auction has ended
-        require(block.timestamp >= (firstBidTime + auction.duration), "settleAuction auction not finished");
+        require(block.timestamp >= (firstBidTime + auction.duration), "AUCTION_NOT_OVER");
 
         // Cache the auction currency
         address currency = auction.currency;

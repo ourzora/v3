@@ -151,14 +151,14 @@ contract ReserveAuctionCoreEthTest is DSTest {
     }
 
     function testRevert_MustBeTokenOwnerOrOperator() public {
-        vm.expectRevert("createAuction must be token owner or operator");
+        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0);
     }
 
     function testRevert_MustSpecifySellerFundsRecipient() public {
         vm.prank(address(seller));
-        vm.expectRevert("createAuction must specify _sellerFundsRecipient");
-        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(0)), 0);
+        vm.expectRevert("INVALID_FUNDS_RECIPIENT");
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(0), 0);
     }
 
     /// ------------ SET AUCTION RESERVE PRICE ------------ ///
@@ -179,7 +179,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0);
 
-        vm.expectRevert("setAuctionReservePrice must be seller");
+        vm.expectRevert("ONLY_SELLER");
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
     }
 
@@ -193,7 +193,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
 
         vm.warp(1 hours + 1 minutes);
         vm.prank(address(seller));
-        vm.expectRevert("setAuctionReservePrice auction already started");
+        vm.expectRevert("AUCTION_STARTED");
         auctions.setAuctionReservePrice(address(token), 0, 20 ether);
     }
 
@@ -215,7 +215,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0);
 
-        vm.expectRevert("cancelAuction must be seller or token owner");
+        vm.expectRevert("ONLY_SELLER_OR_TOKEN_OWNER");
         auctions.cancelAuction(address(token), 0);
     }
 
@@ -229,7 +229,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.createBid{value: 1 ether}(address(token), 0);
 
         vm.prank(address(seller));
-        vm.expectRevert("cancelAuction auction already started");
+        vm.expectRevert("AUCTION_STARTED");
         auctions.cancelAuction(address(token), 0);
     }
 
@@ -347,7 +347,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         vm.warp(12 hours);
 
         vm.prank(address(otherBidder));
-        vm.expectRevert("createBid auction expired");
+        vm.expectRevert("AUCTION_OVER");
         auctions.createBid{value: 2 ether}(address(token), 0);
     }
 
@@ -356,11 +356,12 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 1 days);
 
         vm.prank(address(bidder));
-        vm.expectRevert("createBid auction not started");
+        vm.expectRevert("AUCTION_NOT_STARTED");
         auctions.createBid(address(token), 0);
     }
 
-    function testFail_CannotBidOnAuctionNotActive() public {
+    function testRevert_CannotBidOnAuctionNotActive() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
         auctions.createBid(address(token), 0);
     }
 
@@ -369,7 +370,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0);
 
         vm.prank(address(bidder));
-        vm.expectRevert("createBid must meet reserve price");
+        vm.expectRevert("RESERVE_PRICE_NOT_MET");
         auctions.createBid{value: 0.5 ether}(address(token), 0);
     }
 
@@ -385,7 +386,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         vm.warp(1 hours + 1 minutes);
 
         vm.prank(address(otherBidder));
-        vm.expectRevert("createBid must meet minimum bid");
+        vm.expectRevert("MINIMUM_BID_NOT_MET");
         auctions.createBid{value: 1.01 ether}(address(token), 0);
     }
 
@@ -413,7 +414,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0);
 
-        vm.expectRevert("settleAuction auction not started");
+        vm.expectRevert("AUCTION_NOT_STARTED");
         auctions.settleAuction(address(token), 0);
     }
 
@@ -425,7 +426,7 @@ contract ReserveAuctionCoreEthTest is DSTest {
         vm.prank(address(bidder));
         auctions.createBid{value: 1 ether}(address(token), 0);
 
-        vm.expectRevert("settleAuction auction not finished");
+        vm.expectRevert("AUCTION_NOT_OVER");
         auctions.settleAuction(address(token), 0);
     }
 }

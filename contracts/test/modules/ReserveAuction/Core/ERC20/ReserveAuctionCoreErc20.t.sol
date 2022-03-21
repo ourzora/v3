@@ -11,6 +11,7 @@ import {ZoraProtocolFeeSettings} from "../../../../../auxiliary/ZoraProtocolFeeS
 import {ERC20TransferHelper} from "../../../../../transferHelpers/ERC20TransferHelper.sol";
 import {ERC721TransferHelper} from "../../../../../transferHelpers/ERC721TransferHelper.sol";
 import {RoyaltyEngine} from "../../../../utils/modules/RoyaltyEngine.sol";
+import {TestERC20} from "../../../../utils/tokens/TestERC20.sol";
 import {TestERC721} from "../../../../utils/tokens/TestERC721.sol";
 import {WETH} from "../../../../utils/tokens/WETH.sol";
 import {VM} from "../../../../utils/VM.sol";
@@ -28,6 +29,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
     RoyaltyEngine internal royaltyEngine;
 
     ReserveAuctionCoreErc20 internal auctions;
+    TestERC20 internal erc20;
     TestERC721 internal token;
     WETH internal weth;
 
@@ -63,6 +65,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
 
         // Deploy mocks
         royaltyEngine = new RoyaltyEngine(address(royaltyRecipient));
+        erc20 = new TestERC20();
         token = new TestERC721();
         weth = new WETH();
 
@@ -84,6 +87,9 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         // Mint seller token
         token.mint(address(seller), 0);
 
+        // Mint bidder 2^96 ERC-20 tokens
+        erc20.mint(address(bidder), 2**96);
+
         // Bidder swap 50 ETH <> 50 WETH
         vm.prank(address(bidder));
         weth.deposit{value: 50 ether}();
@@ -101,7 +107,11 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(seller));
         token.setApprovalForAll(address(erc721TransferHelper), true);
 
-        // Bidder approve ERC20TransferHelper
+        // Bidder approve ERC20TransferHelper for TestERC20
+        vm.prank(address(bidder));
+        erc20.approve(address(erc20TransferHelper), 2**96);
+
+        // Bidder approve ERC20TransferHelper for WETH
         vm.prank(address(bidder));
         weth.approve(address(erc20TransferHelper), 50 ether);
 
@@ -173,14 +183,22 @@ contract ReserveAuctionCoreErc20Test is DSTest {
     }
 
     function testRevert_MustBeTokenOwnerOrOperator() public {
-        vm.expectRevert("createAuction must be token owner or operator");
+        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
+    }
+
+    function testRevert_MustBeValidReservePrice() public {
+        uint256 reservePrice = 2**96;
+
+        vm.prank(address(seller));
+        vm.expectRevert("INVALID_RESERVE_PRICE");
+        auctions.createAuction(address(token), 0, 1 days, reservePrice, address(sellerFundsRecipient), 0, address(weth));
     }
 
     function testRevert_MustSpecifySellerFundsRecipient() public {
         vm.prank(address(seller));
-        vm.expectRevert("createAuction must specify _sellerFundsRecipient");
-        auctions.createAuction(address(token), 0, 1 days, 1 ether, payable(address(0)), 0, address(weth));
+        vm.expectRevert("INVALID_FUNDS_RECIPIENT");
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(0), 0, address(weth));
     }
 
     /// ------------ SET AUCTION RESERVE PRICE ------------ ///
@@ -201,7 +219,12 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
 
-        vm.expectRevert("setAuctionReservePrice must be seller");
+        vm.expectRevert("ONLY_SELLER");
+        auctions.setAuctionReservePrice(address(token), 0, 5 ether);
+    }
+
+    function testRevert_CannotUpdateAuctionDoesNotExist() public {
+        vm.expectRevert("ONLY_SELLER");
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
     }
 
@@ -215,8 +238,17 @@ contract ReserveAuctionCoreErc20Test is DSTest {
 
         vm.warp(1 hours + 1 minutes);
         vm.prank(address(seller));
-        vm.expectRevert("setAuctionReservePrice auction already started");
+        vm.expectRevert("AUCTION_STARTED");
         auctions.setAuctionReservePrice(address(token), 0, 20 ether);
+    }
+
+    function testRevert_InvalidReservePrice() public {
+        vm.prank(address(seller));
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
+
+        vm.prank(address(seller));
+        vm.expectRevert("INVALID_RESERVE_PRICE");
+        auctions.setAuctionReservePrice(address(token), 0, 2**96);
     }
 
     /// ------------ CANCEL AUCTION ------------ ///
@@ -237,7 +269,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
 
-        vm.expectRevert("cancelAuction must be seller or token owner");
+        vm.expectRevert("ONLY_SELLER_OR_TOKEN_OWNER");
         auctions.cancelAuction(address(token), 0);
     }
 
@@ -251,7 +283,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         auctions.createBid(address(token), 0, 1 ether);
 
         vm.prank(address(seller));
-        vm.expectRevert("cancelAuction auction already started");
+        vm.expectRevert("AUCTION_STARTED");
         auctions.cancelAuction(address(token), 0);
     }
 
@@ -370,7 +402,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.warp(6 days);
 
         vm.prank(address(otherBidder));
-        vm.expectRevert("createBid auction expired");
+        vm.expectRevert("AUCTION_OVER");
         auctions.createBid(address(token), 0, 2 ether);
     }
 
@@ -379,11 +411,12 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 1 days, address(weth));
 
         vm.prank(address(bidder));
-        vm.expectRevert("createBid auction not started");
+        vm.expectRevert("AUCTION_NOT_STARTED");
         auctions.createBid(address(token), 0, 2 ether);
     }
 
-    function testFail_ERC20CannotBidOnAuctionNotActive() public {
+    function testRevert_CannotBidOnAuctionNotActive() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
         auctions.createBid(address(token), 0, 2 ether);
     }
 
@@ -392,7 +425,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
 
         vm.prank(address(bidder));
-        vm.expectRevert("createBid must meet reserve price");
+        vm.expectRevert("RESERVE_PRICE_NOT_MET");
         auctions.createBid(address(token), 0, 0.5 ether);
     }
 
@@ -406,8 +439,33 @@ contract ReserveAuctionCoreErc20Test is DSTest {
 
         vm.warp(1 hours + 1 minutes);
         vm.prank(address(otherBidder));
-        vm.expectRevert("createBid must meet minimum bid");
+        vm.expectRevert("MINIMUM_BID_NOT_MET");
         auctions.createBid(address(token), 0, 1.01 ether);
+    }
+
+    function testRevert_InvalidBid() public {
+        vm.prank(address(seller));
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
+
+        vm.warp(1 hours);
+
+        vm.prank(address(bidder));
+        vm.expectRevert("INVALID_BID");
+        auctions.createBid(address(token), 0, 2**96);
+    }
+
+    function testRevert_MaxBid() public {
+        vm.prank(address(seller));
+        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(erc20));
+
+        vm.warp(1 hours);
+
+        vm.prank(address(bidder));
+        auctions.createBid(address(token), 0, (2**96 - 2));
+
+        vm.prank(address(otherBidder));
+        vm.expectRevert("MAX_BID_PLACED");
+        auctions.createBid(address(token), 0, (2**96 - 1));
     }
 
     /// ------------ SETTLE AUCTION ------------ ///
@@ -434,7 +492,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
 
-        vm.expectRevert("settleAuction auction not started");
+        vm.expectRevert("AUCTION_NOT_STARTED");
         auctions.settleAuction(address(token), 0);
     }
 
@@ -446,7 +504,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(bidder));
         auctions.createBid(address(token), 0, 1 ether);
 
-        vm.expectRevert("settleAuction auction not finished");
+        vm.expectRevert("AUCTION_NOT_OVER");
         auctions.settleAuction(address(token), 0);
     }
 }

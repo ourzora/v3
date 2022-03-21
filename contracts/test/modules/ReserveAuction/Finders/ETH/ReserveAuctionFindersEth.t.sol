@@ -107,8 +107,8 @@ contract ReserveAuctionFindersEthTest is DSTest {
             uint256 duration,
             uint256 startTime,
             address highestBidfinder,
-            uint256 findersFeeBps,
-            uint256 firstBidTime
+            uint256 firstBidTime,
+            uint256 findersFeeBps
         ) = auctions.auctionForNFT(address(token), 0);
 
         require(creator == address(seller));
@@ -152,19 +152,19 @@ contract ReserveAuctionFindersEthTest is DSTest {
     }
 
     function testRevert_MustBeTokenOwnerOrOperator() public {
-        vm.expectRevert("createAuction must be token owner or operator");
+        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, 1000);
     }
 
     function testRevert_FindersFeeBPSCannotExceed10000() public {
         vm.prank(address(seller));
-        vm.expectRevert("createAuction _findersFeeBps must be <= 10000");
+        vm.expectRevert("INVALID_FINDERS_FEE");
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, 10001);
     }
 
     function testRevert_MustSpecifySellerFundsRecipient() public {
         vm.prank(address(seller));
-        vm.expectRevert("createAuction must specify _sellerFundsRecipient");
+        vm.expectRevert("INVALID_FUNDS_RECIPIENT");
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(0), 0, 1000);
     }
 
@@ -185,12 +185,12 @@ contract ReserveAuctionFindersEthTest is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, 1000);
 
-        vm.expectRevert("setAuctionReservePrice must be seller");
+        vm.expectRevert("ONLY_SELLER");
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
     }
 
     function testRevert_CannotUpdateAuctionDoesNotExist() public {
-        vm.expectRevert("setAuctionReservePrice must be seller");
+        vm.expectRevert("ONLY_SELLER");
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
     }
 
@@ -204,7 +204,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         auctions.createBid{value: 5 ether}(address(token), 0, address(finder));
 
         vm.prank(address(seller));
-        vm.expectRevert("setAuctionReservePrice auction already started");
+        vm.expectRevert("AUCTION_STARTED");
         auctions.setAuctionReservePrice(address(token), 0, 20 ether);
     }
 
@@ -227,7 +227,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, 1000);
 
-        vm.expectRevert("cancelAuction must be seller or token owner");
+        vm.expectRevert("ONLY_SELLER_OR_TOKEN_OWNER");
         auctions.cancelAuction(address(token), 0);
     }
 
@@ -241,7 +241,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         auctions.createBid{value: 1 ether}(address(token), 0, address(finder));
 
         vm.prank(address(seller));
-        vm.expectRevert("cancelAuction auction already started");
+        vm.expectRevert("AUCTION_STARTED");
         auctions.cancelAuction(address(token), 0);
     }
 
@@ -262,7 +262,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         vm.prank(address(bidder));
         auctions.createBid{value: 1 ether}(address(token), 0, address(finder));
 
-        (, , , , , , , , , uint256 firstBidTime) = auctions.auctionForNFT(address(token), 0);
+        (, , , , , , , , uint256 firstBidTime, ) = auctions.auctionForNFT(address(token), 0);
         require(firstBidTime == 1 hours);
     }
 
@@ -355,7 +355,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         vm.warp(12 hours);
 
         vm.prank(address(otherBidder));
-        vm.expectRevert("createBid auction expired");
+        vm.expectRevert("AUCTION_OVER");
         auctions.createBid{value: 2 ether}(address(token), 0, address(finder));
     }
 
@@ -364,7 +364,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 1 days, 1000);
 
         vm.prank(address(bidder));
-        vm.expectRevert("createBid auction not started");
+        vm.expectRevert("AUCTION_NOT_STARTED");
         auctions.createBid(address(token), 0, address(finder));
     }
 
@@ -377,7 +377,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, 1000);
 
         vm.prank(address(bidder));
-        vm.expectRevert("createBid must meet reserve price");
+        vm.expectRevert("RESERVE_PRICE_NOT_MET");
         auctions.createBid{value: 0.5 ether}(address(token), 0, address(finder));
     }
 
@@ -393,7 +393,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         vm.warp(1 hours + 1 minutes);
 
         vm.prank(address(otherBidder));
-        vm.expectRevert("createBid must meet minimum bid");
+        vm.expectRevert("MINIMUM_BID_NOT_MET");
         auctions.createBid{value: 1.01 ether}(address(token), 0, address(finder));
     }
 
@@ -423,7 +423,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
         vm.prank(address(seller));
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, 1000);
 
-        vm.expectRevert("settleAuction auction not started");
+        vm.expectRevert("AUCTION_NOT_STARTED");
         auctions.settleAuction(address(token), 0);
     }
 
@@ -438,7 +438,7 @@ contract ReserveAuctionFindersEthTest is DSTest {
 
         vm.warp(10 hours);
 
-        vm.expectRevert("settleAuction auction not finished");
+        vm.expectRevert("AUCTION_NOT_OVER");
         auctions.settleAuction(address(token), 0);
     }
 }
