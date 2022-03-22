@@ -8,11 +8,18 @@ import {ERC721TransferHelper} from "../../../../transferHelpers/ERC721TransferHe
 import {IncomingTransferSupportV1} from "../../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
 import {FeePayoutSupportV1} from "../../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
 import {ModuleNamingSupportV1} from "../../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
+import {IReserveAuctionFindersErc20} from "./IReserveAuctionFindersErc20.sol";
 
 /// @title Reserve Auction Finders ERC-20
 /// @author kulkarohan
 /// @notice Module adding Finders Fee to Reserve Auction Core ERC-20
-contract ReserveAuctionFindersErc20 is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1 {
+contract ReserveAuctionFindersErc20 is
+    IReserveAuctionFindersErc20,
+    ReentrancyGuard,
+    IncomingTransferSupportV1,
+    FeePayoutSupportV1,
+    ModuleNamingSupportV1
+{
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint16 constant TIME_BUFFER = 15 minutes;
 
@@ -101,6 +108,14 @@ contract ReserveAuctionFindersErc20 is ReentrancyGuard, IncomingTransferSupportV
         ModuleNamingSupportV1("Reserve Auction Finders ERC-20")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
+    }
+
+    /// @notice Implements EIP-165 for standard interface detection
+    /// @dev `0x01ffc9a7` is the IERC165 interface id
+    /// @param _interfaceId The identifier of a given interface
+    /// @return If the given interface is supported
+    function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
+        return _interfaceId == type(IReserveAuctionFindersErc20).interfaceId || _interfaceId == 0x01ffc9a7;
     }
 
     //     ,-.

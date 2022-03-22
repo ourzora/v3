@@ -7,11 +7,12 @@ import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {ERC721TransferHelper} from "../../../../transferHelpers/ERC721TransferHelper.sol";
 import {FeePayoutSupportV1} from "../../../../common/FeePayoutSupport/FeePayoutSupportV1.sol";
 import {ModuleNamingSupportV1} from "../../../../common/ModuleNamingSupport/ModuleNamingSupportV1.sol";
+import {IReserveAuctionFindersEth} from "./IReserveAuctionFindersEth.sol";
 
 /// @title Reserve Auction Finders ETH
 /// @author kulkarohan
 /// @notice Module adding Finders Fee to Reserve Auction Core ETH
-contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupportV1 {
+contract ReserveAuctionFindersEth is IReserveAuctionFindersEth, ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupportV1 {
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint16 constant TIME_BUFFER = 15 minutes;
 
@@ -95,6 +96,14 @@ contract ReserveAuctionFindersEth is ReentrancyGuard, FeePayoutSupportV1, Module
         ModuleNamingSupportV1("Reserve Auction Finders ETH")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
+    }
+
+    /// @notice Implements EIP-165 for standard interface detection
+    /// @dev `0x01ffc9a7` is the IERC165 interface id
+    /// @param _interfaceId The identifier of a given interface
+    /// @return If the given interface is supported
+    function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
+        return _interfaceId == type(IReserveAuctionFindersEth).interfaceId || _interfaceId == 0x01ffc9a7;
     }
 
     //     ,-.
