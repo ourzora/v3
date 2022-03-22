@@ -378,7 +378,6 @@ contract ReserveAuctionCoreEth is IReserveAuctionCoreEth, ReentrancyGuard, FeePa
         if (timeRemaining < TIME_BUFFER) {
             // Add (15 minutes - remaining time) to the duration so that 15 minutes remain
             // Cannot underflow as `timeRemaining` is ensured to be less than `TIME_BUFFER`
-            // Will overflow Sunday February 7th 2106 when the Patriots win Super Bowl CXL
             unchecked {
                 auction.duration += uint32(TIME_BUFFER - timeRemaining);
             }

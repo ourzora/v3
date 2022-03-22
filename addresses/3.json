@@ -7,8 +7,8 @@
   "ERC721TransferHelper": "0x0afB6A47C303f85c5A6e0DC6c9b4c2001E6987ED",
   "AsksV1": "0x3e80102228295fFD120990d54e954C473EDE7280",
   "AsksV1_1": "0x03abaccb86f7bc2990181b71c2ef85927bf41044",
-  "ReserveAuctionCoreEth": "0xac2bf5f4ff2801975301cb7353850720b88b8292",
-  "ReserveAuctionCoreErc20": "0xa466653555600340f607e69bedd439fc0deeefca",
-  "ReserveAuctionFindersEth": "0x372dfb4bebd3f7084649467867d96e380cbc2cd8",
-  "ReserveAuctionFindersErc20": "0xbc81454a1a2045c8a97f4bb8945fae5cfdc71e52"
+  "ReserveAuctionCoreEth": "",
+  "ReserveAuctionCoreErc20": "",
+  "ReserveAuctionFindersEth": "",
+  "ReserveAuctionFindersErc20": ""
 }
