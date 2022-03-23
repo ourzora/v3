@@ -368,7 +368,8 @@ contract ReserveAuctionFindersEthTest is DSTest {
         auctions.createBid(address(token), 0, address(finder));
     }
 
-    function testFail_CannotBidOnAuctionNotActive() public {
+    function testRevert_CannotBidOnAuctionNotActive() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
         auctions.createBid{value: 1 ether}(address(token), 0, address(finder));
     }
 
