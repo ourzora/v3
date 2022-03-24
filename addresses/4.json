@@ -11,5 +11,7 @@
   "ReserveAuctionCoreEth": "0x3feAf4c06211680e5969A86aDB1423Fc8AD9e994",
   "ReserveAuctionCoreErc20": "0x9eb86B88D13eD0e38348AB951b55a26cA468A262",
   "ReserveAuctionFindersEth": "0x1b5A56DEa3d9760c6b14B709B9cf0ef9AaCD2730",
-  "ReserveAuctionFindersErc20": "0x81950e0CD9c51564583bFB80EC3d40f2B915A956"
+  "ReserveAuctionFindersErc20": "0x81950e0CD9c51564583bFB80EC3d40f2B915A956",
+  "ReserveAuctionListingEth": "0x665814dA60D1Ddc23Fa1F69C1F5B5CAF63ab24b3",
+  "ReserveAuctionListingErc20": "0x7a91CfC8C1Aec9EfdBaaCb47C6D41268524D47D4"
 }
