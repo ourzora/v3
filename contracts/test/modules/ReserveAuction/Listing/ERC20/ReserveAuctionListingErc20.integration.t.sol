@@ -146,7 +146,7 @@ contract ReserveAuctionListingErc20IntegrationTest is DSTest {
         auctions.settleAuction(address(token), 0);
     }
 
-    function testSUP_ERC20Integration() public {
+    function test_ERC20Integration() public {
         uint256 beforeSellerBalance = weth.balanceOf(address(sellerFundsRecipient));
         uint256 beforeBidderBalance = weth.balanceOf(address(bidder));
         uint256 beforeOtherBidderBalance = weth.balanceOf(address(otherBidder));
