@@ -1,0 +1,55 @@
+        ,-.                                                                                                 
+        `-'                                                                                                 
+        /|\                                                                                                 
+         |             ,------.                           ,--------------------.                            
+        / \            |AsksV1|                           |ERC721TransferHelper|                            
+      Caller           `--+---'                           `---------+----------'                            
+        |    fillAsk()    |                                         |                                       
+        | ---------------->                                         |                                       
+        |                 |                                         |                                       
+        |                 |----.                                    |                                       
+        |                 |    | validate received funds            |                                       
+        |                 |<---'                                    |                                       
+        |                 |                                         |                                       
+        |                 |----.                                    |                                       
+        |                 |    | handle royalty payouts             |                                       
+        |                 |<---'                                    |                                       
+        |                 |                                         |                                       
+        |                 |                                         |                                       
+        |    _________________________________________________      |                                       
+        |    ! ALT  /  finders fee configured for this ask?   !     |                                       
+        |    !_____/      |                                   !     |                                       
+        |    !            |----.                              !     |                                       
+        |    !            |    | handle finders fee payout    !     |                                       
+        |    !            |<---'                              !     |                                       
+        |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!     |                                       
+        |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!     |                                       
+        |                 |                                         |                                       
+        |                 |----.                                                                            
+        |                 |    | handle seller funds recipient payout                                       
+        |                 |<---'                                                                            
+        |                 |                                         |                                       
+        |                 |              transferFrom()             |                                       
+        |                 | ---------------------------------------->                                       
+        |                 |                                         |                                       
+        |                 |                                         |----.                                  
+        |                 |                                         |    | transfer NFT from seller to buyer
+        |                 |                                         |<---'                                  
+        |                 |                                         |                                       
+        |                 |----.                                    |                                       
+        |                 |    | emit ExchangeExecuted()            |                                       
+        |                 |<---'                                    |                                       
+        |                 |                                         |                                       
+        |                 |----.                                    |                                       
+        |                 |    | emit AskFilled()                   |                                       
+        |                 |<---'                                    |                                       
+        |                 |                                         |                                       
+        |                 |----.                                    |                                       
+        |                 |    | delete ask from contract           |                                       
+        |                 |<---'                                    |                                       
+      Caller           ,--+---.                           ,---------+----------.                            
+        ,-.            |AsksV1|                           |ERC721TransferHelper|                            
+        `-'            `------'                           `--------------------'                            
+        /|\                                                                                                 
+         |                                                                                                  
+        / \                                                                                                 

@@ -1,0 +1,20 @@
+@startuml
+actor Caller
+participant AsksV1
+
+Caller -> AsksV1 : createAsk()
+
+alt Ask already exists for this token?
+
+    AsksV1 -> AsksV1 : _cancelAsk(_tokenContract, _tokenId)
+
+else noop
+
+end
+
+AsksV1 -> AsksV1 : create ask
+
+AsksV1 -> AsksV1 : emit AskCreated()
+
+@enduml
+
