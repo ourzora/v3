@@ -162,7 +162,7 @@ contract AsksCoreEthTest is DSTest {
     }
 
     function testRevert_MustBeOwnerOrOperator() public {
-        vm.expectRevert("ONLY_OWNER_OR_OPERATOR");
+        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
         asks.createAsk(address(token), 0, 1 ether);
     }
 
@@ -335,7 +335,7 @@ contract AsksCoreEthTest is DSTest {
         asks.createAsk(address(token), 0, 1 ether);
 
         vm.prank(address(buyer));
-        vm.expectRevert("MUST_MEET_ASK_PRICE");
+        vm.expectRevert("MUST_MATCH_PRICE");
         asks.fillAsk{value: 0.99 ether}(address(token), 0);
     }
 }

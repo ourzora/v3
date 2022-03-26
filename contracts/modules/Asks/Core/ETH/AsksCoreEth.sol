@@ -107,7 +107,7 @@ contract AsksCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupport
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
         // Ensure the caller is the owner or an approved operator
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_OWNER_OR_OPERATOR");
+        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
 
         // Ensure the price can be downcasted to 96 bits
         // Cannot realistically exceed as this is magnitudes higher than the total supply of ETH
@@ -303,7 +303,7 @@ contract AsksCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupport
         uint256 price = ask.price;
 
         // Ensure the attached ETH matches the price
-        require(msg.value == price, "MUST_MEET_ASK_PRICE");
+        require(msg.value == price, "MUST_MATCH_PRICE");
 
         // Payout associated token royalties, if any
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, price, address(0), 300000);
