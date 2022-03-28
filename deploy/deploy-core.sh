@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# args: network name; optional 'overwrite' to redeploy and commit new addresses
-# env: <NETWORK_NAME>_CHAIN_ID, <NETWORK_NAME>_RPC_URL, <NETWORK_NAME>_PRIVATE_KEY, <NETWORK_NAME>_WALLET_ADDRESS, <NETWORK_NAME>_REGISTRAR, <NETWORK_NAME>_FEE_SETTINGS_OWNER
+# args: network name; 'overwrite' or 'dontoverwrite' to redeploy and commit new addresses
+# env: ETHERSCAN_API_KEY, <NETWORK_NAME>_CHAIN_ID, <NETWORK_NAME>_RPC_URL, <NETWORK_NAME>_PRIVATE_KEY, <NETWORK_NAME>_WALLET_ADDRESS, <NETWORK_NAME>_REGISTRAR, <NETWORK_NAME>_FEE_SETTINGS_OWNER
 
 echo "Loading env..."
 source .env
@@ -12,6 +12,17 @@ then
     exit 1
 fi
 NETWORK_NAME=$(echo $1 | tr '[:lower:]' '[:upper:]')
+
+if [ "$2" = "" ]
+then
+    echo "Missing overwrite/dontoverwrite argument. Exiting."
+    exit 1
+fi
+if [ "$2" != "overwrite" ] && [ "$2" != "dontoverwrite" ]
+then
+    echo "Invalid overwrite/dontoverwrite argument. Exiting."
+    exit 1
+fi
 
 CHAIN_ID_NAME="$NETWORK_NAME"_CHAIN_ID
 CHAIN_ID="${!CHAIN_ID_NAME}"
@@ -62,21 +73,27 @@ then
 fi
 
 ADDRESSES_FILENAME="addresses/$CHAIN_ID.json"
-if [ "$2" != "overwrite" ]
+echo "Checking for existing contract addresses"
+if EXISTING_ADDRESS=$(test -f "$ADDRESSES_FILENAME" && cat "$ADDRESSES_FILENAME" | python3 -c "import sys, json; print(json.load(sys.stdin)['ZoraProtocolFeeSettings'])" 2> /dev/null)
 then
-    echo "Checking for existing contract addresses"
-    if EXISTING_ADDRESS=$(test -f "$ADDRESSES_FILENAME" && cat "$ADDRESSES_FILENAME" | python3 -c "import sys, json; print(json.load(sys.stdin)['ZoraProtocolFeeSettings'])" 2> /dev/null)
-    then
-        echo "ZoraProtocolFeeSettings already exists on chain $CHAIN_ID at $EXISTING_ADDRESS. Exiting."
+    echo "ZoraProtocolFeeSettings already exists on chain $CHAIN_ID at $EXISTING_ADDRESS."
+    if [ "$2" != "overwrite" ]
+        echo "Exiting."
         exit 1
-    fi
-    if EXISTING_ADDRESS=$(test -f "$ADDRESSES_FILENAME" && cat "$ADDRESSES_FILENAME" | python3 -c "import sys, json; print(json.load(sys.stdin)['ZoraModuleManager'])" 2> /dev/null)
-    then
-        echo "ZoraModuleManager already exists on chain $CHAIN_ID at $EXISTING_ADDRESS. Exiting."
-        exit 1
+    else
+        echo "Continuing."
     fi
 fi
-
+if EXISTING_ADDRESS=$(test -f "$ADDRESSES_FILENAME" && cat "$ADDRESSES_FILENAME" | python3 -c "import sys, json; print(json.load(sys.stdin)['ZoraModuleManager'])" 2> /dev/null)
+then
+    echo "ZoraModuleManager already exists on chain $CHAIN_ID at $EXISTING_ADDRESS."
+    if [ "$2" != "overwrite" ]
+        echo "Exiting."
+        exit 1
+    else
+        echo "Continuing."
+    fi
+fi
 
 echo ""
 
