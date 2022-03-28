@@ -17,18 +17,25 @@
     "@rari-capital/solmate": "^6.2.0"
   },
   "devDependencies": {
-    "@typechain/ethers-v5": "^9.0.0",
+    "@typechain/ethers-v5": "^10.0.0",
     "husky": "^7.0.0",
     "lint-staged": "^12.3.7",
-    "prettier": "^2.6.0",
+    "prettier": "^2.6.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
     "solhint": "^3.3.7",
     "solhint-plugin-prettier": "^0.0.5",
-    "typechain": "^7.0.1",
-    "typescript": "^4.6.2"
+    "typechain": "^8.0.0",
+    "typescript": "^4.6.3"
   },
   "lint-staged": {
     "*.{ts,js,css,md,sol}": "prettier --write",
     "*.sol": "solhint"
+  },
+  "scripts": {
+    "build": "forge build && yarn typechain",
+    "clean": "forge clean && rm -rf ./dist",
+    "prepublishOnly": "rm -rf ./dist && forge clean && forge build && yarn typechain && cp -R contracts dist && cp -R addresses dist",
+    "test": "forge test",
+    "typechain": "typechain --target=ethers-v5 'dist/artifacts/*/*.json' --out-dir dist/typechain"
   }
 }
