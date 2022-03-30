@@ -109,12 +109,11 @@ contract AsksCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupport
         // Ensure the caller is the owner or an approved operator
         require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
 
-        // Ensure the price can be downcasted to 96 bits
-        // Cannot realistically exceed as this is magnitudes higher than the total supply of ETH
-        require(_price <= type(uint96).max, "INVALID_ASK_PRICE");
-
-        // Store the ask metadata
+        // Store the owner as the seller
         askForNFT[_tokenContract][_tokenId].seller = tokenOwner;
+
+        // Store the ask price
+        // The max value for this module is 2^96 - 1, which is magnitudes higher than the total supply of ETH
         askForNFT[_tokenContract][_tokenId].price = uint96(_price);
 
         emit AskCreated(_tokenContract, _tokenId, tokenOwner, _price);
@@ -169,11 +168,8 @@ contract AsksCoreEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupport
         // Ensure the caller is seller
         require(msg.sender == ask.seller, "ONLY_SELLER");
 
-        // Ensure the updated ask price can be downcasted to 96 bits
-        // Cannot realistically exceed as this is magnitudes higher than the total supply of ETH
-        require(_price <= type(uint96).max, "INVALID_ASK_PRICE");
-
         // Update the ask price
+        // The max value for this module is 2^96 - 1, which is magnitudes higher than the total supply of ETH
         ask.price = uint96(_price);
 
         emit AskPriceUpdated(_tokenContract, _tokenId, msg.sender, _price);

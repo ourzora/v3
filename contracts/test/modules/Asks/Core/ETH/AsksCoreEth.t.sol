@@ -166,12 +166,6 @@ contract AsksCoreEthTest is DSTest {
         asks.createAsk(address(token), 0, 1 ether);
     }
 
-    function testRevert_MaxAskPrice() public {
-        vm.prank(address(seller));
-        vm.expectRevert("INVALID_ASK_PRICE");
-        asks.createAsk(address(token), 0, 2**96);
-    }
-
     /// ------------ SET ASK PRICE ------------ ///
 
     function test_IncreaseAskPrice() public {
@@ -229,19 +223,6 @@ contract AsksCoreEthTest is DSTest {
         vm.prank(address(seller));
         vm.expectRevert("ONLY_SELLER");
         asks.setAskPrice(address(token), 0, 5 ether);
-    }
-
-    function testRevert_CannotUpdateInvalidPrice() public {
-        vm.startPrank(address(seller));
-
-        asks.createAsk(address(token), 0, 1 ether);
-
-        vm.warp(1 minutes);
-
-        vm.expectRevert("INVALID_ASK_PRICE");
-        asks.setAskPrice(address(token), 0, 2**96);
-
-        vm.stopPrank();
     }
 
     /// ------------ CANCEL ASK ------------ ///
