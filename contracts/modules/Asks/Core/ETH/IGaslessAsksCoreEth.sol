@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {ModuleApprovalSig} from "../../../../ZoraModuleManager.sol";
-
 interface IGaslessAsksCoreEth {
+    struct ModuleApprovalSig {
+        uint8 v; // The 129th byte and chain ID of the signature
+        bytes32 r; // The first 64 bytes of the signature
+        bytes32 s; // Bytes 64-128 of the signature
+        uint256 deadline; // The deadline at which point the approval expires
+    }
+
     struct GaslessAsk {
         address from; // The address of the seller
         address tokenAddress; // The address of the NFT being sold

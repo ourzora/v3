@@ -3,13 +3,6 @@ pragma solidity 0.8.10;
 
 import {ZoraProtocolFeeSettings} from "./auxiliary/ZoraProtocolFeeSettings/ZoraProtocolFeeSettings.sol";
 
-struct ModuleApprovalSig {
-    uint8 v; // The 129th byte and chain ID of the signature
-    bytes32 r; // The first 64 bytes of the signature
-    bytes32 s; // Bytes 64-128 of the signature
-    uint256 deadline; // The deadline at which point the approval expires
-}
-
 /// @title ZoraModuleManager
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to approve registered modules on ZORA V3
