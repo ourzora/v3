@@ -1,0 +1,17 @@
+name: Deploy Core
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: 'Network name like "rinkeby". Must have corresponding environment variables prefixed with "<network name in all caps>_".'
+        required: true
+      overwrite:
+        description: 'Must equal "overwrite" or "nooverwrite". "overwrite" will deploy new contracts even if core contracts already have addresses in addresses/<chain-id>.json file.'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup
+        run: bash --version
