@@ -16,7 +16,6 @@ interface IAsksGaslessEth {
         uint256 expiry; // The Unix timestamp that this order expires at
         uint256 nonce; // The ID to represent this order (for cancellations)
         uint256 price; // The amount of ETH to sell the NFT for
-        ModuleApprovalSig approvalSig; // The user's approval to use this module (optional, empty if already set)
     }
 
     /// @notice Fills the given signed ask for an NFT

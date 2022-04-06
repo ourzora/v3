@@ -81,15 +81,19 @@ contract AsksGaslessEthTest is DSTest {
     ///                          UTILS                           ///
     ///                                                          ///
 
-    function test_GetHash() public {
-        bytes32 sigHash = keccak256(
-            "SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price,uint8 _v,bytes32 _r,bytes32 _s,uint256 deadline)"
-        );
+    function test_GetAskHash() public {
+        bytes32 sigHash = keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price)");
 
         emit log_bytes32(sigHash);
     }
 
-    function getModuleApprovalSig() public returns (IAsksGaslessEth.ModuleApprovalSig memory) {
+    function test_GetModApprovalHash() public {
+        bytes32 sigHash = keccak256("SignedModuleApproval(uint8 _v,bytes32 _r,bytes32 _s,uint256 deadline)");
+
+        emit log_bytes32(sigHash);
+    }
+
+    function getSignedModuleApproval() public returns (IAsksGaslessEth.ModuleApprovalSig memory) {
         bytes32 ZMM_DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -113,7 +117,31 @@ contract AsksGaslessEthTest is DSTest {
         return sig;
     }
 
-    function getSignedAskSig()
+    function getInvalidModuleApproval() public returns (IAsksGaslessEth.ModuleApprovalSig memory) {
+        bytes32 ZMM_DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("ZORA")),
+                keccak256(bytes("3")),
+                99,
+                address(ZMM)
+            )
+        );
+
+        // keccak256("SignedApproval(address module,address user,bool approved,uint256 deadline,uint256 nonce)")
+        bytes32 SIGNED_APPROVAL = 0x8413132cc7aa5bd2ce1a1b142a3f09e2baeda86addf4f9a5dacd4679f56e7cec;
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            privateKey,
+            keccak256(abi.encodePacked("\x19\x01", ZMM_DOMAIN_SEPARATOR, keccak256(abi.encode(SIGNED_APPROVAL, address(asks), seller, true, 0, 0))))
+        );
+
+        IAsksGaslessEth.ModuleApprovalSig memory sig = IAsksGaslessEth.ModuleApprovalSig({v: v, r: r, s: s, deadline: 1 hours});
+
+        return sig;
+    }
+
+    function getSignedAsk()
         public
         returns (
             uint8 v,
@@ -131,24 +159,16 @@ contract AsksGaslessEthTest is DSTest {
             )
         );
 
-        // keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price,uint8 _v,bytes32 _r,bytes32 _s,uint256 deadline)");
-        bytes32 ASK_APPROVAL = 0xde0428517acbd93d05cf529384fe8d583dfcab25db4370d93bcece3b3bc85629;
-
-        IAsksGaslessEth.ModuleApprovalSig memory sig = getModuleApprovalSig();
+        // keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price)");
+        bytes32 ASK_APPROVAL = 0xf788c01ac4e7f192187030902df708ad915c1962e5a989fba9ee65a61f396fb4;
 
         (v, r, s) = vm.sign(
             privateKey,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    ASKS_DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(ASK_APPROVAL, address(token), 1, 0, 0, 1 ether, sig.v, sig.r, sig.s, 0))
-                )
-            )
+            keccak256(abi.encodePacked("\x19\x01", ASKS_DOMAIN_SEPARATOR, keccak256(abi.encode(ASK_APPROVAL, address(token), 1, 0, 0, 1 ether))))
         );
     }
 
-    function getSignedAskSigWithoutModuleApproval()
+    function getInvalidAsk()
         public
         returns (
             uint8 v,
@@ -166,20 +186,12 @@ contract AsksGaslessEthTest is DSTest {
             )
         );
 
-        // keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price,uint8 _v,bytes32 _r,bytes32 _s,uint256 deadline)");
-        bytes32 ASK_APPROVAL = 0xde0428517acbd93d05cf529384fe8d583dfcab25db4370d93bcece3b3bc85629;
-
-        IAsksGaslessEth.ModuleApprovalSig memory sig = IAsksGaslessEth.ModuleApprovalSig({v: 0, r: 0, s: 0, deadline: 0});
+        // keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price)");
+        bytes32 ASK_APPROVAL = 0xf788c01ac4e7f192187030902df708ad915c1962e5a989fba9ee65a61f396fb4;
 
         (v, r, s) = vm.sign(
             privateKey,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    ASKS_DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(ASK_APPROVAL, address(token), 1, 0, 0, 1 ether, sig.v, sig.r, sig.s, 0))
-                )
-            )
+            keccak256(abi.encodePacked("\x19\x01", ASKS_DOMAIN_SEPARATOR, keccak256(abi.encode(ASK_APPROVAL, address(token), 0, 0, 0, 1 ether))))
         );
     }
 
@@ -187,18 +199,20 @@ contract AsksGaslessEthTest is DSTest {
     ///                         FILL ASK                         ///
     ///                                                          ///
 
-    function test_FillAskWithModuleApprovalSig() public {
+    function test_FillAsk() public {
+        vm.prank(seller);
+        ZMM.setApprovalForModule(address(asks), true);
+
         IAsksGaslessEth.GaslessAsk memory ask = IAsksGaslessEth.GaslessAsk({
             seller: seller,
             tokenContract: address(token),
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSig();
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         vm.prank(address(buyer));
         asks.fillAsk{value: 1 ether}(ask, v, r, s);
@@ -206,11 +220,8 @@ contract AsksGaslessEthTest is DSTest {
         require(token.ownerOf(1) == address(buyer));
     }
 
-    function test_FillAskWithEmptyApprovalSig() public {
-        vm.prank(seller);
-        ZMM.setApprovalForModule(address(asks), true);
-
-        IAsksGaslessEth.ModuleApprovalSig memory sig = IAsksGaslessEth.ModuleApprovalSig({v: 0, r: 0, s: 0, deadline: 0});
+    function test_FillAskWithModuleApprovalSig() public {
+        require(!ZMM.isModuleApproved(seller, address(asks)));
 
         IAsksGaslessEth.GaslessAsk memory ask = IAsksGaslessEth.GaslessAsk({
             seller: seller,
@@ -218,14 +229,15 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: sig
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSigWithoutModuleApproval();
+        IAsksGaslessEth.ModuleApprovalSig memory sig = getSignedModuleApproval();
+
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         vm.prank(address(buyer));
-        asks.fillAsk{value: 1 ether}(ask, v, r, s);
+        asks.fillAsk{value: 1 ether}(ask, sig, v, r, s);
 
         require(token.ownerOf(1) == address(buyer));
     }
@@ -237,17 +249,37 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 1 days,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSig();
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         vm.warp(1 days + 1 minutes);
 
         vm.prank(address(buyer));
         vm.expectRevert("EXPIRED_ASK");
         asks.fillAsk{value: 1 ether}(ask, v, r, s);
+    }
+
+    function testRevert_ExpiredModuleApproval() public {
+        IAsksGaslessEth.GaslessAsk memory ask = IAsksGaslessEth.GaslessAsk({
+            seller: seller,
+            tokenContract: address(token),
+            tokenId: 1,
+            expiry: 0,
+            nonce: 0,
+            price: 1 ether
+        });
+
+        IAsksGaslessEth.ModuleApprovalSig memory sig = getInvalidModuleApproval();
+
+        vm.warp(2 hours);
+
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
+
+        vm.prank(address(buyer));
+        vm.expectRevert("ZMM::setApprovalForModuleBySig deadline expired");
+        asks.fillAsk{value: 1 ether}(ask, sig, v, r, s);
     }
 
     function testRevert_InvalidSig() public {
@@ -257,11 +289,10 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSig();
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         vm.prank(address(buyer));
         vm.expectRevert("INVALID_SIG");
@@ -275,14 +306,13 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
         vm.prank(seller);
         asks.cancelAsk(ask);
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSig();
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         vm.prank(address(buyer));
         vm.expectRevert("INVALID_ASK");
@@ -296,11 +326,10 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSig();
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         vm.prank(address(buyer));
         vm.expectRevert("MUST_MATCH_PRICE");
@@ -320,8 +349,7 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
         vm.prank(seller);
@@ -337,8 +365,7 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
         vm.expectRevert("ONLY_SIGNER");
@@ -356,11 +383,10 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSig();
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         bool valid = asks.validateAskSig(ask, v, r, s);
 
@@ -374,11 +400,10 @@ contract AsksGaslessEthTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSigWithoutModuleApproval();
+        (uint8 v, bytes32 r, bytes32 s) = getInvalidAsk();
 
         bool valid = asks.validateAskSig(ask, v, r, s);
 

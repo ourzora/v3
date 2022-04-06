@@ -60,8 +60,12 @@ contract AsksGaslessEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupp
     ///                                                          ///
 
     /// @notice The EIP-712 type for a signed ask order
-    /// @dev keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price,uint8 _v,bytes32 _r,bytes32 _s,uint256 deadline)");
-    bytes32 private constant SIGNED_ASK_TYPEHASH = 0xde0428517acbd93d05cf529384fe8d583dfcab25db4370d93bcece3b3bc85629;
+    /// @dev keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price)");
+    bytes32 private constant SIGNED_ASK_TYPEHASH = 0xf788c01ac4e7f192187030902df708ad915c1962e5a989fba9ee65a61f396fb4;
+
+    /// @notice The EIP-712 type for a signed module approval
+    /// @dev keccak256("SignedModuleApproval(uint8 _v,bytes32 _r,bytes32 _s,uint256 deadline)");
+    bytes32 private constant SIGNED_MODULE_APPROVAL_TYPEHASH = 0xe85f51623d2a2c6a227a03b74ae96521390f212006fafcabd7bf959916eec097;
 
     /// @notice The EIP-712 domain separator
     bytes32 private immutable EIP_712_DOMAIN_SEPARATOR =
@@ -97,20 +101,7 @@ contract AsksGaslessEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupp
             abi.encodePacked(
                 "\x19\x01",
                 EIP_712_DOMAIN_SEPARATOR,
-                keccak256(
-                    abi.encode(
-                        SIGNED_ASK_TYPEHASH,
-                        _ask.tokenContract,
-                        _ask.tokenId,
-                        _ask.expiry,
-                        _ask.nonce,
-                        _ask.price,
-                        _ask.approvalSig.v,
-                        _ask.approvalSig.r,
-                        _ask.approvalSig.s,
-                        _ask.approvalSig.deadline
-                    )
-                )
+                keccak256(abi.encode(SIGNED_ASK_TYPEHASH, _ask.tokenContract, _ask.tokenId, _ask.expiry, _ask.nonce, _ask.price))
             )
         );
 
@@ -169,18 +160,69 @@ contract AsksGaslessEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupp
         // Ensure the attached ETH matches the price
         require(msg.value == _ask.price, "MUST_MATCH_PRICE");
 
+        // Payout associated token royalties, if any
+        (uint256 remainingProfit, ) = _handleRoyaltyPayout(tokenContract, tokenId, _ask.price, address(0), 300000);
+
+        // Payout the module fee, if configured
+        remainingProfit = _handleProtocolFeePayout(remainingProfit, address(0));
+
+        // Transfer the remaining profit to the seller
+        _handleOutgoingTransfer(seller, remainingProfit, address(0), 50000);
+
+        // Transfer the NFT to the buyer
+        // Reverts if the seller did not approve the ERC721TransferHelper or no longer owns the token
+        erc721TransferHelper.transferFrom(tokenContract, seller, msg.sender, tokenId);
+
+        emit AskFilled(_ask, msg.sender);
+
+        // Increment the nonce for the associated token
+        // Cannot realistically overflow
+        unchecked {
+            ++nonce[tokenContract][tokenId];
+        }
+    }
+
+    /// @notice Fills the given signed ask for an NFT with a signed module approval
+    /// @param _ask The signed ask to fill
+    /// @param _approvalSig The signed module approval
+    /// @param _v The 129th byte and chain ID of the signature
+    /// @param _r The first 64 bytes of the signature
+    /// @param _s Bytes 64-128 of the signature
+    function fillAsk(
+        IAsksGaslessEth.GaslessAsk calldata _ask,
+        IAsksGaslessEth.ModuleApprovalSig calldata _approvalSig,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external payable nonReentrant {
+        // Ensure the ask has not expired
+        require(_ask.expiry == 0 || _ask.expiry >= block.timestamp, "EXPIRED_ASK");
+
+        // Recover the signer address
+        address recoveredAddress = _recoverAddress(_ask, _v, _r, _s);
+
+        // Cache the seller address
+        address seller = _ask.seller;
+
+        // Ensure the recovered signer matches the seller
+        require(recoveredAddress == seller, "INVALID_SIG");
+
+        // Cache the token contract
+        address tokenContract = _ask.tokenContract;
+
+        // Cache the token id
+        uint256 tokenId = _ask.tokenId;
+
+        // Ensure the ask nonce matches the token nonce
+        require(_ask.nonce == nonce[tokenContract][tokenId], "INVALID_ASK");
+
+        // Ensure the attached ETH matches the price
+        require(msg.value == _ask.price, "MUST_MATCH_PRICE");
+
         // If the seller has not approved this module in the ZORA Module Manager,
         if (!ZMM.isModuleApproved(seller, address(this))) {
             // Approve the module on behalf of the seller
-            ZMM.setApprovalForModuleBySig(
-                address(this),
-                seller,
-                true,
-                _ask.approvalSig.deadline,
-                _ask.approvalSig.v,
-                _ask.approvalSig.r,
-                _ask.approvalSig.s
-            );
+            ZMM.setApprovalForModuleBySig(address(this), seller, true, _approvalSig.deadline, _approvalSig.v, _approvalSig.r, _approvalSig.s);
         }
 
         // Payout associated token royalties, if any

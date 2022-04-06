@@ -87,7 +87,7 @@ contract AsksGaslessEthIntegrationTest is DSTest {
     ///                          UTILS                           ///
     ///                                                          ///
 
-    function getModuleApprovalSig() public returns (IAsksGaslessEth.ModuleApprovalSig memory) {
+    function getSignedModuleApproval() public returns (IAsksGaslessEth.ModuleApprovalSig memory) {
         bytes32 ZMM_DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
@@ -111,7 +111,7 @@ contract AsksGaslessEthIntegrationTest is DSTest {
         return sig;
     }
 
-    function getSignedAskSig()
+    function getSignedAsk()
         public
         returns (
             uint8 v,
@@ -129,20 +129,12 @@ contract AsksGaslessEthIntegrationTest is DSTest {
             )
         );
 
-        // keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price,uint8 _v,bytes32 _r,bytes32 _s,uint256 deadline)");
-        bytes32 ASK_APPROVAL = 0xde0428517acbd93d05cf529384fe8d583dfcab25db4370d93bcece3b3bc85629;
-
-        IAsksGaslessEth.ModuleApprovalSig memory sig = getModuleApprovalSig();
+        // keccak256("SignedAsk(address tokenContract,uint256 tokenId,uint256 expiry,uint256 nonce, uint256 price)");
+        bytes32 ASK_APPROVAL = 0xf788c01ac4e7f192187030902df708ad915c1962e5a989fba9ee65a61f396fb4;
 
         (v, r, s) = vm.sign(
             privateKey,
-            keccak256(
-                abi.encodePacked(
-                    "\x19\x01",
-                    ASKS_DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(ASK_APPROVAL, address(token), 1, 0, 0, 1 ether, sig.v, sig.r, sig.s, 0))
-                )
-            )
+            keccak256(abi.encodePacked("\x19\x01", ASKS_DOMAIN_SEPARATOR, keccak256(abi.encode(ASK_APPROVAL, address(token), 1, 0, 0, 1 ether))))
         );
     }
 
@@ -157,14 +149,15 @@ contract AsksGaslessEthIntegrationTest is DSTest {
             tokenId: 1,
             expiry: 0,
             nonce: 0,
-            price: 1 ether,
-            approvalSig: getModuleApprovalSig()
+            price: 1 ether
         });
 
-        (uint8 v, bytes32 r, bytes32 s) = getSignedAskSig();
+        IAsksGaslessEth.ModuleApprovalSig memory sig = getSignedModuleApproval();
+
+        (uint8 v, bytes32 r, bytes32 s) = getSignedAsk();
 
         vm.prank(address(buyer));
-        asks.fillAsk{value: 1 ether}(ask, v, r, s);
+        asks.fillAsk{value: 1 ether}(ask, sig, v, r, s);
     }
 
     function test_ETHIntegration() public {
