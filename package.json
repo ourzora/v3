@@ -1,6 +1,6 @@
 {
   "name": "@zoralabs/v3",
-  "version": "1.0.1",
+  "version": "1.0.9",
   "private": false,
   "homepage": "https://github.com/ourzora/v3",
   "repository": {
@@ -12,20 +12,20 @@
     "./dist/*"
   ],
   "dependencies": {
-    "@manifoldxyz/royalty-registry-solidity": "^1.0.7",
-    "@openzeppelin/contracts": "^4.4.2",
+    "@manifoldxyz/royalty-registry-solidity": "^1.0.9",
+    "@openzeppelin/contracts": "^4.5.0",
     "@rari-capital/solmate": "^6.2.0"
   },
   "devDependencies": {
-    "@typechain/ethers-v5": "^9.0.0",
+    "@typechain/ethers-v5": "^10.0.0",
     "husky": "^7.0.0",
-    "lint-staged": "^12.3.1",
-    "prettier": "^2.5.1",
+    "lint-staged": "^12.3.7",
+    "prettier": "^2.6.1",
     "prettier-plugin-solidity": "^1.0.0-beta.19",
-    "solhint": "^3.3.6",
+    "solhint": "^3.3.7",
     "solhint-plugin-prettier": "^0.0.5",
-    "typechain": "^7.0.0",
-    "typescript": "^4.5.5"
+    "typechain": "^8.0.0",
+    "typescript": "^4.6.3"
   },
   "lint-staged": {
     "*.{ts,js,css,md,sol}": "prettier --write",
@@ -33,8 +33,7 @@
   },
   "scripts": {
     "build": "forge build && yarn typechain",
-    "clean": "forge clean && rm -rf dist/typechain",
-    "prepare": "husky install",
+    "clean": "forge clean && rm -rf ./dist",
     "prepublishOnly": "rm -rf ./dist && forge clean && forge build && yarn typechain && cp -R contracts dist && cp -R addresses dist",
     "test": "forge test",
     "typechain": "typechain --target=ethers-v5 'dist/artifacts/*/*.json' --out-dir dist/typechain"

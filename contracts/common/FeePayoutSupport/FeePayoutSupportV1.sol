@@ -11,16 +11,21 @@ import {OutgoingTransferSupportV1} from "../OutgoingTransferSupport/V1/OutgoingT
 /// @author tbtstl <t@zora.co>
 /// @notice This contract extension supports paying out protocol fees and royalties
 contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
-    IRoyaltyEngineV1 royaltyEngine;
-    ZoraProtocolFeeSettings immutable protocolFeeSettings;
+    /// @notice The ZORA Module Registrar
     address public immutable registrar;
+
+    /// @notice The ZORA Protocol Fee Settings
+    ZoraProtocolFeeSettings immutable protocolFeeSettings;
+
+    /// @notice The Manifold Royalty Engine
+    IRoyaltyEngineV1 royaltyEngine;
 
     /// @notice Emitted when royalties are paid
     /// @param tokenContract The ERC-721 token address of the royalty payout
     /// @param tokenId The ERC-721 token ID of the royalty payout
     /// @param recipient The recipient address of the royalty
     /// @param amount The amount paid to the recipient
-    event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId, address indexed recipient, uint256 amount);
+    event RoyaltyPayout(address indexed tokenContract, uint256 indexed tokenId, address recipient, uint256 amount);
 
     /// @param _royaltyEngine The Manifold Royalty Engine V1 address
     /// @param _protocolFeeSettings The ZoraProtocolFeeSettingsV1 address
@@ -50,21 +55,25 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
         royaltyEngine = IRoyaltyEngineV1(_royaltyEngine);
     }
 
-    /// @notice Pays out protocol fee to protocol fee recipient
-    /// @param _amount the sale amount
-    /// @param _payoutCurrency the currency amount to pay the fee in
-    /// @return remaining funds after paying protocol fee
+    /// @notice Pays out the protocol fee to its fee recipient
+    /// @param _amount The sale amount
+    /// @param _payoutCurrency The currency to pay the fee
+    /// @return The remaining funds after paying the protocol fee
     function _handleProtocolFeePayout(uint256 _amount, address _payoutCurrency) internal returns (uint256) {
+        // Get fee for this module
         uint256 protocolFee = protocolFeeSettings.getFeeAmount(address(this), _amount);
 
-        if (protocolFee != 0) {
-            (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
-            _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 0);
+        // If no fee, return initial amount
+        if (protocolFee == 0) return _amount;
 
-            return _amount - protocolFee;
-        } else {
-            return _amount;
-        }
+        // Get fee recipient
+        (, address feeRecipient) = protocolFeeSettings.moduleFeeSetting(address(this));
+
+        // Payout protocol fee
+        _handleOutgoingTransfer(feeRecipient, protocolFee, _payoutCurrency, 50000);
+
+        // Return remaining amount
+        return _amount - protocolFee;
     }
 
     /// @notice Pays out royalties for given NFTs
@@ -73,7 +82,7 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     /// @param _amount The total sale amount
     /// @param _payoutCurrency The ERC-20 token address to payout royalties in, or address(0) for ETH
     /// @param _gasLimit The gas limit to use when attempting to payout royalties. Uses gasleft() if not provided.
-    /// @return remaining funds after paying out royalties
+    /// @return The remaining funds after paying out royalties
     function _handleRoyaltyPayout(
         address _tokenContract,
         uint256 _tokenId,
@@ -100,29 +109,53 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
     /// @param _tokenId, The Token ID to get royalty information from
     /// @param _amount The total sale amount
     /// @param _payoutCurrency The ERC-20 token address to payout royalties in, or address(0) for ETH
-    /// @return remaining funds after paying out royalties
+    /// @return The remaining funds after paying out royalties
     function _handleRoyaltyEnginePayout(
         address _tokenContract,
         uint256 _tokenId,
         uint256 _amount,
         address _payoutCurrency
     ) external payable returns (uint256) {
+        // Ensure the caller is the contract
         require(msg.sender == address(this), "_handleRoyaltyEnginePayout only self callable");
-        uint256 remainingAmount = _amount;
 
+        // Get the royalty recipients and their associated amounts
         (address payable[] memory recipients, uint256[] memory amounts) = royaltyEngine.getRoyalty(_tokenContract, _tokenId, _amount);
 
-        for (uint256 i = 0; i < recipients.length; i++) {
+        // Store the number of recipients
+        uint256 numRecipients = recipients.length;
+
+        // If there are no royalties, return the initial amount
+        if (numRecipients == 0) return _amount;
+
+        // Store the initial amount
+        uint256 amountRemaining = _amount;
+
+        // Store the variables that cache each recipient and amount
+        address recipient;
+        uint256 amount;
+
+        // Payout each royalty
+        for (uint256 i = 0; i < numRecipients; ) {
+            // Cache the recipient and amount
+            recipient = recipients[i];
+            amount = amounts[i];
+
             // Ensure that we aren't somehow paying out more than we have
-            require(remainingAmount >= amounts[i], "insolvent");
-            // Payout each royalty recipient
-            _handleOutgoingTransfer(recipients[i], amounts[i], _payoutCurrency, 0);
+            require(amountRemaining >= amount, "insolvent");
 
-            emit RoyaltyPayout(_tokenContract, _tokenId, recipients[i], amounts[i]);
+            // Transfer to the recipient
+            _handleOutgoingTransfer(recipient, amount, _payoutCurrency, 50000);
 
-            remainingAmount -= amounts[i];
+            emit RoyaltyPayout(_tokenContract, _tokenId, recipient, amount);
+
+            // Cannot underflow as remaining amount is ensured to be greater than or equal to royalty amount
+            unchecked {
+                amountRemaining -= amount;
+                ++i;
+            }
         }
 
-        return remainingAmount;
+        return amountRemaining;
     }
 }

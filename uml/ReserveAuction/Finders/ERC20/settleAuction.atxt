@@ -1,0 +1,48 @@
+        ,-.                                                                          
+        `-'                                                                          
+        /|\                                                                          
+         |             ,--------------------------.                                  
+        / \            |ReserveAuctionFindersErc20|                                  
+      Caller           `------------+-------------'                                  
+        |      settleAuction()      |                                                
+        | -------------------------->                                                
+        |                           |                                                
+        |                           |----.                                           
+        |                           |    | validate auction ended                    
+        |                           |<---'                                           
+        |                           |                                                
+        |                           |----.                                           
+        |                           |    | handle royalty payouts                    
+        |                           |<---'                                           
+        |                           |                                                
+        |                           |                                                
+        |    ___________________________________________________________             
+        |    ! ALT  /  finders fee configured for this auction?         !            
+        |    !_____/                |                                   !            
+        |    !                      |----.                              !            
+        |    !                      |    | handle finders fee payout    !            
+        |    !                      |<---'                              !            
+        |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!            
+        |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!            
+        |                           |                                                
+        |                           |----.                                           
+        |                           |    | handle seller funds recipient payout      
+        |                           |<---'                                           
+        |                           |                                                
+        |                           |----.                                           
+        |                           |    | transfer NFT from escrow to winning bidder
+        |                           |<---'                                           
+        |                           |                                                
+        |                           |----.                                           
+        |                           |    | emit AuctionEnded()                       
+        |                           |<---'                                           
+        |                           |                                                
+        |                           |----.                                           
+        |                           |    | delete auction from contract              
+        |                           |<---'                                           
+      Caller           ,------------+-------------.                                  
+        ,-.            |ReserveAuctionFindersErc20|                                  
+        `-'            `--------------------------'                                  
+        /|\                                                                          
+         |                                                                           
+        / \                                                                          

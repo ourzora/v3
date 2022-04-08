@@ -1,0 +1,18 @@
+@startuml
+actor Caller
+participant AsksCoreEth
+participant ERC721TransferHelper
+
+Caller -> AsksCoreEth : fillAsk()
+
+AsksCoreEth -> AsksCoreEth : validate received ETH
+AsksCoreEth -> AsksCoreEth : handle royalty payouts
+AsksCoreEth -> AsksCoreEth : handle seller payout
+
+AsksCoreEth -> ERC721TransferHelper : transferFrom()
+ERC721TransferHelper -> ERC721TransferHelper : transfer NFT from seller to buyer
+
+AsksCoreEth -> AsksCoreEth : emit AskFilled()
+AsksCoreEth -> AsksCoreEth : delete ask from contract
+
+@enduml

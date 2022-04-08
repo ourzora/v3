@@ -1,0 +1,32 @@
+@startuml
+actor Caller
+participant ReserveAuctionCoreEth
+participant ERC721TransferHelper
+
+
+Caller -> ReserveAuctionCoreEth : createBid()
+
+alt First bid?
+    
+    ReserveAuctionCoreEth ->  ReserveAuctionCoreEth : start auction
+    ReserveAuctionCoreEth -> ERC721TransferHelper : transferFrom()
+    ERC721TransferHelper -> ERC721TransferHelper : transfer NFT from seller to escrow
+
+else refund previous bidder
+
+    ReserveAuctionCoreEth -> ReserveAuctionCoreEth : transfer ETH to bidder
+
+end
+
+
+alt Bid placed within 15 min of end?
+    
+    ReserveAuctionCoreEth ->  ReserveAuctionCoreEth : extend auction
+
+else noop
+
+end
+
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : emit AuctionBid()
+
+@enduml

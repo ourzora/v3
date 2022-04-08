@@ -1,0 +1,12 @@
+{
+  "RoyaltyEngineV1": "0x54D88324cBedfFe1e62c9A59eBb310A11C295198",
+  "WETH": "0xd0A1E359811322d97991E03f863a0C30C2cF029C",
+  "ZoraProtocolFeeSettings": "0x53172d999a299198a935f9E424f9f8544e3d4292",
+  "ZoraModuleManager": "0xd1adAF05575295710dE1145c3c9427c364A70a7f",
+  "ERC20TransferHelper": "0x1E58bE778aCae2744c1185ea1cE542f304860B96",
+  "ERC721TransferHelper": "0x1e009dEC13A2A441b3Aa133Bd320FF5B16B22E71",
+  "ReserveAuctionCoreEth": "",
+  "ReserveAuctionCoreErc20": "",
+  "ReserveAuctionFindersEth": "",
+  "ReserveAuctionFindersErc20": ""
+}

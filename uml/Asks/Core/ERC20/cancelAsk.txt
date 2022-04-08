@@ -1,0 +1,9 @@
+@startuml
+actor Caller
+participant AsksCoreErc20
+
+Caller -> AsksCoreErc20 : cancelAsk()
+AsksCoreErc20 -> AsksCoreErc20 : emit AskCanceled()
+AsksCoreErc20 -> AsksCoreErc20 : delete ask
+
+@enduml

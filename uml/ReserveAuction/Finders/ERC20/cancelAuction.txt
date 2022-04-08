@@ -1,0 +1,10 @@
+@startuml
+actor Caller
+participant ReserveAuctionFindersErc20
+
+Caller -> ReserveAuctionFindersErc20 : cancelAuction()
+
+ReserveAuctionFindersErc20 -> ReserveAuctionFindersErc20 : emit AuctionCanceled()
+ReserveAuctionFindersErc20 -> ReserveAuctionFindersErc20 : delete auction
+
+@enduml

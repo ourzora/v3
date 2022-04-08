@@ -1,0 +1,22 @@
+        ,-.                                                                
+        `-'                                                                
+        /|\                                                                
+         |             ,------------------------.                          
+        / \            |ReserveAuctionFindersEth|                          
+      Caller           `-----------+------------'                          
+        | setAuctionReservePrice() |                                       
+        | ------------------------->                                       
+        |                          |                                       
+        |                          |----.                                  
+        |                          |    | update reserve price             
+        |                          |<---'                                  
+        |                          |                                       
+        |                          |----.                                  
+        |                          |    | emit AuctionReservePriceUpdated()
+        |                          |<---'                                  
+      Caller           ,-----------+------------.                          
+        ,-.            |ReserveAuctionFindersEth|                          
+        `-'            `------------------------'                          
+        /|\                                                                
+         |                                                                 
+        / \                                                                
