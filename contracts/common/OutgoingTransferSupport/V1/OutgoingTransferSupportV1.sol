@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {IWETH} from "../../../interfaces/common/IWETH.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import {IWETH} from "./IWETH.sol";
 
 /// @title OutgoingTransferSupportV1
 /// @author tbtstl <t@zora.co>
@@ -33,14 +34,13 @@ contract OutgoingTransferSupportV1 {
             return;
         }
 
-        // If no gas limit was provided or provided gas limit greater than gas left, just use the remaining gas.
-
         // Handle ETH payment
         if (_currency == address(0)) {
             require(address(this).balance >= _amount, "_handleOutgoingTransfer insolvent");
 
+            // If no gas limit was provided or provided gas limit greater than gas left, just use the remaining gas.
             uint256 gas = (_gasLimit == 0 || _gasLimit > gasleft()) ? gasleft() : _gasLimit;
-            (bool success, ) = _dest.call{value: _amount, gas: gas}(new bytes(0));
+            (bool success, ) = _dest.call{value: _amount, gas: gas}("");
             // If the ETH transfer fails (sigh), wrap the ETH and try send it as WETH.
             if (!success) {
                 weth.deposit{value: _amount}();

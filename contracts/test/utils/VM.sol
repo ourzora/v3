@@ -39,7 +39,7 @@ interface VM {
     /// @dev Performs all the following smart contract calls with specified `msg.sender`, (newSender)
     function startPrank(address) external;
 
-    /// @dev Stop smart contract calls using the specified address with prankStart()
+    /// @dev Stop smart contract calls using the specified address with startPrank()
     function stopPrank() external;
 
     /// @dev Sets an address' balance, (who, newBalance)

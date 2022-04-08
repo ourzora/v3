@@ -1,0 +1,10 @@
+@startuml
+actor Caller
+participant AsksCoreErc20
+
+Caller -> AsksCoreErc20 : createAsk()
+
+AsksCoreErc20 -> AsksCoreErc20 : store ask metadata
+AsksCoreErc20 -> AsksCoreErc20 : emit AskCreated()
+
+@enduml

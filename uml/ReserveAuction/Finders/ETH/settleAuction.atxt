@@ -1,0 +1,48 @@
+        ,-.                                                                         
+        `-'                                                                         
+        /|\                                                                         
+         |             ,------------------------.                                   
+        / \            |ReserveAuctionFindersEth|                                   
+      Caller           `-----------+------------'                                   
+        |      settleAuction()     |                                                
+        | ------------------------->                                                
+        |                          |                                                
+        |                          |----.                                           
+        |                          |    | validate auction ended                    
+        |                          |<---'                                           
+        |                          |                                                
+        |                          |----.                                           
+        |                          |    | handle royalty payouts                    
+        |                          |<---'                                           
+        |                          |                                                
+        |                          |                                                
+        |    __________________________________________________________             
+        |    ! ALT  /  finders fee configured for this auction?        !            
+        |    !_____/               |                                   !            
+        |    !                     |----.                              !            
+        |    !                     |    | handle finders fee payout    !            
+        |    !                     |<---'                              !            
+        |    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!            
+        |    !~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!            
+        |                          |                                                
+        |                          |----.                                           
+        |                          |    | handle seller funds recipient payout      
+        |                          |<---'                                           
+        |                          |                                                
+        |                          |----.                                           
+        |                          |    | transfer NFT from escrow to winning bidder
+        |                          |<---'                                           
+        |                          |                                                
+        |                          |----.                                           
+        |                          |    | emit AuctionEnded()                       
+        |                          |<---'                                           
+        |                          |                                                
+        |                          |----.                                           
+        |                          |    | delete auction from contract              
+        |                          |<---'                                           
+      Caller           ,-----------+------------.                                   
+        ,-.            |ReserveAuctionFindersEth|                                   
+        `-'            `------------------------'                                   
+        /|\                                                                         
+         |                                                                          
+        / \                                                                         

@@ -1,0 +1,41 @@
+        ,-.                                                                                       
+        `-'                                                                                       
+        /|\                                                                                       
+         |             ,-----------.            ,--------------------.                            
+        / \            |AsksCoreEth|            |ERC721TransferHelper|                            
+      Caller           `-----+-----'            `---------+----------'                            
+        |     fillAsk()      |                            |                                       
+        | ------------------>|                            |                                       
+        |                    |                            |                                       
+        |                    ----.                        |                                       
+        |                        | validate received ETH  |                                       
+        |                    <---'                        |                                       
+        |                    |                            |                                       
+        |                    ----.                        |                                       
+        |                        | handle royalty payouts |                                       
+        |                    <---'                        |                                       
+        |                    |                            |                                       
+        |                    ----.                        |                                       
+        |                        | handle seller payout   |                                       
+        |                    <---'                        |                                       
+        |                    |                            |                                       
+        |                    |       transferFrom()       |                                       
+        |                    |---------------------------->                                       
+        |                    |                            |                                       
+        |                    |                            |----.                                  
+        |                    |                            |    | transfer NFT from seller to buyer
+        |                    |                            |<---'                                  
+        |                    |                            |                                       
+        |                    ----.                        |                                       
+        |                        | emit AskFilled()       |                                       
+        |                    <---'                        |                                       
+        |                    |                            |                                       
+        |                    ----.                                                                
+        |                        | delete ask from contract                                       
+        |                    <---'                                                                
+      Caller           ,-----+-----.            ,---------+----------.                            
+        ,-.            |AsksCoreEth|            |ERC721TransferHelper|                            
+        `-'            `-----------'            `--------------------'                            
+        /|\                                                                                       
+         |                                                                                        
+        / \                                                                                       

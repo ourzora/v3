@@ -1,0 +1,41 @@
+        ,-.                                                                                         
+        `-'                                                                                         
+        /|\                                                                                         
+         |             ,-------------.            ,--------------------.                            
+        / \            |AsksCoreErc20|            |ERC721TransferHelper|                            
+      Caller           `------+------'            `---------+----------'                            
+        |      fillAsk()      |                             |                                       
+        | ------------------->|                             |                                       
+        |                     |                             |                                       
+        |                     ----.                                                                 
+        |                         | validate received payment                                       
+        |                     <---'                                                                 
+        |                     |                             |                                       
+        |                     ----.                         |                                       
+        |                         | handle royalty payouts  |                                       
+        |                     <---'                         |                                       
+        |                     |                             |                                       
+        |                     ----.                         |                                       
+        |                         | handle seller payout    |                                       
+        |                     <---'                         |                                       
+        |                     |                             |                                       
+        |                     |       transferFrom()        |                                       
+        |                     |----------------------------->                                       
+        |                     |                             |                                       
+        |                     |                             |----.                                  
+        |                     |                             |    | transfer NFT from seller to buyer
+        |                     |                             |<---'                                  
+        |                     |                             |                                       
+        |                     ----.                         |                                       
+        |                         | emit AskFilled()        |                                       
+        |                     <---'                         |                                       
+        |                     |                             |                                       
+        |                     ----.                         |                                       
+        |                         | delete ask from contract|                                       
+        |                     <---'                         |                                       
+      Caller           ,------+------.            ,---------+----------.                            
+        ,-.            |AsksCoreErc20|            |ERC721TransferHelper|                            
+        `-'            `-------------'            `--------------------'                            
+        /|\                                                                                         
+         |                                                                                          
+        / \                                                                                         

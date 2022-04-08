@@ -1,0 +1,10 @@
+@startuml
+actor Caller
+participant ReserveAuctionCoreEth
+
+Caller -> ReserveAuctionCoreEth : cancelAuction()
+
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : emit AuctionCanceled()
+ReserveAuctionCoreEth -> ReserveAuctionCoreEth : delete auction
+
+@enduml

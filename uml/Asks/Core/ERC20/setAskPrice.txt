@@ -1,0 +1,25 @@
+@startuml
+actor Caller
+participant AsksCoreErc20
+
+Caller -> AsksCoreErc20 : setAskPrice()
+
+alt price change?
+
+    AsksCoreErc20 -> AsksCoreErc20 : update price
+
+else noop
+
+end
+
+alt currency change?
+
+    AsksCoreErc20 -> AsksCoreErc20 : update currency
+
+else noop
+
+end
+
+AsksCoreErc20 -> AsksCoreErc20 : emit AskPriceUpdated()
+
+@enduml
