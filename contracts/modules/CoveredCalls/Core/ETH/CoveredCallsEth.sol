@@ -171,6 +171,9 @@ contract CoveredCallsEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSup
         // Ensure the attached ETH matches the premium
         require(msg.value == premium, "MUST_MATCH_PREMIUM");
 
+        // Mark the option as purchased
+        call.buyer = msg.sender;
+
         // Cache the seller address
         address seller = call.seller;
 
@@ -180,9 +183,6 @@ contract CoveredCallsEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSup
 
         // Transfer the premium to the seller
         _handleOutgoingTransfer(seller, premium, address(0), 50000);
-
-        // Mark the option as purchased
-        call.buyer = msg.sender;
 
         emit CallPurchased(_tokenContract, _tokenId, call);
     }
