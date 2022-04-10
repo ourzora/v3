@@ -194,11 +194,11 @@ contract CoveredPutsEth is ReentrancyGuard, FeePayoutSupportV1, ModuleNamingSupp
         // Ensure the attached ETH matches the premium
         require(msg.value == premium, "INVALID_PREMIUM");
 
-        // Transfer the premium to seller
-        _handleOutgoingTransfer(put.seller, premium, address(0), 50000);
-
         // Mark the option as purchased
         put.buyer = msg.sender;
+
+        // Transfer the premium to seller
+        _handleOutgoingTransfer(put.seller, premium, address(0), 50000);
 
         emit PutPurchased(_tokenContract, _tokenId, _putId, put);
     }
