@@ -30,6 +30,20 @@ interface IAsksGaslessEth {
         bytes32 _s
     ) external payable;
 
+    /// @notice Fills the given signed ask for an NFT with a signed module approval
+    /// @param _ask The signed ask to fill
+    /// @param _approvalSig The signed module approval
+    /// @param _v The 129th byte and chain ID of the signature
+    /// @param _r The first 64 bytes of the signature
+    /// @param _s Bytes 64-128 of the signature
+    function fillAsk(
+        IAsksGaslessEth.GaslessAsk calldata _ask,
+        IAsksGaslessEth.ModuleApprovalSig calldata _approvalSig,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external payable;
+
     /// @notice Invalidates an off-chain order
     /// @param _ask The signed ask parameters to invalidate
     function cancelAsk(IAsksGaslessEth.GaslessAsk calldata _ask) external;
