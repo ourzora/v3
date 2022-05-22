@@ -1,0 +1,36 @@
+@startuml
+actor Caller
+participant ReserveAuctionListingErc20
+participant ERC721TransferHelper
+participant ERC20TransferHelper
+
+
+Caller -> ReserveAuctionListingErc20 : createBid()
+
+alt First bid?
+    
+    ReserveAuctionListingErc20 ->  ReserveAuctionListingErc20 : start auction
+    ReserveAuctionListingErc20 -> ERC721TransferHelper : transferFrom()
+    ERC721TransferHelper -> ERC721TransferHelper : transfer NFT from seller to escrow
+
+else refund previous bidder
+
+    ReserveAuctionListingErc20 -> ERC20TransferHelper : handle outgoing refund
+    ERC20TransferHelper -> ERC20TransferHelper : transfer tokens to bidder
+
+end
+
+ReserveAuctionListingErc20 -> ERC20TransferHelper : handle incoming bid
+ERC20TransferHelper -> ERC20TransferHelper : transfer tokens to escrow
+
+alt Bid placed within 15 min of end?
+    
+    ReserveAuctionListingErc20 ->  ReserveAuctionListingErc20 : extend auction
+
+else noop
+
+end
+
+ReserveAuctionListingErc20 -> ReserveAuctionListingErc20 : emit AuctionBid()
+
+@enduml

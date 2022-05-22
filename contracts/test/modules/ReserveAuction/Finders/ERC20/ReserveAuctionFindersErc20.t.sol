@@ -122,7 +122,9 @@ contract ReserveAuctionFindersErc20Test is DSTest {
         weth.approve(address(erc20TransferHelper), 50 ether);
     }
 
-    /// ------------ CREATE AUCTION ------------ ///
+    ///                                                          ///
+    ///                         CREATE AUCTION                   ///
+    ///                                                          ///
 
     function test_CreateAuction() public {
         vm.prank(address(seller));
@@ -202,7 +204,9 @@ contract ReserveAuctionFindersErc20Test is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(0), 0, address(weth), 1000);
     }
 
-    /// ------------ SET AUCTION RESERVE PRICE ------------ ///
+    ///                                                          ///
+    ///                      UPDATE RESERVE PRICE                ///
+    ///                                                          ///
 
     function test_SetReservePrice() public {
         vm.prank(address(seller));
@@ -242,7 +246,9 @@ contract ReserveAuctionFindersErc20Test is DSTest {
         auctions.setAuctionReservePrice(address(token), 0, 20 ether);
     }
 
-    /// ------------ CANCEL AUCTION ------------ ///
+    ///                                                          ///
+    ///                         CANCEL AUCTION                   ///
+    ///                                                          ///
 
     function test_CancelAuction() public {
         vm.startPrank(address(seller));
@@ -279,7 +285,9 @@ contract ReserveAuctionFindersErc20Test is DSTest {
         auctions.cancelAuction(address(token), 0);
     }
 
-    /// ------------ CREATE BID ------------ ///
+    ///                                                          ///
+    ///                           CREATE BID                     ///
+    ///                                                          ///
 
     function test_CreateFirstBid() public {
         vm.prank(address(seller));
@@ -435,7 +443,9 @@ contract ReserveAuctionFindersErc20Test is DSTest {
         auctions.createBid(address(token), 0, 1.01 ether, address(finder));
     }
 
-    /// ------------ SETTLE AUCTION ------------ ///
+    ///                                                          ///
+    ///                         SETTLE AUCTION                   ///
+    ///                                                          ///
 
     function test_SettleAuction() public {
         vm.prank(address(seller));
