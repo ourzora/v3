@@ -133,8 +133,8 @@ contract ReserveAuctionCoreErc20Test is DSTest {
 
         (
             address creator,
-            uint256 reservePrice,
             address fundsRecipient,
+            uint256 reservePrice,
             uint256 highestBid,
             address highestBidder,
             uint256 duration,
@@ -175,7 +175,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         auctions.createAuction(address(token), 0, 5 days, 12 ether, address(sellerFundsRecipient), 0, address(weth));
         vm.stopPrank();
 
-        (address creator, uint256 reservePrice, , , , uint256 duration, , , ) = auctions.auctionForNFT(address(token), 0);
+        (address creator, , uint256 reservePrice, , , uint256 duration, , , ) = auctions.auctionForNFT(address(token), 0);
 
         require(creator == address(sellerFundsRecipient));
         require(duration == 5 days);
@@ -185,14 +185,6 @@ contract ReserveAuctionCoreErc20Test is DSTest {
     function testRevert_MustBeTokenOwnerOrOperator() public {
         vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
-    }
-
-    function testRevert_MustBeValidReservePrice() public {
-        uint256 reservePrice = 2**96;
-
-        vm.prank(address(seller));
-        vm.expectRevert("INVALID_RESERVE_PRICE");
-        auctions.createAuction(address(token), 0, 1 days, reservePrice, address(sellerFundsRecipient), 0, address(weth));
     }
 
     function testRevert_MustSpecifySellerFundsRecipient() public {
@@ -210,7 +202,7 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(seller));
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
 
-        (, uint256 reservePrice, , , , , , , ) = auctions.auctionForNFT(address(token), 0);
+        (, , uint256 reservePrice, , , , , , ) = auctions.auctionForNFT(address(token), 0);
 
         require(reservePrice == 5 ether);
     }
@@ -240,15 +232,6 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(seller));
         vm.expectRevert("AUCTION_STARTED");
         auctions.setAuctionReservePrice(address(token), 0, 20 ether);
-    }
-
-    function testRevert_InvalidReservePrice() public {
-        vm.prank(address(seller));
-        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
-
-        vm.prank(address(seller));
-        vm.expectRevert("INVALID_RESERVE_PRICE");
-        auctions.setAuctionReservePrice(address(token), 0, 2**96);
     }
 
     /// ------------ CANCEL AUCTION ------------ ///
@@ -441,31 +424,6 @@ contract ReserveAuctionCoreErc20Test is DSTest {
         vm.prank(address(otherBidder));
         vm.expectRevert("MINIMUM_BID_NOT_MET");
         auctions.createBid(address(token), 0, 1.01 ether);
-    }
-
-    function testRevert_InvalidBid() public {
-        vm.prank(address(seller));
-        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(weth));
-
-        vm.warp(1 hours);
-
-        vm.prank(address(bidder));
-        vm.expectRevert("INVALID_BID");
-        auctions.createBid(address(token), 0, 2**96);
-    }
-
-    function testRevert_MaxBid() public {
-        vm.prank(address(seller));
-        auctions.createAuction(address(token), 0, 1 days, 1 ether, address(sellerFundsRecipient), 0, address(erc20));
-
-        vm.warp(1 hours);
-
-        vm.prank(address(bidder));
-        auctions.createBid(address(token), 0, (2**96 - 2));
-
-        vm.prank(address(otherBidder));
-        vm.expectRevert("MAX_BID_PLACED");
-        auctions.createBid(address(token), 0, (2**96 - 1));
     }
 
     /// ------------ SETTLE AUCTION ------------ ///

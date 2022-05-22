@@ -35,8 +35,8 @@ contract ReserveAuctionFindersErc20 is
 
     /// @notice The metadata for a given auction
     /// @param seller The address of the seller
-    /// @param reservePrice The reserve price to start the auction
     /// @param sellerFundsRecipient The address where funds are sent after the auction
+    /// @param reservePrice The reserve price to start the auction
     /// @param highestBid The highest bid of the auction
     /// @param highestBidder The address of the highest bidder
     /// @param startTime The time that the first bid can be placed
@@ -47,9 +47,9 @@ contract ReserveAuctionFindersErc20 is
     /// @param findersFeeBps The fee that is sent to the referrer of the highest bid
     struct Auction {
         address seller;
-        uint96 reservePrice;
         address sellerFundsRecipient;
-        uint96 highestBid;
+        uint256 reservePrice;
+        uint256 highestBid;
         address highestBidder;
         uint96 startTime;
         address currency;
@@ -165,10 +165,6 @@ contract ReserveAuctionFindersErc20 is
         // Ensure the caller is the owner or an approved operator
         require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
 
-        // Ensure the reserve price can be downcasted to 96 bits for this module
-        // For a higher reserve price, use the supporting module
-        require(_reservePrice <= type(uint96).max, "INVALID_RESERVE_PRICE");
-
         // Ensure the funds recipient is specified
         require(_sellerFundsRecipient != address(0), "INVALID_FUNDS_RECIPIENT");
 
@@ -180,8 +176,8 @@ contract ReserveAuctionFindersErc20 is
 
         // Store the associated metadata
         auction.seller = tokenOwner;
-        auction.reservePrice = uint96(_reservePrice);
         auction.sellerFundsRecipient = _sellerFundsRecipient;
+        auction.reservePrice = _reservePrice;
         auction.startTime = uint96(_startTime);
         auction.currency = _bidCurrency;
         auction.duration = uint80(_duration);
@@ -230,11 +226,8 @@ contract ReserveAuctionFindersErc20 is
         // Ensure the caller is the seller
         require(msg.sender == auction.seller, "ONLY_SELLER");
 
-        // Ensure the reserve price can be downcasted to 96 bits
-        require(_reservePrice <= type(uint96).max, "INVALID_RESERVE_PRICE");
-
         // Update the reserve price
-        auction.reservePrice = uint96(_reservePrice);
+        auction.reservePrice = _reservePrice;
 
         emit AuctionReservePriceUpdated(_tokenContract, _tokenId, auction);
     }
@@ -362,10 +355,6 @@ contract ReserveAuctionFindersErc20 is
         // Ensure the auction has started or is valid to start
         require(block.timestamp >= auction.startTime, "AUCTION_NOT_STARTED");
 
-        // Ensure the bid can be downcasted to 96 bits for gas optimization
-        // For a higher bid, use a supporting module
-        require(_amount <= type(uint96).max, "INVALID_BID");
-
         // Cache more auction metadata
         uint256 firstBidTime = auction.firstBidTime;
         uint256 duration = auction.duration;
@@ -401,13 +390,7 @@ contract ReserveAuctionFindersErc20 is
             uint256 minValidBid;
 
             // Calculate the minimum bid required (10% higher than the highest bid)
-            // Cannot overflow as `minValidBid` cannot be greater than 104 bits
-            unchecked {
-                minValidBid = highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100);
-            }
-
-            // Ensure the result can be downcasted to 96 bits
-            require(minValidBid <= type(uint96).max, "MAX_BID_PLACED");
+            minValidBid = highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100);
 
             // Ensure the incoming bid meets the minimum
             require(_amount >= minValidBid, "MINIMUM_BID_NOT_MET");
@@ -422,7 +405,7 @@ contract ReserveAuctionFindersErc20 is
         _handleIncomingTransfer(_amount, currency);
 
         // Store the amount as the highest bid
-        auction.highestBid = uint96(_amount);
+        auction.highestBid = _amount;
 
         // Store the caller as the highest bidder
         auction.highestBidder = msg.sender;
