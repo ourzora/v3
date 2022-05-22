@@ -1,0 +1,22 @@
+        ,-.                                                
+        `-'                                                
+        /|\                                                
+         |             ,--------------.                    
+        / \            |AsksPrivateEth|                    
+      Caller           `------+-------'                    
+        |    setAskPrice()    |                            
+        | -------------------->                            
+        |                     |                            
+        |                     |----.                       
+        |                     |    | update ask price      
+        |                     |<---'                       
+        |                     |                            
+        |                     |----.                       
+        |                     |    | emit AskPriceUpdated()
+        |                     |<---'                       
+      Caller           ,------+-------.                    
+        ,-.            |AsksPrivateEth|                    
+        `-'            `--------------'                    
+        /|\                                                
+         |                                                 
+        / \                                                

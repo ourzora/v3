@@ -1,0 +1,45 @@
+        ,-.                                                                                         
+        `-'                                                                                         
+        /|\                                                                                         
+         |             ,--------------.           ,--------------------.                            
+        / \            |AsksPrivateEth|           |ERC721TransferHelper|                            
+      Caller           `------+-------'           `---------+----------'                            
+        |      fillAsk()      |                             |                                       
+        | -------------------->                             |                                       
+        |                     |                             |                                       
+        |                     |----.                        |                                       
+        |                     |    | validate caller        |                                       
+        |                     |<---'                        |                                       
+        |                     |                             |                                       
+        |                     |----.                        |                                       
+        |                     |    | validate received ETH  |                                       
+        |                     |<---'                        |                                       
+        |                     |                             |                                       
+        |                     |----.                        |                                       
+        |                     |    | handle royalty payouts |                                       
+        |                     |<---'                        |                                       
+        |                     |                             |                                       
+        |                     |----.                        |                                       
+        |                     |    | handle seller payout   |                                       
+        |                     |<---'                        |                                       
+        |                     |                             |                                       
+        |                     |        transferFrom()       |                                       
+        |                     | ---------------------------->                                       
+        |                     |                             |                                       
+        |                     |                             |----.                                  
+        |                     |                             |    | transfer NFT from seller to buyer
+        |                     |                             |<---'                                  
+        |                     |                             |                                       
+        |                     |----.                        |                                       
+        |                     |    | emit AskFilled()       |                                       
+        |                     |<---'                        |                                       
+        |                     |                             |                                       
+        |                     |----.                                                                
+        |                     |    | delete ask from contract                                       
+        |                     |<---'                                                                
+      Caller           ,------+-------.           ,---------+----------.                            
+        ,-.            |AsksPrivateEth|           |ERC721TransferHelper|                            
+        `-'            `--------------'           `--------------------'                            
+        /|\                                                                                         
+         |                                                                                          
+        / \                                                                                         

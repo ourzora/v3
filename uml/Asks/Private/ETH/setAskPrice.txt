@@ -1,0 +1,9 @@
+@startuml
+actor Caller
+participant AsksPrivateEth
+
+Caller -> AsksPrivateEth : setAskPrice()
+AsksPrivateEth -> AsksPrivateEth : update ask price
+AsksPrivateEth -> AsksPrivateEth : emit AskPriceUpdated()
+
+@enduml

@@ -1,0 +1,10 @@
+@startuml
+actor Caller
+participant AsksPrivateEth
+
+Caller -> AsksPrivateEth : createAsk()
+
+AsksPrivateEth -> AsksPrivateEth : store ask metadata
+AsksPrivateEth -> AsksPrivateEth : emit AskCreated()
+
+@enduml
