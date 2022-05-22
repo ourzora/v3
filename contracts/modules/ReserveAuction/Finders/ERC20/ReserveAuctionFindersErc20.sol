@@ -175,16 +175,19 @@ contract ReserveAuctionFindersErc20 is
         // Ensure the finders fee does not exceed 10,000 basis points
         require(_findersFeeBps <= 10000, "INVALID_FINDERS_FEE");
 
-        // Store the auction metadata
-        auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
-        auctionForNFT[_tokenContract][_tokenId].reservePrice = uint96(_reservePrice);
-        auctionForNFT[_tokenContract][_tokenId].sellerFundsRecipient = _sellerFundsRecipient;
-        auctionForNFT[_tokenContract][_tokenId].startTime = uint96(_startTime);
-        auctionForNFT[_tokenContract][_tokenId].currency = _bidCurrency;
-        auctionForNFT[_tokenContract][_tokenId].duration = uint80(_duration);
-        auctionForNFT[_tokenContract][_tokenId].findersFeeBps = uint16(_findersFeeBps);
+        // Get the auction's storage pointer
+        Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
-        emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
+        // Store the associated metadata
+        auction.seller = tokenOwner;
+        auction.reservePrice = uint96(_reservePrice);
+        auction.sellerFundsRecipient = _sellerFundsRecipient;
+        auction.startTime = uint96(_startTime);
+        auction.currency = _bidCurrency;
+        auction.duration = uint80(_duration);
+        auction.findersFeeBps = uint16(_findersFeeBps);
+
+        emit AuctionCreated(_tokenContract, _tokenId, auction);
     }
 
     //     ,-.
@@ -359,8 +362,8 @@ contract ReserveAuctionFindersErc20 is
         // Ensure the auction has started or is valid to start
         require(block.timestamp >= auction.startTime, "AUCTION_NOT_STARTED");
 
-        // Ensure the bid can be downcasted to 96 bits for this module
-        // For a higher bid, use the supporting module
+        // Ensure the bid can be downcasted to 96 bits for gas optimization
+        // For a higher bid, use a supporting module
         require(_amount <= type(uint96).max, "INVALID_BID");
 
         // Cache more auction metadata

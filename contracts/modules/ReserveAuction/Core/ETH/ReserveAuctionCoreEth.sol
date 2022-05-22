@@ -148,14 +148,17 @@ contract ReserveAuctionCoreEth is IReserveAuctionCoreEth, ReentrancyGuard, FeePa
         // Ensure the funds recipient is specified
         require(_sellerFundsRecipient != address(0), "INVALID_FUNDS_RECIPIENT");
 
-        // Store the auction metadata
-        auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
-        auctionForNFT[_tokenContract][_tokenId].reservePrice = uint96(_reservePrice);
-        auctionForNFT[_tokenContract][_tokenId].sellerFundsRecipient = _sellerFundsRecipient;
-        auctionForNFT[_tokenContract][_tokenId].duration = uint32(_duration);
-        auctionForNFT[_tokenContract][_tokenId].startTime = uint32(_startTime);
+        // Get the auction's storage pointer
+        Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
-        emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
+        // Store the associated metadata
+        auction.seller = tokenOwner;
+        auction.reservePrice = uint96(_reservePrice);
+        auction.sellerFundsRecipient = _sellerFundsRecipient;
+        auction.duration = uint32(_duration);
+        auction.startTime = uint32(_startTime);
+
+        emit AuctionCreated(_tokenContract, _tokenId, auction);
     }
 
     //     ,-.

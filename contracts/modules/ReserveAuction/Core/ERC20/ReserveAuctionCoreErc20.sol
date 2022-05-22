@@ -160,15 +160,18 @@ contract ReserveAuctionCoreErc20 is IReserveAuctionCoreErc20, ReentrancyGuard, I
         // Ensure the funds recipient is specified
         require(_sellerFundsRecipient != address(0), "INVALID_FUNDS_RECIPIENT");
 
-        // Store the auction metadata
-        auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
-        auctionForNFT[_tokenContract][_tokenId].reservePrice = uint96(_reservePrice);
-        auctionForNFT[_tokenContract][_tokenId].sellerFundsRecipient = _sellerFundsRecipient;
-        auctionForNFT[_tokenContract][_tokenId].duration = uint48(_duration);
-        auctionForNFT[_tokenContract][_tokenId].startTime = uint48(_startTime);
-        auctionForNFT[_tokenContract][_tokenId].currency = _bidCurrency;
+        // Get the auction's storage pointer
+        Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
-        emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
+        // Store the associated metadata
+        auction.seller = tokenOwner;
+        auction.reservePrice = uint96(_reservePrice);
+        auction.sellerFundsRecipient = _sellerFundsRecipient;
+        auction.duration = uint48(_duration);
+        auction.startTime = uint48(_startTime);
+        auction.currency = _bidCurrency;
+
+        emit AuctionCreated(_tokenContract, _tokenId, auction);
     }
 
     //     ,-.
@@ -341,7 +344,7 @@ contract ReserveAuctionCoreErc20 is IReserveAuctionCoreErc20, ReentrancyGuard, I
         // Ensure the auction has started or is valid to start
         require(block.timestamp >= auction.startTime, "AUCTION_NOT_STARTED");
 
-        // Ensure the bid can be downcasted to 96 bits for this module
+        // Ensure the bid can be downcasted to 96 bits for gas optimization
         // For a higher bid, use the supporting module
         require(_amount <= type(uint96).max, "INVALID_BID");
 

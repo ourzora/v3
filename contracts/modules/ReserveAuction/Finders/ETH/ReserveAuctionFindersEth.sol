@@ -157,15 +157,18 @@ contract ReserveAuctionFindersEth is IReserveAuctionFindersEth, ReentrancyGuard,
         // Ensure the finders fee does not exceed 10,000 basis points
         require(_findersFeeBps <= 10000, "INVALID_FINDERS_FEE");
 
-        // Store the auction metadata
-        auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
-        auctionForNFT[_tokenContract][_tokenId].reservePrice = uint96(_reservePrice);
-        auctionForNFT[_tokenContract][_tokenId].sellerFundsRecipient = _sellerFundsRecipient;
-        auctionForNFT[_tokenContract][_tokenId].duration = uint48(_duration);
-        auctionForNFT[_tokenContract][_tokenId].startTime = uint48(_startTime);
-        auctionForNFT[_tokenContract][_tokenId].findersFeeBps = uint16(_findersFeeBps);
+        // Get the auction's storage pointer
+        Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
-        emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
+        // Store the associated metadata
+        auction.seller = tokenOwner;
+        auction.reservePrice = uint96(_reservePrice);
+        auction.sellerFundsRecipient = _sellerFundsRecipient;
+        auction.duration = uint48(_duration);
+        auction.startTime = uint48(_startTime);
+        auction.findersFeeBps = uint16(_findersFeeBps);
+
+        emit AuctionCreated(_tokenContract, _tokenId, auction);
     }
 
     //     ,-.
