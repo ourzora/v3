@@ -1,0 +1,19 @@
+@startuml
+actor Caller
+participant AsksPrivateEth
+participant ERC721TransferHelper
+
+Caller -> AsksPrivateEth : fillAsk()
+
+AsksPrivateEth -> AsksPrivateEth : validate caller
+AsksPrivateEth -> AsksPrivateEth : validate received ETH
+AsksPrivateEth -> AsksPrivateEth : handle royalty payouts
+AsksPrivateEth -> AsksPrivateEth : handle seller payout
+
+AsksPrivateEth -> ERC721TransferHelper : transferFrom()
+ERC721TransferHelper -> ERC721TransferHelper : transfer NFT from seller to buyer
+
+AsksPrivateEth -> AsksPrivateEth : emit AskFilled()
+AsksPrivateEth -> AsksPrivateEth : delete ask from contract
+
+@enduml

@@ -74,6 +74,29 @@ contract AsksPrivateEth is IAsksPrivateEth, ReentrancyGuard, FeePayoutSupportV1,
     ///                          CREATE ASK                      ///
     ///                                                          ///
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------------.
+    //     / \            |AsksPrivateEth|
+    //   Caller           `------+-------'
+    //     |     createAsk()     |
+    //     | -------------------->
+    //     |                     |
+    //     |                     |----.
+    //     |                     |    | store ask metadata
+    //     |                     |<---'
+    //     |                     |
+    //     |                     |----.
+    //     |                     |    | emit AskCreated()
+    //     |                     |<---'
+    //   Caller           ,------+-------.
+    //     ,-.            |AsksPrivateEth|
+    //     `-'            `--------------'
+    //     /|\
+    //      |
+    //     / \
+
     /// @notice Emitted when an ask is created
     /// @param tokenContract The ERC-721 token address of the created ask
     /// @param tokenId The ERC-721 token id of the created ask
@@ -112,6 +135,29 @@ contract AsksPrivateEth is IAsksPrivateEth, ReentrancyGuard, FeePayoutSupportV1,
     ///                          UPDATE ASK                      ///
     ///                                                          ///
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------------.
+    //     / \            |AsksPrivateEth|
+    //   Caller           `------+-------'
+    //     |    setAskPrice()    |
+    //     | -------------------->
+    //     |                     |
+    //     |                     |----.
+    //     |                     |    | update ask price
+    //     |                     |<---'
+    //     |                     |
+    //     |                     |----.
+    //     |                     |    | emit AskPriceUpdated()
+    //     |                     |<---'
+    //   Caller           ,------+-------.
+    //     ,-.            |AsksPrivateEth|
+    //     `-'            `--------------'
+    //     /|\
+    //      |
+    //     / \
+
     /// @notice Emitted when an ask is updated
     /// @param tokenContract The ERC-721 token address of the updated ask
     /// @param tokenId The ERC-721 token id of the updated ask
@@ -143,6 +189,29 @@ contract AsksPrivateEth is IAsksPrivateEth, ReentrancyGuard, FeePayoutSupportV1,
     ///                          CANCEL ASK                      ///
     ///                                                          ///
 
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------------.
+    //     / \            |AsksPrivateEth|
+    //   Caller           `------+-------'
+    //     |     cancelAsk()     |
+    //     | -------------------->
+    //     |                     |
+    //     |                     |----.
+    //     |                     |    | emit AskCanceled()
+    //     |                     |<---'
+    //     |                     |
+    //     |                     |----.
+    //     |                     |    | delete ask
+    //     |                     |<---'
+    //   Caller           ,------+-------.
+    //     ,-.            |AsksPrivateEth|
+    //     `-'            `--------------'
+    //     /|\
+    //      |
+    //     / \
+
     /// @notice Emitted when an ask is canceled
     /// @param tokenContract The ERC-721 token address of the canceled ask
     /// @param tokenId The ERC-721 token id of the canceled ask
@@ -168,6 +237,52 @@ contract AsksPrivateEth is IAsksPrivateEth, ReentrancyGuard, FeePayoutSupportV1,
     ///                                                          ///
     ///                           FILL ASK                       ///
     ///                                                          ///
+
+    //     ,-.
+    //     `-'
+    //     /|\
+    //      |             ,--------------.           ,--------------------.
+    //     / \            |AsksPrivateEth|           |ERC721TransferHelper|
+    //   Caller           `------+-------'           `---------+----------'
+    //     |      fillAsk()      |                             |
+    //     | -------------------->                             |
+    //     |                     |                             |
+    //     |                     |----.                        |
+    //     |                     |    | validate caller        |
+    //     |                     |<---'                        |
+    //     |                     |                             |
+    //     |                     |----.                        |
+    //     |                     |    | validate received ETH  |
+    //     |                     |<---'                        |
+    //     |                     |                             |
+    //     |                     |----.                        |
+    //     |                     |    | handle royalty payouts |
+    //     |                     |<---'                        |
+    //     |                     |                             |
+    //     |                     |----.                        |
+    //     |                     |    | handle seller payout   |
+    //     |                     |<---'                        |
+    //     |                     |                             |
+    //     |                     |        transferFrom()       |
+    //     |                     | ---------------------------->
+    //     |                     |                             |
+    //     |                     |                             |----.
+    //     |                     |                             |    | transfer NFT from seller to buyer
+    //     |                     |                             |<---'
+    //     |                     |                             |
+    //     |                     |----.                        |
+    //     |                     |    | emit AskFilled()       |
+    //     |                     |<---'                        |
+    //     |                     |                             |
+    //     |                     |----.
+    //     |                     |    | delete ask from contract
+    //     |                     |<---'
+    //   Caller           ,------+-------.           ,---------+----------.
+    //     ,-.            |AsksPrivateEth|           |ERC721TransferHelper|
+    //     `-'            `--------------'           `--------------------'
+    //     /|\
+    //      |
+    //     / \
 
     /// @notice Emitted when an ask is filled
     /// @param tokenContract The ERC-721 token address of the filled ask
