@@ -70,7 +70,6 @@ contract AuctionDataStorageTest is DSTest {
         assertEq(auction.listingFee.listingFeeRecipient, address(0x0), "listingfee recipient wrong");
         assertEq(auction.tokenGate.token, address(0x0), "tokengate wrong");
         assertEq(auction.tokenGate.minAmount, 0, "tokengate wrong");
-        assertEq(address(1), address(2));
     }
 
     function test_AuctionStorageInit() public {

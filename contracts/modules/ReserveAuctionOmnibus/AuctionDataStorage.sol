@@ -100,12 +100,6 @@ contract AuctionDataStorage {
         auction.featureData[FEATURE_MASK_ERC20_CURRENCY] = uint256(uint160(currency));
     }
 
-    // // force an auction to start at a specific time
-    // uint256 startTime;
-
-    // // erc20
-    // address currency;
-
     struct FullAuction {
         address seller;
         uint96 reservePrice;
@@ -120,7 +114,7 @@ contract AuctionDataStorage {
     }
 
     function _hasFeature(uint32 features, uint32 feature) internal pure returns (bool) {
-        return (features & feature) == features;
+        return (features & feature) == feature;
     }
 
     function _getFullAuction(StoredAuction storage auction) internal view returns (FullAuction memory) {
