@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
@@ -167,8 +168,12 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         }
 
         if (_hasFeature(ask.features, FEATURE_MASK_TOKEN_GATE)) {
-            uint256 expiry = _getExpiry(ask);
-            require(expiry >= block.timestamp, "Ask has expired");
+            AsksDataStorage.TokenGate memory tokenGate = _getAskTokenGate(ask);
+            require(IERC20(tokenGate.token).balanceOf(msg.sender) >= tokenGate.minAmount, "Token gate not satisfied");
+        }
+
+        if (_hasFeature(ask.features, FEATURE_MASK_BUYER)) {
+            require(msg.sender == _getBuyerWithFallback(ask), "Ask is reserved for a specific buyer");
         }
 
         // Transfer the ask price from the buyer
