@@ -73,7 +73,9 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
 
         require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
+        require(_listingFee.listingFeeBps <= 10000, "INVALID_LISTING_FEE");
         require(_sellerFundsRecipient != address(0), "createAsk must specify _sellerFundsRecipient");
+        require(_expiry == 0 || _expiry > block.timestamp, "expiry cannot be in the past");
 
         ask.features = 0;
 
