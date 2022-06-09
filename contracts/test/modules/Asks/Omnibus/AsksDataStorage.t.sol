@@ -1,0 +1,101 @@
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity 0.8.10;
+
+import {DSTest} from "ds-test/test.sol";
+
+import {AsksDataStorage} from "../../../../modules/Asks/Omnibus/AsksDataStorage.sol";
+import {VM} from "../../../utils/VM.sol";
+
+contract StorageTestBaseFull is AsksDataStorage {
+    function newAsk(address tokenContract, uint256 tokenId) public {
+        StoredAsk storage ask = askForNFT[tokenContract][tokenId];
+        ask.seller = address(0x111);
+        ask.price = 0.4 ether;
+        ask.sellerFundsRecipient = address(0x112);
+        _setERC20Currency(ask, address(0x113));
+        _setTokenGate(ask, address(0x114), 0.1 ether);
+        _setListingFee(ask, 1, address(0x115));
+        _setFindersFee(ask, 2);
+        _setExpiry(ask, block.timestamp + 1_000);
+        _setBuyer(ask, address(0x116));
+    }
+
+    function getExpectedActiveFeatures() public pure returns (uint32) {
+        return
+            FEATURE_MASK_LISTING_FEE |
+            FEATURE_MASK_FINDERS_FEE |
+            FEATURE_MASK_ERC20_CURRENCY |
+            FEATURE_MASK_TOKEN_GATE |
+            FEATURE_MASK_EXPIRY |
+            FEATURE_MASK_BUYER;
+    }
+
+    function hasFeature(uint32 features, uint32 feature) public pure returns (bool) {
+        return _hasFeature(features, feature);
+    }
+
+    function getFullAsk(address tokenContract, uint256 tokenId) public view returns (FullAsk memory) {
+        return _getFullAsk(askForNFT[tokenContract][tokenId]);
+    }
+}
+
+contract StorageTestBaseMinimal is AsksDataStorage {
+    function newAsk(address tokenContract, uint256 tokenId) public {
+        StoredAsk storage ask = askForNFT[tokenContract][tokenId];
+        ask.seller = address(0x111);
+        ask.price = 0.4 ether;
+        ask.sellerFundsRecipient = address(0x111);
+    }
+
+    function getExpectedActiveFeatures() public pure returns (uint32) {
+        return 0;
+    }
+
+    function hasFeature(uint32 features, uint32 feature) public pure returns (bool) {
+        return _hasFeature(features, feature);
+    }
+
+    function getFullAsk(address tokenContract, uint256 tokenId) public view returns (FullAsk memory) {
+        return _getFullAsk(askForNFT[tokenContract][tokenId]);
+    }
+}
+
+/// @title
+/// @notice
+contract AskDataStorageTest is DSTest {
+    VM internal vm;
+
+    function test_AskStorageMinimalInit() public {
+        StorageTestBaseMinimal dataStorage = new StorageTestBaseMinimal();
+        dataStorage.newAsk(address(0x112), 21);
+        AsksDataStorage.FullAsk memory ask = dataStorage.getFullAsk(address(0x112), 21);
+        assertEq(ask.seller, address(0x111), "seller wrong");
+        assertEq(ask.price, 0.4 ether, "price wrong");
+        assertEq(ask.sellerFundsRecipient, address(0x111), "seller funds recipient wrong");
+        assertEq(ask.currency, address(0), "incorrect currency");
+        assertEq(ask.buyer, address(0), "incorrect buyer");
+        assertEq(ask.expiry, 0, "incorrect expiry");
+        assertEq(ask.findersFeeBps, 0, "incorrect finders fee");
+        assertEq(ask.tokenGate.token, address(0), "incorrect token gate");
+        assertEq(ask.tokenGate.minAmount, 0, "incorrect token gate");
+        assertEq(ask.listingFee.listingFeeBps, 0, "incorrect listing fee");
+        assertEq(ask.listingFee.listingFeeRecipient, address(0), "incorrect listing fee");
+    }
+
+    function test_AskStorageInit() public {
+        StorageTestBaseFull dataStorage = new StorageTestBaseFull();
+        dataStorage.newAsk(address(0x121), 21);
+        AsksDataStorage.FullAsk memory ask = dataStorage.getFullAsk(address(0x121), 21);
+        assertEq(ask.seller, address(0x111), "seller wrong");
+        assertEq(ask.price, 0.4 ether, "price wrong");
+        assertEq(ask.sellerFundsRecipient, address(0x112), "seller funds recipient wrong");
+        assertEq(ask.currency, address(0x113), "incorrect currency");
+        assertEq(ask.buyer, address(0x116), "incorrect buyer");
+        assertEq(ask.expiry, block.timestamp + 1_000, "incorrect expiry");
+        assertEq(ask.findersFeeBps, 2, "incorrect finders fee");
+        assertEq(ask.tokenGate.token, address(0x114), "incorrect token gate");
+        assertEq(ask.tokenGate.minAmount, 0.1 ether, "incorrect token gate");
+        assertEq(ask.listingFee.listingFeeBps, 1, "incorrect listing fee");
+        assertEq(ask.listingFee.listingFeeRecipient, address(0x115), "incorrect listing fee");
+    }
+}
