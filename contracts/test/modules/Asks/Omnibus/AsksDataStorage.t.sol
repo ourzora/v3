@@ -11,12 +11,11 @@ contract StorageTestBaseFull is AsksDataStorage {
         StoredAsk storage ask = askForNFT[tokenContract][tokenId];
         ask.seller = address(0x111);
         ask.price = 0.4 ether;
-        ask.sellerFundsRecipient = address(0x112);
         _setERC20Currency(ask, address(0x113));
         _setTokenGate(ask, address(0x114), 0.1 ether);
         _setListingFee(ask, 1, address(0x115));
         _setFindersFee(ask, 2);
-        _setExpiry(ask, block.timestamp + 1_000);
+        _setExpiryAndFundsRecipient(ask, uint96(block.timestamp + 1_000), address(0x112));
         _setBuyer(ask, address(0x116));
     }
 
@@ -26,7 +25,7 @@ contract StorageTestBaseFull is AsksDataStorage {
             FEATURE_MASK_FINDERS_FEE |
             FEATURE_MASK_ERC20_CURRENCY |
             FEATURE_MASK_TOKEN_GATE |
-            FEATURE_MASK_EXPIRY |
+            FEATURE_MASK_RECIPIENT_OR_EXPIRY |
             FEATURE_MASK_BUYER;
     }
 
@@ -44,7 +43,6 @@ contract StorageTestBaseMinimal is AsksDataStorage {
         StoredAsk storage ask = askForNFT[tokenContract][tokenId];
         ask.seller = address(0x111);
         ask.price = 0.4 ether;
-        ask.sellerFundsRecipient = address(0x111);
     }
 
     function getExpectedActiveFeatures() public pure returns (uint32) {

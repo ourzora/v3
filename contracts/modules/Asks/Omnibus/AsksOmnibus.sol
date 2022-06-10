@@ -46,10 +46,26 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         return _interfaceId == type(IAsksOmnibus).interfaceId || _interfaceId == 0x01ffc9a7;
     }
 
+    function createAskMinimal(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint96 _askPrice
+    ) external nonReentrant {
+        // Get the owner of the specified token
+        address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
+        // Ensure the caller is the owner or an approved operator
+        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
+
+        StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
+        ask.features = 0;
+        ask.seller = tokenOwner;
+        ask.price = uint96(_askPrice);
+    }
+
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
-        uint256 _expiry,
+        uint96 _expiry,
         uint256 _askPrice,
         address _sellerFundsRecipient,
         address _askCurrency,
@@ -73,11 +89,6 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
 
-        require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
-        require(_listingFee.listingFeeBps <= 10000, "INVALID_LISTING_FEE");
-        require(_sellerFundsRecipient != address(0), "createAsk must specify _sellerFundsRecipient");
-        require(_expiry == 0 || _expiry > block.timestamp, "expiry cannot be in the past");
-
         ask.features = 0;
 
         if (_listingFee.listingFeeBps > 0) {
@@ -87,6 +98,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         if (_findersFeeBps > 0) {
             require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
+            require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
             _setFindersFee(ask, _findersFeeBps);
         }
 
@@ -95,9 +107,9 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
             _setTokenGate(ask, _tokenGate.token, _tokenGate.minAmount);
         }
 
-        if (_expiry > 0) {
-            require(_expiry > block.timestamp, "Expiry must be in the future");
-            _setExpiry(ask, _expiry);
+        if (_expiry > 0 || (_sellerFundsRecipient != address(0) && _sellerFundsRecipient != tokenOwner)) {
+            require(_expiry == 0 || _expiry > block.timestamp, "Expiry must be in the future");
+            _setExpiryAndFundsRecipient(ask, _expiry, _sellerFundsRecipient);
         }
 
         if (_askCurrency != address(0)) {
@@ -110,7 +122,6 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         ask.seller = tokenOwner;
         ask.price = uint96(_askPrice);
-        ask.sellerFundsRecipient = _sellerFundsRecipient;
 
         // emit AskCreated(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
     }
@@ -162,8 +173,11 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         // Ensure the specified currency matches the ask currency
         require(_currency == currency, "MUST_MATCH_CURRENCY");
 
-        if (_hasFeature(ask.features, FEATURE_MASK_EXPIRY)) {
-            uint256 expiry = _getExpiry(ask);
+        address fundsRecipient = ask.seller;
+
+        if (_hasFeature(ask.features, FEATURE_MASK_RECIPIENT_OR_EXPIRY)) {
+            (uint96 expiry, address storedFundsRecipient) = _getExpiryAndFundsRecipient(ask);
+            fundsRecipient = storedFundsRecipient;
             require(expiry >= block.timestamp, "Ask has expired");
         }
 
@@ -212,7 +226,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         }
 
         // Transfer the remaining profit to the seller
-        _handleOutgoingTransfer(seller, remainingProfit, currency, 50000);
+        _handleOutgoingTransfer(fundsRecipient, remainingProfit, currency, 50000);
 
         // Transfer the NFT to the buyer
         // Reverts if the seller did not approve the ERC721TransferHelper or no longer owns the token

@@ -5,7 +5,6 @@ contract AsksDataStorage {
     struct StoredAsk {
         address seller;
         uint96 price;
-        address sellerFundsRecipient;
         uint32 features;
         mapping(uint32 => uint256) featureData;
     }
@@ -17,7 +16,7 @@ contract AsksDataStorage {
     uint32 constant FEATURE_MASK_FINDERS_FEE = 1 << 4;
     uint32 constant FEATURE_MASK_ERC20_CURRENCY = 1 << 5;
     uint32 constant FEATURE_MASK_TOKEN_GATE = 1 << 6;
-    uint32 constant FEATURE_MASK_EXPIRY = 1 << 7;
+    uint32 constant FEATURE_MASK_RECIPIENT_OR_EXPIRY = 1 << 7;
     uint32 constant FEATURE_MASK_BUYER = 1 << 8;
 
     struct ListingFee {
@@ -69,13 +68,19 @@ contract AsksDataStorage {
         ask.featureData[FEATURE_MASK_TOKEN_GATE + 1] = minAmount;
     }
 
-    function _getExpiry(StoredAsk storage ask) internal view returns (uint256) {
-        return ask.featureData[FEATURE_MASK_EXPIRY];
+    function _getExpiryAndFundsRecipient(StoredAsk storage ask) internal view returns (uint96 expiry, address fundsRecipient) {
+        uint256 data = ask.featureData[FEATURE_MASK_RECIPIENT_OR_EXPIRY];
+        expiry = uint96(data);
+        fundsRecipient = address(uint160(data >> 96));
     }
 
-    function _setExpiry(StoredAsk storage ask, uint256 expiry) internal {
-        ask.features |= FEATURE_MASK_EXPIRY;
-        ask.featureData[FEATURE_MASK_EXPIRY] = expiry;
+    function _setExpiryAndFundsRecipient(
+        StoredAsk storage ask,
+        uint96 expiry,
+        address fundsRecipient
+    ) internal {
+        ask.features |= FEATURE_MASK_RECIPIENT_OR_EXPIRY;
+        ask.featureData[FEATURE_MASK_RECIPIENT_OR_EXPIRY] = expiry | (uint256(uint160(fundsRecipient)) << 96);
     }
 
     function _getERC20CurrencyWithFallback(StoredAsk storage ask) internal view returns (address) {
@@ -141,8 +146,8 @@ contract AsksDataStorage {
             fullAsk.currency = _getERC20CurrencyWithFallback(ask);
         }
 
-        if (_hasFeature(features, FEATURE_MASK_EXPIRY)) {
-            fullAsk.expiry = _getExpiry(ask);
+        if (_hasFeature(features, FEATURE_MASK_RECIPIENT_OR_EXPIRY)) {
+            (fullAsk.expiry, fullAsk.sellerFundsRecipient) = _getExpiryAndFundsRecipient(ask);
         }
 
         if (_hasFeature(features, FEATURE_MASK_BUYER)) {
@@ -151,7 +156,6 @@ contract AsksDataStorage {
 
         fullAsk.seller = ask.seller;
         fullAsk.price = ask.price;
-        fullAsk.sellerFundsRecipient = ask.sellerFundsRecipient;
 
         return fullAsk;
     }
