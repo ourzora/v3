@@ -101,7 +101,7 @@ contract AsksCoreEthTest is DSTest {
         asks.createAsk(address(token), 0, 1 ether);
     }
 
-    function test_CreateAsk() public {
+    function test_CoreETHCreateAsk() public {
         vm.prank(address(seller));
         asks.createAsk(address(token), 0, 1 ether);
 

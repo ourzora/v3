@@ -116,7 +116,7 @@ contract AsksOmnibusTest is DSTest {
             0,
             0,
             1 ether,
-            address(sellerFundsRecipient),
+            address(seller),
             address(0),
             address(0),
             0,
@@ -125,12 +125,17 @@ contract AsksOmnibusTest is DSTest {
         );
     }
 
+    function test_CreateAskMinimalTiny() public {
+        vm.prank(address(seller));
+        asks.createAskMinimal(address(token), 0, 1 ether);
+    }
+
     function test_CreateAsk() public {
         vm.prank(address(seller));
         asks.createAsk(
             address(token),
             0,
-            block.timestamp + 1 days,
+            uint96(block.timestamp + 1 days),
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
