@@ -41,6 +41,7 @@ contract AsksOmnibusTest is DSTest {
     Zorb internal listingFeeRecipient;
     Zorb internal royaltyRecipient;
     Zorb internal buyer;
+    Zorb internal other;
 
     function setUp() public {
         // Cheatcodes
@@ -65,6 +66,7 @@ contract AsksOmnibusTest is DSTest {
         finder = new Zorb(address(ZMM));
         royaltyRecipient = new Zorb(address(ZMM));
         listingFeeRecipient = new Zorb(address(ZMM));
+        other = new Zorb(address(ZMM));
 
         // Deploy mocks
         royaltyEngine = new RoyaltyEngine(address(royaltyRecipient));
@@ -90,7 +92,7 @@ contract AsksOmnibusTest is DSTest {
         vm.prank(address(buyer));
         weth.deposit{value: 50 ether}();
 
-        // Users approve ReserveAuction module
+        // Users approve AsksOmnibus module
         seller.setApprovalForModule(address(asks), true);
         buyer.setApprovalForModule(address(asks), true);
 
@@ -111,23 +113,41 @@ contract AsksOmnibusTest is DSTest {
 
     function test_CreateAskMinimal() public {
         vm.prank(address(seller));
-        asks.createAsk(
-            address(token),
-            0,
-            0,
-            1 ether,
-            address(seller),
-            address(0),
-            address(0),
-            0,
-            AsksDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            AsksDataStorage.TokenGate({token: address(0), minAmount: 0})
-        );
+        asks.createAskMinimal(address(token), 0, 1 ether);
+        AsksDataStorage.FullAsk memory ask = asks.getFullAsk(address(token), 0);
+        assertEq(ask.seller, address(seller));
+        assertEq(ask.sellerFundsRecipient, address(0));
+        assertEq(ask.currency, address(0));
+        assertEq(ask.buyer, address(0));
+        assertEq(ask.expiry, 0);
+        assertEq(ask.findersFeeBps, 0);
+        assertEq(ask.price, 1 ether);
+        assertEq(ask.tokenGate.token, address(0));
+        assertEq(ask.tokenGate.minAmount, 0);
+        assertEq(ask.listingFee.listingFeeBps, 0);
+        assertEq(ask.listingFee.listingFeeRecipient, address(0));
     }
 
-    function test_CreateAskMinimalTiny() public {
-        vm.prank(address(seller));
+    function testRevert_CreateAskMinimalNotTokenOwnerOrOperator() public {
+        vm.prank(address(other));
+        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
         asks.createAskMinimal(address(token), 0, 1 ether);
+    }
+
+    function testRevert_CreateAskMinimalModuleNotApproved() public {
+        vm.startPrank(address(seller));
+        seller.setApprovalForModule(address(asks), false);
+        vm.expectRevert("MODULE_NOT_APPROVED");
+        asks.createAskMinimal(address(token), 0, 1 ether);
+        vm.stopPrank();
+    }
+
+    function testRevert_CreateAskMinimalTransferHelperNotApproved() public {
+        vm.startPrank(address(seller));
+        token.setApprovalForAll(address(erc721TransferHelper), false);
+        vm.expectRevert("TRANSFER_HELPER_NOT_APPROVED");
+        asks.createAskMinimal(address(token), 0, 1 ether);
+        vm.stopPrank();
     }
 
     function test_CreateAsk() public {
@@ -144,5 +164,72 @@ contract AsksOmnibusTest is DSTest {
             AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
             AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
         );
+        AsksDataStorage.FullAsk memory ask = asks.getFullAsk(address(token), 0);
+        assertEq(ask.seller, address(seller));
+        assertEq(ask.sellerFundsRecipient, address(sellerFundsRecipient));
+        assertEq(ask.currency, address(weth));
+        assertEq(ask.buyer, address(buyer));
+        assertEq(ask.expiry, uint96(block.timestamp + 1 days));
+        assertEq(ask.findersFeeBps, 1000);
+        assertEq(ask.price, 1 ether);
+        assertEq(ask.tokenGate.token, address(erc20));
+        assertEq(ask.tokenGate.minAmount, 1);
+        assertEq(ask.listingFee.listingFeeBps, 1);
+        assertEq(ask.listingFee.listingFeeRecipient, address(listingFeeRecipient));
+    }
+
+    function testRevert_CreateAskNotTokenOwnerOrOperator() public {
+        vm.prank(address(other));
+        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(buyer),
+            1000,
+            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
+            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+        );
+    }
+
+    function testRevert_CreateAskModuleNotApproved() public {
+        vm.startPrank(address(seller));
+        seller.setApprovalForModule(address(asks), false);
+        vm.expectRevert("MODULE_NOT_APPROVED");
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(buyer),
+            1000,
+            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
+            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+        );
+        vm.stopPrank();
+    }
+
+    function testRevert_CreateAskTransferHelperNotApproved() public {
+        vm.startPrank(address(seller));
+        token.setApprovalForAll(address(erc721TransferHelper), false);
+        vm.expectRevert("TRANSFER_HELPER_NOT_APPROVED");
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(buyer),
+            1000,
+            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
+            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+        );
+        vm.stopPrank();
     }
 }

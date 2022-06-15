@@ -7,10 +7,16 @@ import {AsksDataStorage} from "./AsksDataStorage.sol";
 /// @author kulkarohan
 /// @notice Interface for Reserve Auction Core ERC-20
 interface IAsksOmnibus {
+    function createAskMinimal(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _askPrice
+    ) external;
+
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
-        uint256 _expiry,
+        uint96 _expiry,
         uint256 _askPrice,
         address _sellerFundsRecipient,
         address _askCurrency,

@@ -3,15 +3,14 @@ pragma solidity 0.8.10;
 
 contract AsksDataStorage {
     struct StoredAsk {
+        uint256 price;
         address seller;
-        uint96 price;
         uint32 features;
         mapping(uint32 => uint256) featureData;
     }
 
     mapping(address => mapping(uint256 => StoredAsk)) public askForNFT;
 
-    // TODO: audit bit shift trickery
     uint32 constant FEATURE_MASK_LISTING_FEE = 1 << 3;
     uint32 constant FEATURE_MASK_FINDERS_FEE = 1 << 4;
     uint32 constant FEATURE_MASK_ERC20_CURRENCY = 1 << 5;
@@ -108,13 +107,13 @@ contract AsksDataStorage {
     }
 
     struct FullAsk {
+        uint256 price;
         address seller;
+        uint96 expiry;
         address sellerFundsRecipient;
+        uint16 findersFeeBps;
         address currency;
         address buyer;
-        uint256 expiry;
-        uint16 findersFeeBps;
-        uint96 price;
         TokenGate tokenGate;
         ListingFee listingFee;
     }

@@ -49,17 +49,19 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     function createAskMinimal(
         address _tokenContract,
         uint256 _tokenId,
-        uint96 _askPrice
+        uint256 _askPrice
     ) external nonReentrant {
         // Get the owner of the specified token
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
         // Ensure the caller is the owner or an approved operator
         require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
+        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
+        require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "TRANSFER_HELPER_NOT_APPROVED");
 
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
         ask.features = 0;
         ask.seller = tokenOwner;
-        ask.price = uint96(_askPrice);
+        ask.price = _askPrice;
     }
 
     function createAsk(
@@ -76,16 +78,9 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
-        require(
-            msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender),
-            "createAsk must be token owner or operator"
-        );
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "createAsk must approve AsksOmnibus module");
-        require(
-            IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)),
-            "createAsk must approve ERC721TransferHelper as operator"
-        );
-        require(_askPrice <= type(uint96).max, "INVALID_PRICE");
+        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
+        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
+        require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "TRANSFER_HELPER_NOT_APPROVED");
 
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
 
@@ -121,7 +116,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         }
 
         ask.seller = tokenOwner;
-        ask.price = uint96(_askPrice);
+        ask.price = _askPrice;
 
         // emit AskCreated(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
     }
@@ -162,7 +157,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         require(seller != address(0), "INACTIVE_ASK");
 
         // Cache the price
-        uint256 price = uint256(ask.price);
+        uint256 price = ask.price;
 
         // Ensure the specified price matches the ask price
         require(_price == price, "MUST_MATCH_PRICE");
@@ -236,5 +231,10 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         // Remove the ask from storage
         delete askForNFT[_tokenContract][_tokenId];
+    }
+
+    function getFullAsk(address _tokenContract, uint256 _tokenId) external view returns (FullAsk memory) {
+        StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
+        return _getFullAsk(ask);
     }
 }

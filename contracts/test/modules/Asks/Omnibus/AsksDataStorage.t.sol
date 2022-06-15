@@ -43,6 +43,7 @@ contract StorageTestBaseMinimal is AsksDataStorage {
         StoredAsk storage ask = askForNFT[tokenContract][tokenId];
         ask.seller = address(0x111);
         ask.price = 0.4 ether;
+        ask.features = 0;
     }
 
     function getExpectedActiveFeatures() public pure returns (uint32) {
@@ -69,7 +70,7 @@ contract AskDataStorageTest is DSTest {
         AsksDataStorage.FullAsk memory ask = dataStorage.getFullAsk(address(0x112), 21);
         assertEq(ask.seller, address(0x111), "seller wrong");
         assertEq(ask.price, 0.4 ether, "price wrong");
-        assertEq(ask.sellerFundsRecipient, address(0x111), "seller funds recipient wrong");
+        assertEq(ask.sellerFundsRecipient, address(0), "seller funds recipient wrong");
         assertEq(ask.currency, address(0), "incorrect currency");
         assertEq(ask.buyer, address(0), "incorrect buyer");
         assertEq(ask.expiry, 0, "incorrect expiry");
