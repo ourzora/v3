@@ -19,6 +19,32 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
+    /// @notice Emitted when an ask is created
+    /// @param tokenContract The ERC-721 token address of the created ask
+    /// @param tokenId The ERC-721 token ID of the created ask
+    /// @param ask The metadata of the created ask
+    event AskCreated(address indexed tokenContract, uint256 indexed tokenId, FullAsk ask);
+
+    /// @notice Emitted when an ask price is updated
+    /// @param tokenContract The ERC-721 token address of the updated ask
+    /// @param tokenId The ERC-721 token ID of the updated ask
+    /// @param ask The metadata of the updated ask
+    event AskPriceUpdated(address indexed tokenContract, uint256 indexed tokenId, FullAsk ask);
+
+    /// @notice Emitted when an ask is canceled
+    /// @param tokenContract The ERC-721 token address of the canceled ask
+    /// @param tokenId The ERC-721 token ID of the canceled ask
+    /// @param ask The metadata of the canceled ask
+    event AskCanceled(address indexed tokenContract, uint256 indexed tokenId, FullAsk ask);
+
+    /// @notice Emitted when an ask is filled
+    /// @param tokenContract The ERC-721 token address of the filled ask
+    /// @param tokenId The ERC-721 token ID of the filled ask
+    /// @param buyer The buyer address of the filled ask
+    /// @param finder The address of finder who referred the ask
+    /// @param ask The metadata of the filled ask
+    event AskFilled(address indexed tokenContract, uint256 indexed tokenId, address indexed buyer, address finder, FullAsk ask);
+
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
     /// @param _royaltyEngine The Manifold Royalty Engine address
@@ -62,6 +88,8 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         ask.features = 0;
         ask.seller = tokenOwner;
         ask.price = _askPrice;
+
+        emit AskCreated(_tokenContract, _tokenId, _getFullAsk(ask));
     }
 
     function createAsk(
@@ -118,7 +146,24 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         ask.seller = tokenOwner;
         ask.price = _askPrice;
 
-        // emit AskCreated(_tokenContract, _tokenId, askForNFT[_tokenContract][_tokenId]);
+        emit AskCreated(_tokenContract, _tokenId, _getFullAsk(ask));
+    }
+
+    function setAskPrice(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _askPrice,
+        address _askCurrency
+    ) external nonReentrant {
+        StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
+
+        require(ask.seller == msg.sender, "setAskPrice must be seller");
+
+        ask.price = _askPrice;
+
+        _setETHorERC20Currency(ask, _askCurrency);
+
+        emit AskPriceUpdated(_tokenContract, _tokenId, _getFullAsk(ask));
     }
 
     function cancelAsk(address _tokenContract, uint256 _tokenId) external nonReentrant {
@@ -134,7 +179,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
             "ONLY_SELLER_OR_OPERATOR_OR_TOKEN_OWNER"
         );
 
-        //emit AuctionCanceled(_tokenContract, _tokenId, _getFullAuction(auction));
+        emit AskCanceled(_tokenContract, _tokenId, _getFullAsk(ask));
 
         // Remove the auction from storage
         delete askForNFT[_tokenContract][_tokenId];
@@ -227,7 +272,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         // Reverts if the seller did not approve the ERC721TransferHelper or no longer owns the token
         erc721TransferHelper.transferFrom(_tokenContract, seller, msg.sender, _tokenId);
 
-        // emit AskFilled(_tokenContract, _tokenId, msg.sender, ask);
+        emit AskFilled(_tokenContract, _tokenId, msg.sender, _finder, _getFullAsk(ask));
 
         // Remove the ask from storage
         delete askForNFT[_tokenContract][_tokenId];

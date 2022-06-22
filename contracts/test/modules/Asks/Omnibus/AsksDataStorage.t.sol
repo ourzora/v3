@@ -29,12 +29,28 @@ contract StorageTestBaseFull is AsksDataStorage {
             FEATURE_MASK_BUYER;
     }
 
-    function hasFeature(uint32 features, uint32 feature) public pure returns (bool) {
-        return _hasFeature(features, feature);
+    function hasFeature(
+        address tokenContract,
+        uint256 tokenId,
+        uint32 feature
+    ) public view returns (bool) {
+        StoredAsk storage ask = askForNFT[tokenContract][tokenId];
+        return _hasFeature(ask.features, feature);
     }
 
     function getFullAsk(address tokenContract, uint256 tokenId) public view returns (FullAsk memory) {
         return _getFullAsk(askForNFT[tokenContract][tokenId]);
+    }
+
+    function updatePrice(
+        address tokenContract,
+        uint256 tokenId,
+        address currency,
+        uint256 price
+    ) public {
+        StoredAsk storage ask = askForNFT[tokenContract][tokenId];
+        _setETHorERC20Currency(ask, currency);
+        ask.price = price;
     }
 }
 
@@ -50,8 +66,13 @@ contract StorageTestBaseMinimal is AsksDataStorage {
         return 0;
     }
 
-    function hasFeature(uint32 features, uint32 feature) public pure returns (bool) {
-        return _hasFeature(features, feature);
+    function hasFeature(
+        address tokenContract,
+        uint256 tokenId,
+        uint32 feature
+    ) public view returns (bool) {
+        StoredAsk storage ask = askForNFT[tokenContract][tokenId];
+        return _hasFeature(ask.features, feature);
     }
 
     function getFullAsk(address tokenContract, uint256 tokenId) public view returns (FullAsk memory) {
@@ -61,8 +82,15 @@ contract StorageTestBaseMinimal is AsksDataStorage {
 
 /// @title
 /// @notice
-contract AskDataStorageTest is DSTest {
+contract AsksDataStorageTest is DSTest {
     VM internal vm;
+
+    uint32 constant FEATURE_MASK_LISTING_FEE = 1 << 3;
+    uint32 constant FEATURE_MASK_FINDERS_FEE = 1 << 4;
+    uint32 constant FEATURE_MASK_ERC20_CURRENCY = 1 << 5;
+    uint32 constant FEATURE_MASK_TOKEN_GATE = 1 << 6;
+    uint32 constant FEATURE_MASK_RECIPIENT_OR_EXPIRY = 1 << 7;
+    uint32 constant FEATURE_MASK_BUYER = 1 << 8;
 
     function test_AskStorageMinimalInit() public {
         StorageTestBaseMinimal dataStorage = new StorageTestBaseMinimal();
@@ -96,5 +124,18 @@ contract AskDataStorageTest is DSTest {
         assertEq(ask.tokenGate.minAmount, 0.1 ether, "incorrect token gate");
         assertEq(ask.listingFee.listingFeeBps, 1, "incorrect listing fee");
         assertEq(ask.listingFee.listingFeeRecipient, address(0x115), "incorrect listing fee");
+    }
+
+    function test_AskStorageUpdatePrice() public {
+        StorageTestBaseFull dataStorage = new StorageTestBaseFull();
+        dataStorage.newAsk(address(0x121), 21);
+        AsksDataStorage.FullAsk memory ask = dataStorage.getFullAsk(address(0x121), 21);
+        assertEq(ask.price, 0.4 ether, "price wrong");
+        assertEq(ask.currency, address(0x113), "incorrect currency");
+        dataStorage.updatePrice(address(0x121), 21, address(0), 1 ether);
+        ask = dataStorage.getFullAsk(address(0x121), 21);
+        assertEq(ask.price, 1 ether, "price wrong");
+        assertEq(ask.currency, address(0), "incorrect currency");
+        assertTrue(!dataStorage.hasFeature(address(0x121), 21, FEATURE_MASK_ERC20_CURRENCY));
     }
 }

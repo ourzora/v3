@@ -94,6 +94,20 @@ contract AsksDataStorage {
         ask.featureData[FEATURE_MASK_ERC20_CURRENCY] = uint256(uint160(currency));
     }
 
+    function _setETHorERC20Currency(StoredAsk storage ask, address currency) internal {
+        // turn off erc20 feature if previous currency was erc20 and new currency is eth
+        if (currency == address(0) && _hasFeature(ask.features, FEATURE_MASK_ERC20_CURRENCY)) {
+            ask.features &= ~FEATURE_MASK_ERC20_CURRENCY;
+        }
+        if (currency != address(0)) {
+            // turn on erc20 feature if previous currency was eth and new currency is erc20
+            if (!_hasFeature(ask.features, FEATURE_MASK_ERC20_CURRENCY)) {
+                ask.features |= FEATURE_MASK_ERC20_CURRENCY;
+            }
+            ask.featureData[FEATURE_MASK_ERC20_CURRENCY] = uint256(uint160(currency));
+        }
+    }
+
     function _getBuyerWithFallback(StoredAsk storage ask) internal view returns (address) {
         if (!_hasFeature(ask.features, FEATURE_MASK_BUYER)) {
             return address(0);
