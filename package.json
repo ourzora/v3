@@ -8,8 +8,8 @@
     "url": "https://github.com/ourzora/v3.git"
   },
   "files": [
-    "./dist/**/*",
-    "./dist/*"
+    "dist/**/*",
+    "dist/*"
   ],
   "dependencies": {
     "@manifoldxyz/royalty-registry-solidity": "^1.0.9",
