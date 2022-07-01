@@ -28,6 +28,13 @@ interface IAsksOmnibus {
 
     function cancelAsk(address _tokenContract, uint256 _tokenId) external;
 
+    function setAskPrice(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _askPrice,
+        address _askCurrency
+    ) external;
+
     function fillAsk(
         address _tokenContract,
         uint256 _tokenId,
