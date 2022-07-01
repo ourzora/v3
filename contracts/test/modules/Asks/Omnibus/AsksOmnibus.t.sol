@@ -74,7 +74,7 @@ contract AsksOmnibusTest is DSTest {
         token = new TestERC721();
         weth = new WETH();
 
-        // Deploy Reserve Auction Finders ERC-20
+        // Deploy Asks Omnibus
         asks = new AsksOmnibus(address(erc20TransferHelper), address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(asks));
 
@@ -231,5 +231,70 @@ contract AsksOmnibusTest is DSTest {
             AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
         );
         vm.stopPrank();
+    }
+
+    /// ------------ FILL ASK ------------ ///
+
+    function test_FillAsk() public {
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(buyer),
+            1000,
+            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
+            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+        );
+
+        vm.prank(address(buyer));
+        asks.fillAsk(address(token), 0, 1 ether, address(weth), address(finder));
+
+        assertEq(weth.balanceOf(address(royaltyRecipient)), 0.05 ether);
+        assertEq(weth.balanceOf(address(finder)), 0.95 ether / 10);
+        assertEq(weth.balanceOf(address(listingFeeRecipient)), 0.95 ether / 10000);
+        assertEq(weth.balanceOf(address(sellerFundsRecipient)), 0.95 ether - (0.95 ether / 10) - (0.95 ether / 10000));
+    }
+
+    /// ------------ CANCEL ASK ------------ ///
+
+    function test_CancelAsk() public {
+        vm.startPrank(address(seller));
+
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(buyer),
+            1000,
+            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
+            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+        );
+
+        asks.cancelAsk(address(token), 0);
+
+        AsksDataStorage.FullAsk memory ask = asks.getFullAsk(address(token), 0);
+        assertEq(ask.seller, address(0));
+        assertEq(ask.sellerFundsRecipient, address(0));
+        assertEq(ask.currency, address(0));
+        assertEq(ask.buyer, address(0));
+        assertEq(ask.expiry, 0);
+        assertEq(ask.findersFeeBps, 0);
+        assertEq(ask.price, 0);
+        assertEq(ask.tokenGate.token, address(0));
+        assertEq(ask.tokenGate.minAmount, 0);
+        assertEq(ask.listingFee.listingFeeBps, 0);
+        assertEq(ask.listingFee.listingFeeRecipient, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(address(buyer));
+        vm.expectRevert("INACTIVE_ASK");
+        asks.fillAsk(address(token), 0, 1 ether, address(weth), address(0));
     }
 }

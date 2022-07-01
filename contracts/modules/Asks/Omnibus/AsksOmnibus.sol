@@ -15,6 +15,7 @@ import {AsksDataStorage} from "./AsksDataStorage.sol";
 
 /// @title Asks
 /// @author jgeary
+/// @notice Omnibus module for multi-featured asks for ERC-721 tokens
 contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1, AsksDataStorage {
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
@@ -72,6 +73,10 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         return _interfaceId == type(IAsksOmnibus).interfaceId || _interfaceId == 0x01ffc9a7;
     }
 
+    /// @notice Creates a simple ETH ask for a given NFT
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The id of the ERC-721 token
+    /// @param _askPrice The ETH price to fill the ask
     function createAskMinimal(
         address _tokenContract,
         uint256 _tokenId,
@@ -79,8 +84,10 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     ) external nonReentrant {
         // Get the owner of the specified token
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
+
         // Ensure the caller is the owner or an approved operator
         require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
+
         require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
         require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "TRANSFER_HELPER_NOT_APPROVED");
 
@@ -92,6 +99,17 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         emit AskCreated(_tokenContract, _tokenId, _getFullAsk(ask));
     }
 
+    /// @notice Creates an ask for a given NFT
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The id of the ERC-721 token
+    /// @param _expiry Timestamp after which the ask expires
+    /// @param _askPrice The price to fill the ask
+    /// @param _sellerFundsRecipient Address that receives funds for seller
+    /// @param _askCurrency Address of ERC20 token (or 0x0 for ETH)
+    /// @param _buyer Specifid buyer for private asks
+    /// @param _findersFeeBps Finders fee basis points
+    /// @param _listingFee ListingFee struct specifying fee and recipient
+    /// @param _tokenGate TokenGate struct specifying currency and minimum amount
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -121,7 +139,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         if (_findersFeeBps > 0) {
             require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
-            require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
+            require(_findersFeeBps + _listingFee.listingFeeBps <= 10000, "listingFee and findersFee must be less than or equal to 10000");
             _setFindersFee(ask, _findersFeeBps);
         }
 
@@ -149,6 +167,11 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         emit AskCreated(_tokenContract, _tokenId, _getFullAsk(ask));
     }
 
+    /// @notice Updates the price of a given NFT's live ask
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The id of the ERC-721 token
+    /// @param _askPrice The price to fill the ask
+    /// @param _askCurrency Address of ERC20 token (or 0x0 for ETH)
     function setAskPrice(
         address _tokenContract,
         uint256 _tokenId,
@@ -166,6 +189,9 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         emit AskPriceUpdated(_tokenContract, _tokenId, _getFullAsk(ask));
     }
 
+    /// @notice Cancels an ask for a given NFT
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The id of the ERC-721 token
     function cancelAsk(address _tokenContract, uint256 _tokenId) external nonReentrant {
         // Get the auction for the specified token
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
@@ -185,6 +211,12 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         delete askForNFT[_tokenContract][_tokenId];
     }
 
+    /// @notice Fills an ask for a given NFT
+    /// @param _tokenContract The address of the ERC-721 token
+    /// @param _tokenId The id of the ERC-721 token
+    /// @param _price The ask price
+    /// @param _currency The ask currency
+    /// @param _finder The ask finder
     function fillAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -249,20 +281,20 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
             // Transfer the amount to the listing fee recipient
             _handleOutgoingTransfer(listingFeeInfo.listingFeeRecipient, listingFee, currency, 50000);
 
+            if (_finder != address(0) && _hasFeature(ask.features, FEATURE_MASK_FINDERS_FEE)) {
+                uint16 findersFeeBps = _getFindersFee(ask);
+                // Get the listing fee from the remaining profit
+                uint256 findersFee = (remainingProfit * findersFeeBps) / 10000;
+
+                // Transfer the amount to the listing fee recipient
+                _handleOutgoingTransfer(_finder, findersFee, currency, 50000);
+
+                // Update the remaining profit
+                remainingProfit -= findersFee;
+            }
+
             // Update the remaining profit
             remainingProfit -= listingFee;
-        }
-
-        if (_finder != address(0) && _hasFeature(ask.features, FEATURE_MASK_FINDERS_FEE)) {
-            uint16 findersFeeBps = _getFindersFee(ask);
-            // Get the listing fee from the remaining profit
-            uint256 findersFee = (remainingProfit * findersFeeBps) / 10000;
-
-            // Transfer the amount to the listing fee recipient
-            _handleOutgoingTransfer(_finder, findersFee, currency, 50000);
-
-            // Update the remaining profit
-            remainingProfit -= findersFee;
         }
 
         // Transfer the remaining profit to the seller
