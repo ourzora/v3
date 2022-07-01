@@ -257,6 +257,40 @@ contract AsksOmnibusTest is DSTest {
         assertEq(weth.balanceOf(address(finder)), 0.95 ether / 10);
         assertEq(weth.balanceOf(address(listingFeeRecipient)), 0.95 ether / 10000);
         assertEq(weth.balanceOf(address(sellerFundsRecipient)), 0.95 ether - (0.95 ether / 10) - (0.95 ether / 10000));
+        assertEq(token.ownerOf(0), address(buyer));
+    }
+
+    /// ------------ SET PRICE ------------ ///
+
+    function test_SetPrice() public {
+        vm.startPrank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(buyer),
+            1000,
+            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
+            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+        );
+        asks.setAskPrice(address(token), 0, 2 ether, address(weth));
+        vm.stopPrank();
+
+        AsksDataStorage.FullAsk memory ask = asks.getFullAsk(address(token), 0);
+        assertEq(ask.seller, address(seller));
+        assertEq(ask.sellerFundsRecipient, address(sellerFundsRecipient));
+        assertEq(ask.currency, address(weth));
+        assertEq(ask.buyer, address(buyer));
+        assertEq(ask.expiry, uint96(block.timestamp + 1 days));
+        assertEq(ask.findersFeeBps, 1000);
+        assertEq(ask.price, 2 ether);
+        assertEq(ask.tokenGate.token, address(erc20));
+        assertEq(ask.tokenGate.minAmount, 1);
+        assertEq(ask.listingFee.listingFeeBps, 1);
+        assertEq(ask.listingFee.listingFeeRecipient, address(listingFeeRecipient));
     }
 
     /// ------------ CANCEL ASK ------------ ///
