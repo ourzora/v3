@@ -131,7 +131,7 @@ fi
 MODULE_MANAGER_ADDR=$(cast --to-checksum-address $MODULE_MANAGER_ADDR)
 
 echo "Submitting contract to etherscan for verification..."
-MODULE_MANAGER_ENCODED_ARGS=$(cast abi-encode "constructor(address,address)" "$REGISTRAR" "$FEE_SETTINGS_ADDR")
+MODULE_MANAGER_ENCODED_ARGS=$(cast abi-encode "f(address,address)" "$REGISTRAR" "$FEE_SETTINGS_ADDR")
 for I in 0 1 2 3 4
 do
     {
