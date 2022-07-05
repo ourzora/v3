@@ -88,7 +88,7 @@ then
     echo "Invalid constructor abi argument. Exiting."
     exit 1
 fi
-if [[ $4 = constructor* ]]
+if [[ $4 = f* ]]
 then
     CONSTRUCTOR_ABI="$4"
     if [ -z "$5" ]
@@ -145,7 +145,7 @@ fi
 MODULE_ADDR=$(cast --to-checksum-address $MODULE_ADDR)
 echo "Submitting contract to etherscan for verification..."
 MODULE_VERIFY_CMD="forge verify-contract --chain-id $CHAIN_ID --num-of-optimizations 500000"
-if [[ $CONSTRUCTOR_ABI = constructor* ]]
+if [[ $CONSTRUCTOR_ABI = f* ]]
 then
     MODULE_ENCODED_ARGS=$(cast abi-encode $CONSTRUCTOR_ABI "$@")
     MODULE_VERIFY_CMD="${MODULE_VERIFY_CMD} --constructor-args $MODULE_ENCODED_ARGS"
@@ -163,7 +163,7 @@ do
         else
             if (( 4 > $I ))
             then
-                sleep 15
+                sleep 20
             else
                 echo "Unable to submit contract verification. Exiting."
                 exit 1
