@@ -19,7 +19,7 @@ on:
         description: "Starting from modules folder, i.e Asks/V1.1/AsksV1_1.sol"
         required: true
       constructor_abi:
-        description: 'Constructor abi in quotes, i.e. "constructor(address,string)"'
+        description: 'Constructor abi in quotes, using 'f' as the function name i.e. "f(address,string)"'
         required: true
       constructor_args:
         description: 'Arbitrary constructor args, exactly how you pass them into cli. i.e.: 0x123 0 1 "This 4th arg is a string with spaces"'

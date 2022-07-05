@@ -83,7 +83,7 @@ then
     echo "Missing constructor abi argument. Exiting."
     exit 1
 fi
-if [ "$4" != "noargs" ] && [[ $4 != constructor* ]]
+if [ "$4" != "noargs" ] && [[ $4 != f* ]]
 then
     echo "Invalid constructor abi argument. Exiting."
     exit 1
