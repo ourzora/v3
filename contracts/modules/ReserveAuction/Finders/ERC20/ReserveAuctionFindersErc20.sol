@@ -20,76 +20,26 @@ contract ReserveAuctionFindersErc20 is
     FeePayoutSupportV1,
     ModuleNamingSupportV1
 {
+    ///                                                          ///
+    ///                          CONSTANTS                       ///
+    ///                                                          ///
+
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint16 constant TIME_BUFFER = 15 minutes;
 
     /// @notice The minimum percentage difference between two bids
     uint8 constant MIN_BID_INCREMENT_PERCENTAGE = 10;
 
+    ///                                                          ///
+    ///                          IMMUTABLES                      ///
+    ///                                                          ///
+
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
-    /// @notice The auction for a given NFT, if one exists
-    /// @dev ERC-721 token contract => ERC-721 token id => Auction
-    mapping(address => mapping(uint256 => Auction)) public auctionForNFT;
-
-    /// @notice The metadata for a given auction
-    /// @param seller The address of the seller
-    /// @param reservePrice The reserve price to start the auction
-    /// @param sellerFundsRecipient The address where funds are sent after the auction
-    /// @param highestBid The highest bid of the auction
-    /// @param highestBidder The address of the highest bidder
-    /// @param startTime The time that the first bid can be placed
-    /// @param currency The address of the ERC-20 token, or address(0) for ETH, required to place a bid
-    /// @param firstBidTime The time that the first bid is placed
-    /// @param finder The address that referred the highest bid
-    /// @param duration The length of time that the auction runs after the first bid is placed
-    /// @param findersFeeBps The fee that is sent to the referrer of the highest bid
-    struct Auction {
-        address seller;
-        uint96 reservePrice;
-        address sellerFundsRecipient;
-        uint96 highestBid;
-        address highestBidder;
-        uint96 startTime;
-        address currency;
-        uint96 firstBidTime;
-        address finder;
-        uint80 duration;
-        uint16 findersFeeBps;
-    }
-
-    /// @notice Emitted when an auction is created
-    /// @param tokenContract The ERC-721 token address of the created auction
-    /// @param tokenId The ERC-721 token id of the created auction
-    /// @param auction The metadata of the created auction
-    event AuctionCreated(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
-
-    /// @notice Emitted when a reserve price is updated
-    /// @param tokenContract The ERC-721 token address of the updated auction
-    /// @param tokenId The ERC-721 token id of the updated auction
-    /// @param auction The metadata of the updated auction
-    event AuctionReservePriceUpdated(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
-
-    /// @notice Emitted when an auction is canceled
-    /// @param tokenContract The ERC-721 token address of the canceled auction
-    /// @param tokenId The ERC-721 token id of the canceled auction
-    /// @param auction The metadata of the canceled auction
-    event AuctionCanceled(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
-
-    /// @notice Emitted when a bid is placed
-    /// @param tokenContract The ERC-721 token address of the auction
-    /// @param tokenId The ERC-721 token id of the auction
-    /// @param firstBid If the bid started the auction
-    /// @param extended If the bid extended the auction
-    /// @param auction The metadata of the auction
-    event AuctionBid(address indexed tokenContract, uint256 indexed tokenId, bool firstBid, bool extended, Auction auction);
-
-    /// @notice Emitted when an auction has ended
-    /// @param tokenContract The ERC-721 token address of the auction
-    /// @param tokenId The ERC-721 token id of the auction
-    /// @param auction The metadata of the settled auction
-    event AuctionEnded(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
+    ///                                                          ///
+    ///                          CONSTRUCTOR                     ///
+    ///                                                          ///
 
     /// @param _erc20TransferHelper The ZORA ERC-20 Transfer Helper address
     /// @param _erc721TransferHelper The ZORA ERC-721 Transfer Helper address
@@ -110,6 +60,10 @@ contract ReserveAuctionFindersErc20 is
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
 
+    ///                                                          ///
+    ///                            EIP-165                       ///
+    ///                                                          ///
+
     /// @notice Implements EIP-165 for standard interface detection
     /// @dev `0x01ffc9a7` is the IERC165 interface id
     /// @param _interfaceId The identifier of a given interface
@@ -117,6 +71,44 @@ contract ReserveAuctionFindersErc20 is
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
         return _interfaceId == type(IReserveAuctionFindersErc20).interfaceId || _interfaceId == 0x01ffc9a7;
     }
+
+    ///                                                          ///
+    ///                        AUCTION STORAGE                   ///
+    ///                                                          ///
+
+    /// @notice The metadata for a given auction
+    /// @param seller The address of the seller
+    /// @param sellerFundsRecipient The address where funds are sent after the auction
+    /// @param reservePrice The reserve price to start the auction
+    /// @param highestBid The highest bid of the auction
+    /// @param highestBidder The address of the highest bidder
+    /// @param startTime The time that the first bid can be placed
+    /// @param currency The address of the ERC-20 token, or address(0) for ETH, required to place a bid
+    /// @param firstBidTime The time that the first bid is placed
+    /// @param finder The address that referred the highest bid
+    /// @param duration The length of time that the auction runs after the first bid is placed
+    /// @param findersFeeBps The fee that is sent to the referrer of the highest bid
+    struct Auction {
+        address seller;
+        address sellerFundsRecipient;
+        uint256 reservePrice;
+        uint256 highestBid;
+        address highestBidder;
+        uint96 startTime;
+        address currency;
+        uint96 firstBidTime;
+        address finder;
+        uint80 duration;
+        uint16 findersFeeBps;
+    }
+
+    /// @notice The auction for a given NFT, if one exists
+    /// @dev ERC-721 token contract => ERC-721 token id => Auction
+    mapping(address => mapping(uint256 => Auction)) public auctionForNFT;
+
+    ///                                                          ///
+    ///                         CREATE AUCTION                   ///
+    ///                                                          ///
 
     //     ,-.
     //     `-'
@@ -140,6 +132,13 @@ contract ReserveAuctionFindersErc20 is
     //     /|\
     //      |
     //     / \
+
+    /// @notice Emitted when an auction is created
+    /// @param tokenContract The ERC-721 token address of the created auction
+    /// @param tokenId The ERC-721 token id of the created auction
+    /// @param auction The metadata of the created auction
+    event AuctionCreated(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
+
     /// @notice Creates an auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -165,50 +164,60 @@ contract ReserveAuctionFindersErc20 is
         // Ensure the caller is the owner or an approved operator
         require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
 
-        // Ensure the reserve price can be downcasted to 96 bits for this module
-        // For a higher reserve price, use the supporting module
-        require(_reservePrice <= type(uint96).max, "INVALID_RESERVE_PRICE");
-
         // Ensure the funds recipient is specified
         require(_sellerFundsRecipient != address(0), "INVALID_FUNDS_RECIPIENT");
 
         // Ensure the finders fee does not exceed 10,000 basis points
         require(_findersFeeBps <= 10000, "INVALID_FINDERS_FEE");
 
-        // Store the auction metadata
-        auctionForNFT[_tokenContract][_tokenId].seller = tokenOwner;
-        auctionForNFT[_tokenContract][_tokenId].reservePrice = uint96(_reservePrice);
-        auctionForNFT[_tokenContract][_tokenId].sellerFundsRecipient = _sellerFundsRecipient;
-        auctionForNFT[_tokenContract][_tokenId].startTime = uint96(_startTime);
-        auctionForNFT[_tokenContract][_tokenId].currency = _bidCurrency;
-        auctionForNFT[_tokenContract][_tokenId].duration = uint80(_duration);
-        auctionForNFT[_tokenContract][_tokenId].findersFeeBps = uint16(_findersFeeBps);
+        // Get the auction's storage pointer
+        Auction storage auction = auctionForNFT[_tokenContract][_tokenId];
 
-        emit AuctionCreated(_tokenContract, _tokenId, auctionForNFT[_tokenContract][_tokenId]);
+        // Store the associated metadata
+        auction.seller = tokenOwner;
+        auction.sellerFundsRecipient = _sellerFundsRecipient;
+        auction.reservePrice = _reservePrice;
+        auction.startTime = uint96(_startTime);
+        auction.currency = _bidCurrency;
+        auction.duration = uint80(_duration);
+        auction.findersFeeBps = uint16(_findersFeeBps);
+
+        emit AuctionCreated(_tokenContract, _tokenId, auction);
     }
+
+    ///                                                          ///
+    ///                      UPDATE RESERVE PRICE                ///
+    ///                                                          ///
 
     //     ,-.
     //     `-'
     //     /|\
-    //      |             ,-----------------------.
-    //     / \            |ReserveAuctionCoreErc20|
-    //   Caller           `-----------+-----------'
-    //     | setAuctionReservePrice() |
-    //     | ------------------------>|
-    //     |                          |
-    //     |                          ----.
-    //     |                              | update reserve price
-    //     |                          <---'
-    //     |                          |
-    //     |                          ----.
-    //     |                              | emit AuctionReservePriceUpdated()
-    //     |                          <---'
-    //   Caller           ,-----------+-----------.
-    //     ,-.            |ReserveAuctionCoreErc20|
-    //     `-'            `-----------------------'
+    //      |             ,--------------------------.
+    //     / \            |ReserveAuctionFindersErc20|
+    //   Caller           `------------+-------------'
+    //     |  setAuctionReservePrice() |
+    //     | -------------------------->
+    //     |                           |
+    //     |                           |----.
+    //     |                           |    | update reserve price
+    //     |                           |<---'
+    //     |                           |
+    //     |                           |----.
+    //     |                           |    | emit AuctionReservePriceUpdated()
+    //     |                           |<---'
+    //   Caller           ,------------+-------------.
+    //     ,-.            |ReserveAuctionFindersErc20|
+    //     `-'            `--------------------------'
     //     /|\
     //      |
     //     / \
+
+    /// @notice Emitted when a reserve price is updated
+    /// @param tokenContract The ERC-721 token address of the updated auction
+    /// @param tokenId The ERC-721 token id of the updated auction
+    /// @param auction The metadata of the updated auction
+    event AuctionReservePriceUpdated(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
+
     /// @notice Updates the reserve price for a given auction
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -227,14 +236,15 @@ contract ReserveAuctionFindersErc20 is
         // Ensure the caller is the seller
         require(msg.sender == auction.seller, "ONLY_SELLER");
 
-        // Ensure the reserve price can be downcasted to 96 bits
-        require(_reservePrice <= type(uint96).max, "INVALID_RESERVE_PRICE");
-
         // Update the reserve price
-        auction.reservePrice = uint96(_reservePrice);
+        auction.reservePrice = _reservePrice;
 
         emit AuctionReservePriceUpdated(_tokenContract, _tokenId, auction);
     }
+
+    ///                                                          ///
+    ///                         CANCEL AUCTION                   ///
+    ///                                                          ///
 
     //     ,-.
     //     `-'
@@ -258,6 +268,13 @@ contract ReserveAuctionFindersErc20 is
     //     /|\
     //      |
     //     / \
+
+    /// @notice Emitted when an auction is canceled
+    /// @param tokenContract The ERC-721 token address of the canceled auction
+    /// @param tokenId The ERC-721 token id of the canceled auction
+    /// @param auction The metadata of the canceled auction
+    event AuctionCanceled(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
+
     /// @notice Cancels the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -276,6 +293,10 @@ contract ReserveAuctionFindersErc20 is
         // Remove the auction from storage
         delete auctionForNFT[_tokenContract][_tokenId];
     }
+
+    ///                                                          ///
+    ///                           CREATE BID                     ///
+    ///                                                          ///
 
     //     ,-.
     //     `-'
@@ -336,6 +357,15 @@ contract ReserveAuctionFindersErc20 is
     //     /|\
     //      |
     //     / \
+
+    /// @notice Emitted when a bid is placed
+    /// @param tokenContract The ERC-721 token address of the auction
+    /// @param tokenId The ERC-721 token id of the auction
+    /// @param firstBid If the bid started the auction
+    /// @param extended If the bid extended the auction
+    /// @param auction The metadata of the auction
+    event AuctionBid(address indexed tokenContract, uint256 indexed tokenId, bool firstBid, bool extended, Auction auction);
+
     /// @notice Places a bid on the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
@@ -358,10 +388,6 @@ contract ReserveAuctionFindersErc20 is
 
         // Ensure the auction has started or is valid to start
         require(block.timestamp >= auction.startTime, "AUCTION_NOT_STARTED");
-
-        // Ensure the bid can be downcasted to 96 bits for this module
-        // For a higher bid, use the supporting module
-        require(_amount <= type(uint96).max, "INVALID_BID");
 
         // Cache more auction metadata
         uint256 firstBidTime = auction.firstBidTime;
@@ -398,13 +424,7 @@ contract ReserveAuctionFindersErc20 is
             uint256 minValidBid;
 
             // Calculate the minimum bid required (10% higher than the highest bid)
-            // Cannot overflow as `minValidBid` cannot be greater than 104 bits
-            unchecked {
-                minValidBid = highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100);
-            }
-
-            // Ensure the result can be downcasted to 96 bits
-            require(minValidBid <= type(uint96).max, "MAX_BID_PLACED");
+            minValidBid = highestBid + ((highestBid * MIN_BID_INCREMENT_PERCENTAGE) / 100);
 
             // Ensure the incoming bid meets the minimum
             require(_amount >= minValidBid, "MINIMUM_BID_NOT_MET");
@@ -419,7 +439,7 @@ contract ReserveAuctionFindersErc20 is
         _handleIncomingTransfer(_amount, currency);
 
         // Store the amount as the highest bid
-        auction.highestBid = uint96(_amount);
+        auction.highestBid = _amount;
 
         // Store the caller as the highest bidder
         auction.highestBidder = msg.sender;
@@ -453,6 +473,10 @@ contract ReserveAuctionFindersErc20 is
 
         emit AuctionBid(_tokenContract, _tokenId, firstBid, extended, auction);
     }
+
+    ///                                                          ///
+    ///                         SETTLE AUCTION                   ///
+    ///                                                          ///
 
     //     ,-.
     //     `-'
@@ -502,6 +526,13 @@ contract ReserveAuctionFindersErc20 is
     //     /|\
     //      |
     //     / \
+
+    /// @notice Emitted when an auction has ended
+    /// @param tokenContract The ERC-721 token address of the auction
+    /// @param tokenId The ERC-721 token id of the auction
+    /// @param auction The metadata of the settled auction
+    event AuctionEnded(address indexed tokenContract, uint256 indexed tokenId, Auction auction);
+
     /// @notice Ends the auction for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token

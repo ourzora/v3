@@ -2,7 +2,7 @@
         `-'                                                                 
         /|\                                                                 
          |             ,--------------------------.                         
-        / \            |ReserveAuctionFindersErc20|                         
+        / \            |ReserveAuctionListingErc20|                         
       Caller           `------------+-------------'                         
         |  setAuctionReservePrice() |                                       
         | -------------------------->                                       
@@ -15,7 +15,7 @@
         |                           |    | emit AuctionReservePriceUpdated()
         |                           |<---'                                  
       Caller           ,------------+-------------.                         
-        ,-.            |ReserveAuctionFindersErc20|                         
+        ,-.            |ReserveAuctionListingErc20|                         
         `-'            `--------------------------'                         
         /|\                                                                 
          |                                                                  

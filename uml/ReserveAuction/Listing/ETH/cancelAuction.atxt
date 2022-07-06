@@ -1,0 +1,22 @@
+        ,-.                                                     
+        `-'                                                     
+        /|\                                                     
+         |             ,------------------------.               
+        / \            |ReserveAuctionListingEth|               
+      Caller           `-----------+------------'               
+        |      cancelAuction()     |                            
+        | ------------------------->                            
+        |                          |                            
+        |                          |----.                       
+        |                          |    | emit AuctionCanceled()
+        |                          |<---'                       
+        |                          |                            
+        |                          |----.                       
+        |                          |    | delete auction        
+        |                          |<---'                       
+      Caller           ,-----------+------------.               
+        ,-.            |ReserveAuctionListingEth|               
+        `-'            `------------------------'               
+        /|\                                                     
+         |                                                      
+        / \                                                     

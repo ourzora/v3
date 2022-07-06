@@ -1,0 +1,32 @@
+@startuml
+actor Caller
+participant ReserveAuctionListingEth
+participant ERC721TransferHelper
+
+
+Caller -> ReserveAuctionListingEth : createBid()
+
+alt First bid?
+    
+    ReserveAuctionListingEth ->  ReserveAuctionListingEth : start auction
+    ReserveAuctionListingEth -> ReserveAuctionListingEth : transferFrom()
+    ReserveAuctionListingEth -> ReserveAuctionListingEth : transfer NFT from seller to escrow
+
+else refund previous bidder
+
+    ReserveAuctionListingEth -> ReserveAuctionListingEth : transfer ETH to bidder
+
+end
+
+
+alt Bid placed within 15 min of end?
+    
+    ReserveAuctionListingEth ->  ReserveAuctionListingEth : extend auction
+
+else noop
+
+end
+
+ReserveAuctionListingEth -> ReserveAuctionListingEth : emit AuctionBid()
+
+@enduml
