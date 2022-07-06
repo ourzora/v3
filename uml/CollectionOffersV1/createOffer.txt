@@ -1,0 +1,13 @@
+@startuml
+actor Caller
+participant CollectionOffersV1
+participant ERC20TransferHelper
+
+Caller -> CollectionOffersV1 : createOffer()
+CollectionOffersV1 -> ERC20TransferHelper : msg.value
+ERC20TransferHelper -> ERC20TransferHelper : transfer ETH into escrow
+CollectionOffersV1 -> CollectionOffersV1 : _addOffer()
+CollectionOffersV1 -> CollectionOffersV1 : emit CollectionOfferCreated()
+CollectionOffersV1 -> Caller :id
+
+@enduml

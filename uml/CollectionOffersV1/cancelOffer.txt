@@ -1,0 +1,12 @@
+@startuml
+actor Caller
+participant CollectionOffersV1
+participant ERC20TransferHelper
+
+Caller -> CollectionOffersV1 : cancelOffer()
+CollectionOffersV1 -> ERC20TransferHelper : call()
+ERC20TransferHelper -> ERC20TransferHelper : refund ETH from escrow
+CollectionOffersV1 -> CollectionOffersV1 : emit CollectionOfferCanceled()
+CollectionOffersV1 -> CollectionOffersV1 : _removeOffer()
+
+@enduml
