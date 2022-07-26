@@ -52,9 +52,9 @@ contract AsksDataStorage {
         ask.featureData[FEATURE_MASK_FINDERS_FEE] = uint256(_findersFeeBps);
     }
 
-    function _getAskTokenGate(StoredAsk storage auction) internal view returns (TokenGate memory tokenGate) {
-        tokenGate.token = address(uint160(auction.featureData[FEATURE_MASK_TOKEN_GATE]));
-        tokenGate.minAmount = auction.featureData[FEATURE_MASK_TOKEN_GATE + 1];
+    function _getAskTokenGate(StoredAsk storage ask) internal view returns (TokenGate memory tokenGate) {
+        tokenGate.token = address(uint160(ask.featureData[FEATURE_MASK_TOKEN_GATE]));
+        tokenGate.minAmount = ask.featureData[FEATURE_MASK_TOKEN_GATE + 1];
     }
 
     function _setTokenGate(

@@ -60,7 +60,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     )
         IncomingTransferSupportV1(_erc20TransferHelper)
         FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _weth, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
-        ModuleNamingSupportV1("Reserve Auction Listing ERC-20")
+        ModuleNamingSupportV1("Asks Omnibus: ERC20 / Finders Fee / Listing Fee / Expiry / Private / Token Gate")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
@@ -193,7 +193,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
     function cancelAsk(address _tokenContract, uint256 _tokenId) external nonReentrant {
-        // Get the auction for the specified token
+        // Get the ask for the specified token
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
 
         // Ensure the caller is the seller or a new owner of the token
@@ -207,8 +207,39 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         emit AskCanceled(_tokenContract, _tokenId, _getFullAsk(ask));
 
-        // Remove the auction from storage
+        // Remove the ask from storage
         delete askForNFT[_tokenContract][_tokenId];
+    }
+
+    function _handleListingAndFindersFees(
+        uint256 _remainingProfit,
+        StoredAsk storage ask,
+        address currency,
+        address finder
+    ) internal returns (uint256 remainingProfit) {
+        remainingProfit = _remainingProfit;
+        uint256 listingFee;
+        address listingFeeRecipient;
+        uint256 findersFee;
+
+        if (_hasFeature(ask.features, FEATURE_MASK_LISTING_FEE)) {
+            ListingFee memory listingFeeData = _getListingFee(ask);
+            listingFee = (remainingProfit * listingFeeData.listingFeeBps) / 10000;
+            listingFeeRecipient = listingFeeData.listingFeeRecipient;
+        }
+
+        if (finder != address(0) && _hasFeature(ask.features, FEATURE_MASK_FINDERS_FEE)) {
+            findersFee = (remainingProfit * _getFindersFee(ask)) / 10000;
+        }
+
+        if (listingFee > 0) {
+            _handleOutgoingTransfer((_getListingFee(ask)).listingFeeRecipient, listingFee, currency, 50000);
+            remainingProfit -= listingFee;
+        }
+        if (findersFee > 0) {
+            _handleOutgoingTransfer(finder, findersFee, currency, 50000);
+            remainingProfit -= findersFee;
+        }
     }
 
     /// @notice Fills an ask for a given NFT
@@ -249,7 +280,9 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         if (_hasFeature(ask.features, FEATURE_MASK_RECIPIENT_OR_EXPIRY)) {
             (uint96 expiry, address storedFundsRecipient) = _getExpiryAndFundsRecipient(ask);
-            fundsRecipient = storedFundsRecipient;
+            if (storedFundsRecipient != address(0)) {
+                fundsRecipient = storedFundsRecipient;
+            }
             require(expiry >= block.timestamp, "Ask has expired");
         }
 
@@ -273,29 +306,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         // Payout the module fee, if configured
         remainingProfit = _handleProtocolFeePayout(remainingProfit, currency);
 
-        if (_hasFeature(ask.features, FEATURE_MASK_LISTING_FEE)) {
-            ListingFee memory listingFeeInfo = _getListingFee(ask);
-            // Get the listing fee from the remaining profit
-            uint256 listingFee = (remainingProfit * listingFeeInfo.listingFeeBps) / 10000;
-
-            // Transfer the amount to the listing fee recipient
-            _handleOutgoingTransfer(listingFeeInfo.listingFeeRecipient, listingFee, currency, 50000);
-
-            if (_finder != address(0) && _hasFeature(ask.features, FEATURE_MASK_FINDERS_FEE)) {
-                uint16 findersFeeBps = _getFindersFee(ask);
-                // Get the listing fee from the remaining profit
-                uint256 findersFee = (remainingProfit * findersFeeBps) / 10000;
-
-                // Transfer the amount to the listing fee recipient
-                _handleOutgoingTransfer(_finder, findersFee, currency, 50000);
-
-                // Update the remaining profit
-                remainingProfit -= findersFee;
-            }
-
-            // Update the remaining profit
-            remainingProfit -= listingFee;
-        }
+        remainingProfit = _handleListingAndFindersFees(remainingProfit, ask, currency, _finder);
 
         // Transfer the remaining profit to the seller
         _handleOutgoingTransfer(fundsRecipient, remainingProfit, currency, 50000);
