@@ -1,0 +1,10 @@
+@startuml
+actor Caller
+participant ReserveAuctionListingEth
+
+Caller -> ReserveAuctionListingEth : setAuctionReservePrice()
+
+ReserveAuctionListingEth -> ReserveAuctionListingEth : update reserve price
+ReserveAuctionListingEth -> ReserveAuctionListingEth : emit AuctionReservePriceUpdated()
+
+@enduml

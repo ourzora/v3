@@ -90,7 +90,9 @@ contract ReserveAuctionCoreEthTest is DSTest {
         token.setApprovalForAll(address(erc721TransferHelper), true);
     }
 
-    /// ------------ CREATE AUCTION ------------ ///
+    ///                                                          ///
+    ///                         CREATE AUCTION                   ///
+    ///                                                          ///
 
     function testGas_CreateAuction() public {
         vm.prank(address(seller));
@@ -161,7 +163,9 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.createAuction(address(token), 0, 1 days, 1 ether, address(0), 0);
     }
 
-    /// ------------ SET AUCTION RESERVE PRICE ------------ ///
+    ///                                                          ///
+    ///                      UPDATE RESERVE PRICE                ///
+    ///                                                          ///
 
     function test_SetReservePrice() public {
         vm.prank(address(seller));
@@ -197,7 +201,9 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.setAuctionReservePrice(address(token), 0, 20 ether);
     }
 
-    /// ------------ CANCEL AUCTION ------------ ///
+    ///                                                          ///
+    ///                         CANCEL AUCTION                   ///
+    ///                                                          ///
 
     function test_CancelAuction() public {
         vm.startPrank(address(seller));
@@ -233,7 +239,9 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.cancelAuction(address(token), 0);
     }
 
-    /// ------------ CREATE BID ------------ ///
+    ///                                                          ///
+    ///                           CREATE BID                     ///
+    ///                                                          ///
 
     function test_CreateFirstBid() public {
         vm.prank(address(seller));
@@ -390,7 +398,9 @@ contract ReserveAuctionCoreEthTest is DSTest {
         auctions.createBid{value: 1.01 ether}(address(token), 0);
     }
 
-    /// ------------ SETTLE AUCTION ------------ ///
+    ///                                                          ///
+    ///                         SETTLE AUCTION                   ///
+    ///                                                          ///
 
     function test_SettleAuction() public {
         vm.prank(address(seller));
