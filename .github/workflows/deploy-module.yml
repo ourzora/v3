@@ -1,0 +1,73 @@
+name: Deploy Module
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Name of github environment, i.e. rinkeby. Environment can be named anything as long as it includes the following vars: NPM_TOKEN, ETHERSCAN_API_KEY, RPC_URL, PRIVATE_KEY, WALLET_ADDRESS."
+        required: true
+      chainid:
+        description: "Chain id for corresponding environment. This can't be an environment variable due to an annoying technicality."
+        required: true
+      overwrite:
+        description: 'Optional. Enter "overwrite" to deploy and update address even if address already exists in addresses/<chain_id>.json file.'
+        default: "dontoverwrite"
+      module_name:
+        description: "Name of contract in solidity file, i.e. AsksV1_1"
+        required: true
+      module_path:
+        description: "Starting from modules folder, i.e Asks/V1.1/AsksV1_1.sol"
+        required: true
+      constructor_abi:
+        description: 'Constructor abi in quotes, using f as the function name i.e. "f(address,string)"'
+        required: true
+      constructor_args:
+        description: 'Arbitrary constructor args, exactly how you pass them into cli. i.e.: 0x123 0 1 "This 4th arg is a string with spaces"'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - run: npm install && npm install --global yarn
+      - name: Install Foundry
+        uses: onbjerg/foundry-toolchain@v1
+        with:
+          version: nightly
+      - name: Build
+        run: forge build
+      - name: Run deploy script
+        run: bash ./deploy/deploy-module.sh ${{ github.event.inputs.overwrite }} ${{ github.event.inputs.module_path }} ${{ github.event.inputs.module_name }} ${{ github.event.inputs.constructor_abi }} ${{ github.event.inputs.constructor_args }}
+      - name: Bump version
+        run: npm i -g json-bump && json-bump package.json && yarn prettier --write package.json && npm i -g json && echo "TAG=v$(cat package.json | json version)" >> $GITHUB_ENV
+      - name: Push new addresses and package.json
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: '["addresses/${{ github.event.inputs.chainid }}.json", "package.json"]'
+          message: "Commit from Github Actions (deploy module)"
+          new_branch: main
+          pathspec_error_handling: ignore
+          tag: ${{ env.TAG }}
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          dry-run: false
+      - name: Bundle release
+        run: sudo apt-get install zip && zip -r ${{ env.TAG }}.zip dist package.json LICENSE README.md
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ env.TAG }}.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ env.TAG }}
+    env:
+      ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+      CHAIN_ID: ${{ github.event.inputs.chainid }}
+      RPC_URL: ${{ secrets.RPC_URL }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      WALLET_ADDRESS: ${{ secrets.WALLET_ADDRESS }}

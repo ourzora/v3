@@ -1,6 +1,6 @@
 {
   "name": "@zoralabs/v3",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": false,
   "homepage": "https://github.com/ourzora/v3",
   "repository": {
@@ -8,8 +8,8 @@
     "url": "https://github.com/ourzora/v3.git"
   },
   "files": [
-    "./dist/**/*",
-    "./dist/*"
+    "dist/**/*",
+    "dist/*"
   ],
   "dependencies": {
     "@manifoldxyz/royalty-registry-solidity": "^1.0.9",
