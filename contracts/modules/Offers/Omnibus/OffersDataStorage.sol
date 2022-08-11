@@ -5,7 +5,6 @@ contract OffersDataStorage {
     struct StoredOffer {
         uint256 amount;
         address maker;
-        address currency;
         uint32 features;
         mapping(uint32 => uint256) featureData;
     }
@@ -19,6 +18,7 @@ contract OffersDataStorage {
     uint32 constant FEATURE_MASK_LISTING_FEE = 1 << 3;
     uint32 constant FEATURE_MASK_FINDERS_FEE = 1 << 4;
     uint32 constant FEATURE_MASK_EXPIRY = 1 << 5;
+    uint32 constant FEATURE_MASK_ERC20_CURRENCY = 1 << 6;
 
     struct ListingFee {
         uint16 listingFeeBps;
@@ -59,6 +59,32 @@ contract OffersDataStorage {
         offer.featureData[FEATURE_MASK_EXPIRY] = expiry;
     }
 
+    function _getERC20CurrencyWithFallback(StoredOffer storage offer) internal view returns (address) {
+        if (!_hasFeature(offer.features, FEATURE_MASK_ERC20_CURRENCY)) {
+            return address(0);
+        }
+        return address(uint160(offer.featureData[FEATURE_MASK_ERC20_CURRENCY]));
+    }
+
+    function _setERC20Currency(StoredOffer storage offer, address currency) internal {
+        offer.features |= FEATURE_MASK_ERC20_CURRENCY;
+        offer.featureData[FEATURE_MASK_ERC20_CURRENCY] = uint256(uint160(currency));
+    }
+
+    function _setETHorERC20Currency(StoredOffer storage offer, address currency) internal {
+        // turn off erc20 feature if previous currency was erc20 and new currency is eth
+        if (currency == address(0) && _hasFeature(offer.features, FEATURE_MASK_ERC20_CURRENCY)) {
+            offer.features &= ~FEATURE_MASK_ERC20_CURRENCY;
+        }
+        if (currency != address(0)) {
+            // turn on erc20 feature if previous currency was eth and new currency is erc20
+            if (!_hasFeature(offer.features, FEATURE_MASK_ERC20_CURRENCY)) {
+                offer.features |= FEATURE_MASK_ERC20_CURRENCY;
+            }
+            offer.featureData[FEATURE_MASK_ERC20_CURRENCY] = uint256(uint160(currency));
+        }
+    }
+
     struct FullOffer {
         uint256 amount;
         address maker;
@@ -88,7 +114,7 @@ contract OffersDataStorage {
             fullOffer.expiry = _getExpiry(offer);
         }
 
-        fullOffer.currency = offer.currency;
+        fullOffer.currency = _getERC20CurrencyWithFallback(offer);
         fullOffer.maker = offer.maker;
         fullOffer.amount = offer.amount;
 

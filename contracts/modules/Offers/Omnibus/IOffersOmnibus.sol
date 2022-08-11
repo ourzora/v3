@@ -7,11 +7,7 @@ import {OffersDataStorage} from "./OffersDataStorage.sol";
 /// @author jgeary
 /// @notice Interface for Offers Omnibus
 interface IOffersOmnibus {
-    function createOfferMinimal(
-        address _tokenContract,
-        uint256 _tokenId,
-        uint256 _amount
-    ) external;
+    function createOfferMinimal(address _tokenContract, uint256 _tokenId) external payable returns (uint256);
 
     function createOffer(
         address _tokenContract,
@@ -21,7 +17,7 @@ interface IOffersOmnibus {
         uint96 _expiry,
         uint16 _findersFeeBps,
         OffersDataStorage.ListingFee memory _listingFee
-    ) external;
+    ) external payable returns (uint256);
 
     function setOfferAmount(
         address _tokenContract,
@@ -29,7 +25,7 @@ interface IOffersOmnibus {
         uint256 _offerId,
         address _offerCurrency,
         uint256 _offerAmount
-    ) external;
+    ) external payable;
 
     function cancelOffer(
         address _tokenContract,
@@ -45,4 +41,10 @@ interface IOffersOmnibus {
         address _currency,
         address _finder
     ) external;
+
+    function getFullOffer(
+        address _tokenContract,
+        uint256 _tokenId,
+        uint256 _offerId
+    ) external view returns (OffersDataStorage.FullOffer memory);
 }

@@ -83,26 +83,24 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
     /// @notice Creates a simple WETH offer for a given NFT
     /// @param _tokenContract The address of the ERC-721 token
     /// @param _tokenId The id of the ERC-721 token
-    /// @param _amount The WETH amount offered
-    function createOfferMinimal(
-        address _tokenContract,
-        uint256 _tokenId,
-        uint256 _amount
-    ) external nonReentrant {
-        require(weth.balanceOf(msg.sender) >= _amount, "INSUFFICIENT_WETH_BALANCE");
-        require(weth.allowance(msg.sender, address(erc20TransferHelper)) >= _amount, "INSUFFICIENT_WETH_ALLOWANCE");
+    function createOfferMinimal(address _tokenContract, uint256 _tokenId) external payable nonReentrant returns (uint256) {
+        uint256 _offerAmount = msg.value;
+        weth.deposit{value: msg.value}();
+        weth.transferFrom(address(this), msg.sender, _offerAmount);
+
+        require(weth.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_WETH_ALLOWANCE");
         require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
 
         ++offerCount;
 
         StoredOffer storage offer = offers[_tokenContract][_tokenId][offerCount];
-        offer.amount = _amount;
+        offer.amount = _offerAmount;
         offer.maker = msg.sender;
-        offer.currency = address(weth);
         offer.features = 0;
 
         offersForNFT[_tokenContract][_tokenId].push(offerCount);
-        emit OfferCreated(_tokenContract, _tokenId, offerCount, _getFullOffer(offers[_tokenContract][_tokenId][offerCount]));
+        emit OfferCreated(_tokenContract, _tokenId, offerCount, _getFullOffer(offer));
+        return offerCount;
     }
 
     /// @notice Creates an offer for a given NFT
@@ -121,19 +119,32 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint96 _expiry,
         uint16 _findersFeeBps,
         OffersDataStorage.ListingFee memory _listingFee
-    ) external nonReentrant {
-        IERC20 token = IERC20(_offerCurrency);
-        require(token.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
-        require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
+    ) external payable nonReentrant returns (uint256) {
+        require(_offerAmount > 0, "NO_ZERO_OFFERS");
 
         ++offerCount;
         offersForNFT[_tokenContract][_tokenId].push(offerCount);
         StoredOffer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
+        if (_offerCurrency != address(0)) {
+            require(msg.value == 0, "MSG_VALUE_GT_ZERO_WITH_OTHER_CURRENCY");
+            IERC20 token = IERC20(_offerCurrency);
+            require(token.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
+            require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
+        } else {
+            require(msg.value == _offerAmount, "MSG_VALUE_NEQ_OFFER_AMOUNT");
+            weth.deposit{value: msg.value}();
+            weth.transferFrom(address(this), msg.sender, _offerAmount);
+            require(weth.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
+            require(weth.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
+        }
+        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
+
         offer.maker = msg.sender;
         offer.amount = _offerAmount;
-        offer.currency = _offerCurrency;
+        offer.features = 0;
+
+        _setETHorERC20Currency(offer, _offerCurrency);
 
         if (_listingFee.listingFeeBps > 0) {
             require(_listingFee.listingFeeBps <= 10000, "INVALID_LISTING_FEE");
@@ -151,7 +162,44 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
             _setExpiry(offer, _expiry);
         }
 
-        emit OfferCreated(_tokenContract, _tokenId, offerCount, _getFullOffer(offers[_tokenContract][_tokenId][offerCount]));
+        emit OfferCreated(_tokenContract, _tokenId, offerCount, _getFullOffer(offer));
+        return offerCount;
+    }
+
+    function _validateAndPrepareNewOffer(
+        address _oldCurrency,
+        address _newCurrency,
+        uint256 _oldAmount,
+        uint256 _newAmount
+    ) internal {
+        require(_newAmount > 0, "NO_ZERO_OFFERS");
+        require(_newAmount != _oldAmount || _newCurrency != _oldCurrency, "SAME_OFFER");
+
+        IERC20 token;
+
+        if (_newCurrency == address(0)) {
+            if (_oldCurrency == address(0)) {
+                if (_newAmount > _oldAmount) {
+                    require(msg.value == _newAmount - _oldAmount, "INVALID_MSG_VALUE");
+                } else {
+                    require(msg.value == 0, "INVALID_MSG_VALUE");
+                }
+            } else {
+                require(msg.value == _newAmount, "INVALID_MSG_VALUE");
+            }
+            token = IERC20(address(weth));
+        } else {
+            require(msg.value == 0, "INVALID_MSG_VALUE");
+            token = IERC20(_newCurrency);
+        }
+
+        if (msg.value > 0) {
+            weth.deposit{value: msg.value}();
+            weth.transferFrom(address(this), msg.sender, msg.value);
+        }
+
+        require(token.balanceOf(msg.sender) >= _newAmount, "INSUFFICIENT_BALANCE");
+        require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _newAmount, "INSUFFICIENT_ALLOWANCE");
     }
 
     /// @notice Updates the price of the given offer
@@ -166,17 +214,16 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint256 _offerId,
         address _offerCurrency,
         uint256 _offerAmount
-    ) external nonReentrant {
+    ) external payable nonReentrant {
         StoredOffer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
-        require(offer.maker == msg.sender, "setOfferAmount caller must be maker");
+        require(offer.maker == msg.sender, "CALLER_NOT_MAKER");
 
-        IERC20 token = IERC20(_offerCurrency);
-        require(token.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
-        require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
+        _validateAndPrepareNewOffer(_getERC20CurrencyWithFallback(offer), _offerCurrency, offer.amount, _offerAmount);
+
         require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
 
-        offer.currency = _offerCurrency;
+        _setETHorERC20Currency(offer, _offerCurrency);
         offer.amount = _offerAmount;
 
         emit OfferUpdated(_tokenContract, _tokenId, _offerId, _getFullOffer(offer));
@@ -191,7 +238,7 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint256 _tokenId,
         uint256 _offerId
     ) external nonReentrant {
-        require(offers[_tokenContract][_tokenId][_offerId].maker == msg.sender, "cancelOffer must be maker");
+        require(offers[_tokenContract][_tokenId][_offerId].maker == msg.sender, "CALLER_NOT_MAKER");
 
         emit OfferCanceled(_tokenContract, _tokenId, _offerId, _getFullOffer(offers[_tokenContract][_tokenId][_offerId]));
 
@@ -244,23 +291,29 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint256 _amount,
         address _currency,
         address _finder
-    ) external payable nonReentrant {
+    ) external nonReentrant {
         StoredOffer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
         require(offer.maker != address(0), "fillOffer must be active offer");
         require(IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender, "fillOffer must be token owner");
-        require(offer.currency == _currency && offer.amount == _amount, "fillOffer _currency & _amount must match offer");
+        address incomingTransferCurrency = _getERC20CurrencyWithFallback(offer);
+
+        require(incomingTransferCurrency == _currency && offer.amount == _amount, "fillOffer _currency & _amount must match offer");
+        if (_currency == address(0)) {
+            incomingTransferCurrency = address(weth);
+        }
+        IERC20 token = IERC20(incomingTransferCurrency);
+        uint256 beforeBalance = token.balanceOf(address(this));
+        erc20TransferHelper.safeTransferFrom(incomingTransferCurrency, offer.maker, address(this), _amount);
+        uint256 afterBalance = token.balanceOf(address(this));
+        require(beforeBalance + _amount == afterBalance, "token transfer call did not transfer expected amount");
+        if (_currency == address(0)) {
+            weth.withdraw(_amount);
+        }
 
         if (_hasFeature(offer.features, FEATURE_MASK_EXPIRY)) {
             require(_getExpiry(offer) >= block.timestamp, "Ask has expired");
         }
-
-        // "handleIncomingTransferFrom"
-        IERC20 token = IERC20(_currency);
-        uint256 beforeBalance = token.balanceOf(address(erc20TransferHelper));
-        erc20TransferHelper.safeTransferFrom(_currency, offer.maker, address(erc20TransferHelper), _amount);
-        uint256 afterBalance = token.balanceOf(address(erc20TransferHelper));
-        require(beforeBalance + _amount == afterBalance, "token transfer call did not transfer expected amount");
 
         // Payout associated token royalties, if any
         (uint256 remainingProfit, ) = _handleRoyaltyPayout(_tokenContract, _tokenId, _amount, _currency, 300000);
@@ -289,5 +342,9 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint256 _offerId
     ) external view returns (FullOffer memory) {
         return _getFullOffer(offers[_tokenContract][_tokenId][_offerId]);
+    }
+
+    fallback() external payable {
+        require(msg.sender == address(weth));
     }
 }
