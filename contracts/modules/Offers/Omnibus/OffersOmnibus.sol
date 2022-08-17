@@ -166,42 +166,6 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         return offerCount;
     }
 
-    function _validateAndPrepareNewOffer(
-        address _oldCurrency,
-        address _newCurrency,
-        uint256 _oldAmount,
-        uint256 _newAmount
-    ) internal {
-        require(_newAmount > 0, "NO_ZERO_OFFERS");
-        require(_newAmount != _oldAmount || _newCurrency != _oldCurrency, "SAME_OFFER");
-
-        IERC20 token;
-
-        if (_newCurrency == address(0)) {
-            if (_oldCurrency == address(0)) {
-                if (_newAmount > _oldAmount) {
-                    require(msg.value == _newAmount - _oldAmount, "INVALID_MSG_VALUE");
-                } else {
-                    require(msg.value == 0, "INVALID_MSG_VALUE");
-                }
-            } else {
-                require(msg.value == _newAmount, "INVALID_MSG_VALUE");
-            }
-            token = IERC20(address(weth));
-        } else {
-            require(msg.value == 0, "INVALID_MSG_VALUE");
-            token = IERC20(_newCurrency);
-        }
-
-        if (msg.value > 0) {
-            weth.deposit{value: msg.value}();
-            weth.transferFrom(address(this), msg.sender, msg.value);
-        }
-
-        require(token.balanceOf(msg.sender) >= _newAmount, "INSUFFICIENT_BALANCE");
-        require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _newAmount, "INSUFFICIENT_ALLOWANCE");
-    }
-
     /// @notice Updates the price of the given offer
     /// @param _tokenContract The address of the offer ERC-721 token
     /// @param _tokenId The ID of the offer ERC-721 token
@@ -219,9 +183,20 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
 
         require(offer.maker == msg.sender, "CALLER_NOT_MAKER");
 
-        _validateAndPrepareNewOffer(_getERC20CurrencyWithFallback(offer), _offerCurrency, offer.amount, _offerAmount);
+        require(_offerAmount > 0, "NO_ZERO_OFFERS");
+        require(_offerAmount != offer.amount || _offerCurrency != _getERC20CurrencyWithFallback(offer), "SAME_OFFER");
 
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
+        IERC20 token = IERC20(address(weth));
+        if (_offerCurrency != address(0)) {
+            require(msg.value == 0, "MSG_VALUE_GT_ZERO_WITH_OTHER_CURRENCY");
+            token = IERC20(_offerCurrency);
+        }
+        if (_offerCurrency == address(0) && msg.value > 0) {
+            weth.deposit{value: msg.value}();
+            weth.transferFrom(address(this), msg.sender, msg.value);
+        }
+        require(token.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
+        require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
 
         _setETHorERC20Currency(offer, _offerCurrency);
         offer.amount = _offerAmount;

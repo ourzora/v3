@@ -369,11 +369,11 @@ contract OffersOmnibusTest is DSTest {
         offers.setOfferAmount(address(token), 0, 1, address(0), 0.5 ether);
     }
 
-    function testRevert_CannotIncreaseOfferWithoutAttachingFunds() public {
+    function testRevert_CannotIncreaseEthOfferWithoutAttachingNecessaryFunds() public {
         vm.startPrank(address(maker));
-        offers.createOfferMinimal{value: 1 ether}(address(token), 0);
-        vm.expectRevert("INVALID_MSG_VALUE");
-        offers.setOfferAmount(address(token), 0, 1, address(0), 2 ether);
+        offers.createOfferMinimal{value: 0.1 ether}(address(token), 0);
+        vm.expectRevert("INSUFFICIENT_BALANCE");
+        offers.setOfferAmount(address(token), 0, 1, address(0), 51 ether);
         vm.stopPrank();
     }
 
