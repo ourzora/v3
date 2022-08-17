@@ -86,6 +86,8 @@ contract AuctionDataStorageTest is DSTest {
         assertEq(auction.listingFee.listingFeeRecipient, address(0x0), "listingfee recipient wrong");
         assertEq(auction.tokenGate.token, address(0x0), "tokengate wrong");
         assertEq(auction.tokenGate.minAmount, 0, "tokengate wrong");
+        assertEq(auction.expiry, 0, "expiry wrong");
+        assertEq(auction.fundsRecipient, address(0), "funds recipient wrong");
     }
 
     function test_AuctionStorageInit() public {
@@ -106,5 +108,7 @@ contract AuctionDataStorageTest is DSTest {
         assertEq(auction.listingFee.listingFeeRecipient, address(0x004), "listingfee recipient wrong");
         assertEq(auction.tokenGate.token, address(0x003), "tokengate wrong");
         assertEq(auction.tokenGate.minAmount, 0.1 ether, "tokengate wrong");
+        assertEq(auction.expiry, uint96(block.timestamp) + 2 days, "expiry wrong");
+        assertEq(auction.fundsRecipient, address(0x005), "funds recipient wrong");
     }
 }
