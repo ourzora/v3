@@ -6,6 +6,15 @@ import {ZoraProtocolFeeSettings} from "./auxiliary/ZoraProtocolFeeSettings/ZoraP
 /// @title ZoraModuleManager
 /// @author tbtstl <t@zora.co>
 /// @notice This contract allows users to approve registered modules on ZORA V3
+
+/// Custom Errros:
+error ZMM__onlyRegistrar_must_be_registrar();
+error ZMM__must_set_registrar_to_nonZero_address();
+error ZMM__setApprovalForModuleBySig_deadline_expired();
+error ZMM__setApprovalForModuleBySig_invalid_signature();
+error ZMM__registerModule_module_already_registered();
+error ZMM__must_be_registered_module();
+
 contract ZoraModuleManager {
     /// @notice The EIP-712 type for a signed approval
     /// @dev keccak256("SignedApproval(address module,address user,bool approved,uint256 deadline,uint256 nonce)")
@@ -42,7 +51,7 @@ contract ZoraModuleManager {
 
     /// @notice Ensures only the registrar can register modules
     modifier onlyRegistrar() {
-        require(msg.sender == registrar, "ZMM::onlyRegistrar must be registrar");
+        if(msg.sender != registrar){revert ZMM__onlyRegistrar_must_be_registrar();}
         _;
     }
 
@@ -63,7 +72,7 @@ contract ZoraModuleManager {
     /// @param _registrar The initial registrar for the manager
     /// @param _feeToken The module fee token contract to mint from upon module registration
     constructor(address _registrar, address _feeToken) {
-        require(_registrar != address(0), "ZMM::must set registrar to non-zero address");
+        if(_registrar == address(0)){revert ZMM__must_set_registrar_to_nonZero_address();}
 
         registrar = _registrar;
         moduleFeeToken = ZoraProtocolFeeSettings(_feeToken);
@@ -195,7 +204,7 @@ contract ZoraModuleManager {
         bytes32 _r,
         bytes32 _s
     ) public {
-        require(_deadline == 0 || _deadline >= block.timestamp, "ZMM::setApprovalForModuleBySig deadline expired");
+        if(_deadline != 0 || _deadline < block.timestamp) {revert ZMM__setApprovalForModuleBySig_deadline_expired();}
 
         bytes32 digest = keccak256(
             abi.encodePacked(
@@ -207,7 +216,7 @@ contract ZoraModuleManager {
 
         address recoveredAddress = ecrecover(digest, _v, _r, _s);
 
-        require(recoveredAddress != address(0) && recoveredAddress == _user, "ZMM::setApprovalForModuleBySig invalid signature");
+        if(recoveredAddress == address(0) && recoveredAddress != _user){revert ZMM__setApprovalForModuleBySig_invalid_signature();}
 
         _setApprovalForModule(_module, _user, _approved);
     }
@@ -244,7 +253,7 @@ contract ZoraModuleManager {
     /// @notice Registers a module
     /// @param _module The address of the module
     function registerModule(address _module) public onlyRegistrar {
-        require(!moduleRegistered[_module], "ZMM::registerModule module already registered");
+        if(moduleRegistered[_module]){revert ZMM__registerModule_module_already_registered();}
 
         moduleRegistered[_module] = true;
         moduleFeeToken.mint(registrar, _module);
@@ -277,7 +286,7 @@ contract ZoraModuleManager {
     /// @notice Sets the registrar for the ZORA Module Manager
     /// @param _registrar the address of the new registrar
     function setRegistrar(address _registrar) public onlyRegistrar {
-        require(_registrar != address(0), "ZMM::setRegistrar must set registrar to non-zero address");
+        if(_registrar == address(0)){revert ZMM__must_set_registrar_to_nonZero_address();}
         registrar = _registrar;
 
         emit RegistrarChanged(_registrar);
@@ -292,7 +301,7 @@ contract ZoraModuleManager {
         address _user,
         bool _approved
     ) private {
-        require(moduleRegistered[_module], "ZMM::must be registered module");
+        if(!moduleRegistered[_module]){revert ZMM__must_be_registered_module();}
 
         userApprovals[_user][_module] = _approved;
 
