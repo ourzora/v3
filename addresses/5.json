@@ -1,15 +1,17 @@
 {
+  "AsksOmnibus": "0x88eECe2AeA8c53dC6862617B3a9A3cB0295E2C6e",
+  "AsksV1_1": "0xd8be3E8A8648c4547F06E607174BAC36f5684756",
   "ERC20TransferHelper": "0x53172d999a299198a935f9E424f9f8544e3d4292",
   "ERC721TransferHelper": "0xd1adAF05575295710dE1145c3c9427c364A70a7f",
+  "OffersV1": "0x3a98377E8e67D01a3D21E30eCE6A4703eeB4d25a",
+  "ReserveAuctionCoreErc20": "0x1ee71c10e7dd6c7fbdc891de4e902e041e1f5d33",
+  "ReserveAuctionCoreEth": "0x2506d9f5a2b0e1a2619bcce01cd3e7c289a13163",
+  "ReserveAuctionFindersErc20": "0x36ab5200426715a9dd414513912970cb7d659b3c",
+  "ReserveAuctionFindersEth": "0x29a6237e646a5a189db197a48cb96fa7944a32a2",
+  "ReserveAuctionListingErc20": "0x517f7721f3c3762f7048e03919761e027d900082",
+  "ReserveAuctionListingEth": "0xfcebe0788d5772df2cbcf5079815de98a4d62b09",
   "RoyaltyEngineV1": "0xe7c9Cb6D966f76f3B5142167088927Bf34966a1f",
   "WETH": "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
   "ZoraModuleManager": "0x9458E29713B98BF452ee9B2C099289f533A5F377",
-  "ZoraProtocolFeeSettings": "0x5f7072E1fA7c01dfAc7Cf54289621AFAaD2184d0",
-  "AsksOmnibus": "0x88eECe2AeA8c53dC6862617B3a9A3cB0295E2C6e",
-  "ReserveAuctionCoreEth": "0x2506d9f5a2b0e1a2619bcce01cd3e7c289a13163",
-  "ReserveAuctionCoreErc20": "0x1ee71c10e7dd6c7fbdc891de4e902e041e1f5d33",
-  "ReserveAuctionFindersEth": "0x29a6237e646a5a189db197a48cb96fa7944a32a2",
-  "ReserveAuctionFindersErc20": "0x36ab5200426715a9dd414513912970cb7d659b3c",
-  "ReserveAuctionListingEth": "0xfcebe0788d5772df2cbcf5079815de98a4d62b09",
-  "ReserveAuctionListingErc20": "0x517f7721f3c3762f7048e03919761e027d900082"
+  "ZoraProtocolFeeSettings": "0x5f7072E1fA7c01dfAc7Cf54289621AFAaD2184d0"
 }
