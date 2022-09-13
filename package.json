@@ -38,5 +38,6 @@
     "prettier": "prettier --config \"./.prettierrc\" --write \"**/*.{js,md,sol,yml}\"",
     "test": "forge test",
     "typechain": "typechain --target=ethers-v5 'dist/artifacts/*/*.json' --out-dir dist/typechain"
-  }
+  },
+  "type": "module"
 }
