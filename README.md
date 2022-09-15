@@ -99,3 +99,5 @@ If you have suggestions or comments on how we can better collaborate on this cod
 2. Install dependencies with `yarn` & `forge update`
 3. Compile the contracts with `yarn build`
 4. Run tests with `yarn test`
+
+Want [Typechain](https://github.com/dethcrypto/TypeChain) types for Zora's v3 contracts? Install typechain (`yarn add -D typechain @typechain/ethers-v5`) and then add the following step to your project's build process: `yarn typechain --target=ethers-v5 './node_modules/@zoralabs/v3/dist/artifacts/*/*.json' --out-dir zora-v3-types`
