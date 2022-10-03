@@ -191,7 +191,7 @@ contract OffersOmnibusTest is DSTest {
         );
         vm.warp(tomorrow + 1 days);
         vm.startPrank(address(taker));
-        vm.expectRevert("Ask has expired");
+        vm.expectRevert(abi.encodeWithSignature("OFFER_EXPIRED()"));
         offers.fillOffer(address(token), 0, 1, 1 ether, address(0), address(0));
         vm.warp(start + 1 hours);
         offers.fillOffer(address(token), 0, 1, 1 ether, address(0), address(0));
@@ -365,14 +365,14 @@ contract OffersOmnibusTest is DSTest {
     function testRevert_OnlySellerCanUpdateOffer() public {
         vm.prank(address(maker));
         offers.createOfferMinimal{value: 1 ether}(address(token), 0);
-        vm.expectRevert("CALLER_NOT_MAKER");
+        vm.expectRevert(abi.encodeWithSignature("CALLER_NOT_MAKER()"));
         offers.setOfferAmount(address(token), 0, 1, address(0), 0.5 ether);
     }
 
     function testRevert_CannotIncreaseEthOfferWithoutAttachingNecessaryFunds() public {
         vm.startPrank(address(maker));
         offers.createOfferMinimal{value: 0.1 ether}(address(token), 0);
-        vm.expectRevert("INSUFFICIENT_BALANCE");
+        vm.expectRevert(abi.encodeWithSignature("INSUFFICIENT_BALANCE()"));
         offers.setOfferAmount(address(token), 0, 1, address(0), 51 ether);
         vm.stopPrank();
     }
@@ -381,7 +381,7 @@ contract OffersOmnibusTest is DSTest {
         vm.startPrank(address(maker));
         offers.createOfferMinimal{value: 1 ether}(address(token), 0);
         vm.warp(1 hours);
-        vm.expectRevert("SAME_OFFER");
+        vm.expectRevert(abi.encodeWithSignature("SAME_OFFER()"));
         offers.setOfferAmount{value: 1 ether}(address(token), 0, 1, address(0), 1 ether);
         vm.stopPrank();
     }
@@ -392,7 +392,7 @@ contract OffersOmnibusTest is DSTest {
         vm.prank(address(taker));
         offers.fillOffer(address(token), 0, 1, 1 ether, address(0), address(finder));
         vm.prank(address(maker));
-        vm.expectRevert("CALLER_NOT_MAKER");
+        vm.expectRevert(abi.encodeWithSignature("CALLER_NOT_MAKER()"));
         offers.setOfferAmount(address(token), 0, 1, address(0), 0.5 ether);
     }
 
@@ -415,14 +415,14 @@ contract OffersOmnibusTest is DSTest {
         vm.prank(address(taker));
         offers.fillOffer(address(token), 0, 1, 1 ether, address(0), address(finder));
         vm.prank(address(maker));
-        vm.expectRevert("CALLER_NOT_MAKER");
+        vm.expectRevert(abi.encodeWithSignature("CALLER_NOT_MAKER()"));
         offers.cancelOffer(address(token), 0, 1);
     }
 
     function testRevert_OnlySellerCanCancelOffer() public {
         vm.prank(address(maker));
         offers.createOfferMinimal{value: 1 ether}(address(token), 0);
-        vm.expectRevert("CALLER_NOT_MAKER");
+        vm.expectRevert(abi.encodeWithSignature("CALLER_NOT_MAKER()"));
         offers.cancelOffer(address(token), 0, 1);
     }
 
@@ -441,7 +441,7 @@ contract OffersOmnibusTest is DSTest {
     function testRevert_OnlyTokenHolderCanFillOffer() public {
         vm.prank(address(maker));
         uint256 id = offers.createOfferMinimal{value: 1 ether}(address(token), 0);
-        vm.expectRevert("fillOffer must be token owner");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER()"));
         offers.fillOffer(address(token), 0, id, 1 ether, address(0), address(finder));
     }
 
@@ -451,7 +451,7 @@ contract OffersOmnibusTest is DSTest {
         vm.prank(address(taker));
         offers.fillOffer(address(token), 0, id, 1 ether, address(0), address(finder));
         vm.prank(address(taker));
-        vm.expectRevert("fillOffer must be active offer");
+        vm.expectRevert(abi.encodeWithSignature("INACTIVE_OFFER()"));
         offers.fillOffer(address(token), 0, id, 1 ether, address(0), address(finder));
     }
 
@@ -459,7 +459,7 @@ contract OffersOmnibusTest is DSTest {
         vm.prank(address(maker));
         uint256 id = offers.createOfferMinimal{value: 1 ether}(address(token), 0);
         vm.prank(address(taker));
-        vm.expectRevert("fillOffer _currency & _amount must match offer");
+        vm.expectRevert(abi.encodeWithSignature("INCORRECT_CURRENCY_OR_AMOUNT()"));
         offers.fillOffer(address(token), 0, id, 1 ether, address(weth), address(finder));
     }
 
@@ -467,7 +467,7 @@ contract OffersOmnibusTest is DSTest {
         vm.prank(address(maker));
         uint256 id = offers.createOfferMinimal{value: 1 ether}(address(token), 0);
         vm.prank(address(taker));
-        vm.expectRevert("fillOffer _currency & _amount must match offer");
+        vm.expectRevert(abi.encodeWithSignature("INCORRECT_CURRENCY_OR_AMOUNT()"));
         offers.fillOffer(address(token), 0, id, 0.5 ether, address(0), address(finder));
     }
 }

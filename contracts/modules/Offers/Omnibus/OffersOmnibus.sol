@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
@@ -16,7 +17,7 @@ import {OffersDataStorage} from "./OffersDataStorage.sol";
 /// @title Offers Omnibus
 /// @author jgeary
 /// @notice Omnibus module for multi-featured offers for ERC-721 tokens
-contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1, OffersDataStorage {
+contract OffersOmnibus is IOffersOmnibus, ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1, OffersDataStorage {
     /// @dev The indicator to pass all remaining gas when paying out royalties
     uint256 private constant USE_ALL_GAS_FLAG = 0;
 
@@ -77,7 +78,7 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
     /// @param _interfaceId The identifier of a given interface
     /// @return If the given interface is supported
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
-        return _interfaceId == type(IOffersOmnibus).interfaceId || _interfaceId == 0x01ffc9a7;
+        return _interfaceId == type(IOffersOmnibus).interfaceId || _interfaceId == type(IERC165).interfaceId;
     }
 
     /// @notice Creates a simple WETH offer for a given NFT
@@ -88,8 +89,8 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         weth.deposit{value: msg.value}();
         weth.transferFrom(address(this), msg.sender, _offerAmount);
 
-        require(weth.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_WETH_ALLOWANCE");
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
+        if (weth.allowance(msg.sender, address(erc20TransferHelper)) < _offerAmount) revert INSUFFICIENT_ALLOWANCE();
+        if (!erc721TransferHelper.isModuleApproved(msg.sender)) revert MODULE_NOT_APPROVED();
 
         ++offerCount;
 
@@ -120,25 +121,25 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint16 _findersFeeBps,
         OffersDataStorage.ListingFee memory _listingFee
     ) external payable nonReentrant returns (uint256) {
-        require(_offerAmount > 0, "NO_ZERO_OFFERS");
+        if (_offerAmount == 0) revert NO_ZERO_OFFERS();
 
         ++offerCount;
         offersForNFT[_tokenContract][_tokenId].push(offerCount);
         StoredOffer storage offer = offers[_tokenContract][_tokenId][offerCount];
 
         if (_offerCurrency != address(0)) {
-            require(msg.value == 0, "MSG_VALUE_GT_ZERO_WITH_OTHER_CURRENCY");
+            if (msg.value > 0) revert MSG_VALUE_NEQ_ZERO_WITH_OTHER_CURRENCY();
             IERC20 token = IERC20(_offerCurrency);
-            require(token.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
-            require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
+            if (token.balanceOf(msg.sender) < _offerAmount) revert INSUFFICIENT_BALANCE();
+            if (token.allowance(msg.sender, address(erc20TransferHelper)) < _offerAmount) revert INSUFFICIENT_ALLOWANCE();
         } else {
-            require(msg.value == _offerAmount, "MSG_VALUE_NEQ_OFFER_AMOUNT");
+            if (msg.value != _offerAmount) revert MSG_VALUE_NEQ_OFFER_AMOUNT();
             weth.deposit{value: msg.value}();
             weth.transferFrom(address(this), msg.sender, _offerAmount);
-            require(weth.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
-            require(weth.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
+            if (weth.balanceOf(msg.sender) < _offerAmount) revert INSUFFICIENT_BALANCE();
+            if (weth.allowance(msg.sender, address(erc20TransferHelper)) < _offerAmount) revert INSUFFICIENT_ALLOWANCE();
         }
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
+        if (!erc721TransferHelper.isModuleApproved(msg.sender)) revert MODULE_NOT_APPROVED();
 
         offer.maker = msg.sender;
         offer.amount = _offerAmount;
@@ -146,19 +147,18 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
 
         _setETHorERC20Currency(offer, _offerCurrency);
 
+        if (_findersFeeBps + _listingFee.listingFeeBps > 10000) revert INVALID_FEES();
+
         if (_listingFee.listingFeeBps > 0) {
-            require(_listingFee.listingFeeBps <= 10000, "INVALID_LISTING_FEE");
             _setListingFee(offer, _listingFee.listingFeeBps, _listingFee.listingFeeRecipient);
         }
 
         if (_findersFeeBps > 0) {
-            require(_findersFeeBps <= 10000, "createOffer finders fee bps must be less than or equal to 10000");
-            require(_findersFeeBps + _listingFee.listingFeeBps <= 10000, "listingFee and findersFee must be less than or equal to 10000");
             _setFindersFee(offer, _findersFeeBps);
         }
 
         if (_expiry > 0) {
-            require(_expiry > block.timestamp, "Expiry must be in the future");
+            if (_expiry < block.timestamp) revert INVALID_EXPIRY();
             _setExpiry(offer, _expiry);
         }
 
@@ -181,22 +181,22 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
     ) external payable nonReentrant {
         StoredOffer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
-        require(offer.maker == msg.sender, "CALLER_NOT_MAKER");
+        if (offer.maker != msg.sender) revert CALLER_NOT_MAKER();
 
-        require(_offerAmount > 0, "NO_ZERO_OFFERS");
-        require(_offerAmount != offer.amount || _offerCurrency != _getERC20CurrencyWithFallback(offer), "SAME_OFFER");
+        if (_offerAmount == 0) revert NO_ZERO_OFFERS();
+        if (_offerAmount == offer.amount && _offerCurrency == _getERC20CurrencyWithFallback(offer)) revert SAME_OFFER();
 
         IERC20 token = IERC20(address(weth));
         if (_offerCurrency != address(0)) {
-            require(msg.value == 0, "MSG_VALUE_GT_ZERO_WITH_OTHER_CURRENCY");
+            if (msg.value != 0) revert MSG_VALUE_NEQ_ZERO_WITH_OTHER_CURRENCY();
             token = IERC20(_offerCurrency);
         }
         if (_offerCurrency == address(0) && msg.value > 0) {
             weth.deposit{value: msg.value}();
             weth.transferFrom(address(this), msg.sender, msg.value);
         }
-        require(token.balanceOf(msg.sender) >= _offerAmount, "INSUFFICIENT_BALANCE");
-        require(token.allowance(msg.sender, address(erc20TransferHelper)) >= _offerAmount, "INSUFFICIENT_ALLOWANCE");
+        if (token.balanceOf(msg.sender) < _offerAmount) revert INSUFFICIENT_BALANCE();
+        if (token.allowance(msg.sender, address(erc20TransferHelper)) < _offerAmount) revert INSUFFICIENT_ALLOWANCE();
 
         _setETHorERC20Currency(offer, _offerCurrency);
         offer.amount = _offerAmount;
@@ -213,7 +213,7 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint256 _tokenId,
         uint256 _offerId
     ) external nonReentrant {
-        require(offers[_tokenContract][_tokenId][_offerId].maker == msg.sender, "CALLER_NOT_MAKER");
+        if (offers[_tokenContract][_tokenId][_offerId].maker != msg.sender) revert CALLER_NOT_MAKER();
 
         emit OfferCanceled(_tokenContract, _tokenId, _offerId, _getFullOffer(offers[_tokenContract][_tokenId][_offerId]));
 
@@ -269,11 +269,11 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
     ) external nonReentrant {
         StoredOffer storage offer = offers[_tokenContract][_tokenId][_offerId];
 
-        require(offer.maker != address(0), "fillOffer must be active offer");
-        require(IERC721(_tokenContract).ownerOf(_tokenId) == msg.sender, "fillOffer must be token owner");
+        if (offer.maker == address(0)) revert INACTIVE_OFFER();
+        if (IERC721(_tokenContract).ownerOf(_tokenId) != msg.sender) revert NOT_TOKEN_OWNER();
         address incomingTransferCurrency = _getERC20CurrencyWithFallback(offer);
 
-        require(incomingTransferCurrency == _currency && offer.amount == _amount, "fillOffer _currency & _amount must match offer");
+        if (incomingTransferCurrency != _currency || offer.amount != _amount) revert INCORRECT_CURRENCY_OR_AMOUNT();
         if (_currency == address(0)) {
             incomingTransferCurrency = address(weth);
         }
@@ -281,13 +281,13 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         uint256 beforeBalance = token.balanceOf(address(this));
         erc20TransferHelper.safeTransferFrom(incomingTransferCurrency, offer.maker, address(this), _amount);
         uint256 afterBalance = token.balanceOf(address(this));
-        require(beforeBalance + _amount == afterBalance, "token transfer call did not transfer expected amount");
+        if (beforeBalance + _amount != afterBalance) revert TOKEN_TRANSFER_AMOUNT_INCORRECT();
         if (_currency == address(0)) {
             weth.withdraw(_amount);
         }
 
         if (_hasFeature(offer.features, FEATURE_MASK_EXPIRY)) {
-            require(_getExpiry(offer) >= block.timestamp, "Ask has expired");
+            if (_getExpiry(offer) < block.timestamp) revert OFFER_EXPIRED();
         }
 
         // Payout associated token royalties, if any
@@ -319,6 +319,7 @@ contract OffersOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutS
         return _getFullOffer(offers[_tokenContract][_tokenId][_offerId]);
     }
 
+    // This fallback is necessary so the module can call weth.withdraw
     fallback() external payable {
         require(msg.sender == address(weth));
     }

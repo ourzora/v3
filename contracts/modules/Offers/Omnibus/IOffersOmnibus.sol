@@ -7,6 +7,36 @@ import {OffersDataStorage} from "./OffersDataStorage.sol";
 /// @author jgeary
 /// @notice Interface for Offers Omnibus
 interface IOffersOmnibus {
+    error INSUFFICIENT_ALLOWANCE();
+
+    error MODULE_NOT_APPROVED();
+
+    error NO_ZERO_OFFERS();
+
+    error MSG_VALUE_NEQ_ZERO_WITH_OTHER_CURRENCY();
+
+    error INSUFFICIENT_BALANCE();
+
+    error MSG_VALUE_NEQ_OFFER_AMOUNT();
+
+    error INVALID_FEES();
+
+    error INVALID_EXPIRY();
+
+    error CALLER_NOT_MAKER();
+
+    error SAME_OFFER();
+
+    error INACTIVE_OFFER();
+
+    error NOT_TOKEN_OWNER();
+
+    error INCORRECT_CURRENCY_OR_AMOUNT();
+
+    error TOKEN_TRANSFER_AMOUNT_INCORRECT();
+
+    error OFFER_EXPIRED();
+
     function createOfferMinimal(address _tokenContract, uint256 _tokenId) external payable returns (uint256);
 
     function createOffer(
