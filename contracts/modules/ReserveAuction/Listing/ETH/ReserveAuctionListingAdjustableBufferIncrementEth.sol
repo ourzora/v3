@@ -340,7 +340,7 @@ contract ReserveAuctionListingAdjustableBufferIncrementEth is
     //     |                          |                                       |
     //     |                          |                                       |
     //     |    _______________________________________________               |
-    //     |    ! ALT  /  Bid placed within 15 min of end?     !              |
+    //     |    ! ALT  /  Bid placed within time buffer?       !              |
     //     |    !_____/               |                        !              |
     //     |    !                     |----.                   !              |
     //     |    !                     |    | extend auction    !              |
@@ -452,7 +452,7 @@ contract ReserveAuctionListingAdjustableBufferIncrementEth is
             timeRemaining = firstBidTime + duration - block.timestamp;
         }
 
-        // If the bid is placed within 15 minutes of the auction end, extend the auction
+        // If the bid is placed within time buffer, extend the auction
         uint16 timeBuffer;
         if (auction.timeBuffer > 0) {
             timeBuffer = auction.timeBuffer;
