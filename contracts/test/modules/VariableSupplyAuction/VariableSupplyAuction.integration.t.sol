@@ -110,28 +110,27 @@ contract VariableSupplyAuctionIntegrationTest is DSTest {
         weth.approve(address(erc20TransferHelper), 50 ether);
     }
 
-    function runETH() public {
-        vm.prank(address(seller));
-        auctions.hello();
-    }
+    // function runETH() public {
+    //     //
+    // }
 
-    function test_ETHIntegration() public {
-        uint256 beforeSellerBalance = address(sellerFundsRecipient).balance;
-        uint256 beforeBidderBalance = address(bidder).balance;
-        uint256 beforeOtherBidderBalance = address(otherBidder).balance;
-        uint256 beforeRoyaltyRecipientBalance = address(royaltyRecipient).balance;
-        uint256 beforeProtocolFeeRecipient = address(protocolFeeRecipient).balance;
-        address beforeTokenOwner = token.ownerOf(1);
+    // function test_ETHIntegration() public {
+    //     uint256 beforeSellerBalance = address(sellerFundsRecipient).balance;
+    //     uint256 beforeBidderBalance = address(bidder).balance;
+    //     uint256 beforeOtherBidderBalance = address(otherBidder).balance;
+    //     uint256 beforeRoyaltyRecipientBalance = address(royaltyRecipient).balance;
+    //     uint256 beforeProtocolFeeRecipient = address(protocolFeeRecipient).balance;
+    //     address beforeTokenOwner = token.ownerOf(1);
 
-        runETH();
+    //     runETH();
 
-        uint256 afterSellerBalance = address(sellerFundsRecipient).balance;
-        uint256 afterBidderBalance = address(bidder).balance;
-        uint256 afterOtherBidderBalance = address(otherBidder).balance;
-        uint256 afterRoyaltyRecipientBalance = address(royaltyRecipient).balance;
-        uint256 afterProtocolFeeRecipient = address(protocolFeeRecipient).balance;
-        address afterTokenOwner = token.ownerOf(1);
+    //     uint256 afterSellerBalance = address(sellerFundsRecipient).balance;
+    //     uint256 afterBidderBalance = address(bidder).balance;
+    //     uint256 afterOtherBidderBalance = address(otherBidder).balance;
+    //     uint256 afterRoyaltyRecipientBalance = address(royaltyRecipient).balance;
+    //     uint256 afterProtocolFeeRecipient = address(protocolFeeRecipient).balance;
+    //     address afterTokenOwner = token.ownerOf(1);
 
-        assertEq(beforeSellerBalance, afterSellerBalance);
-    }
+    //     assertEq(beforeSellerBalance, afterSellerBalance);
+    // }
 }

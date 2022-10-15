@@ -6,7 +6,14 @@ pragma solidity 0.8.10;
 /// @notice Interface for Variable Supply Auction
 interface IVariableSupplyAuction {
     //
-    /// @notice Says hello
-    /// @return a friendly greeting
-    function hello() external pure returns (bytes32);
+
+    ///
+    function createAuction(
+        uint256 _minimumRevenue,
+        address _sellerFundsRecipient,
+        uint256 _startTime,
+        uint256 _bidPhaseDuration,
+        uint256 _revealPhaseDuration,
+        uint256 _settlePhaseDuration
+    ) external;
 }

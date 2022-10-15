@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.10;
 
-import {DSTest} from "ds-test/test.sol";
+import "forge-std/Test.sol";
 
 import {VariableSupplyAuction} from "../../../modules/VariableSupplyAuction/VariableSupplyAuction.sol";
+
 import {Zorb} from "../../utils/users/Zorb.sol";
 import {ZoraRegistrar} from "../../utils/users/ZoraRegistrar.sol";
 import {ZoraModuleManager} from "../../../ZoraModuleManager.sol";
@@ -17,9 +18,8 @@ import {VM} from "../../utils/VM.sol";
 
 /// @title VariableSupplyAuctionTest
 /// @notice Unit Tests for Variable Supply Auctions
-contract VariableSupplyAuctionTest is DSTest {
+contract VariableSupplyAuctionTest is Test {
     //
-    VM internal vm;
 
     ZoraRegistrar internal registrar;
     ZoraProtocolFeeSettings internal ZPFS;
@@ -41,9 +41,6 @@ contract VariableSupplyAuctionTest is DSTest {
     Zorb internal otherBidder;
 
     function setUp() public {
-        // Cheatcodes
-        vm = VM(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D);
-
         // Deploy V3
         registrar = new ZoraRegistrar();
         ZPFS = new ZoraProtocolFeeSettings();
@@ -92,10 +89,133 @@ contract VariableSupplyAuctionTest is DSTest {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        Hello World
+                        Create Auction
     //////////////////////////////////////////////////////////////*/
 
-    function test_Hello() public {
-        assertEq(auctions.hello(), bytes32("hello world"));
+    function testGas_CreateAuction() public {
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: block.timestamp,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
     }
+
+    function test_CreateAuction_WhenInstant() public {
+        Auction memory auction = Auction({
+            minimumRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            firstBidTime: uint32(0 days)
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit AuctionCreated(address(seller), auction);
+
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: block.timestamp,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+
+        (
+            uint256 minimumRevenue,
+            address sellerFundsRecipientReturned,
+            uint256 startTime,
+            uint256 endOfBidPhase,
+            uint256 endOfRevealPhase,
+            uint256 endOfSettlePhase,
+            uint256 firstBidTime
+            // bids
+        ) = auctions.auctionForSeller(address(seller));
+
+        assertEq(minimumRevenue, auction.minimumRevenue);
+        assertEq(sellerFundsRecipientReturned, auction.sellerFundsRecipient);
+        assertEq(startTime, auction.startTime);
+        assertEq(endOfBidPhase, auction.endOfBidPhase);
+        assertEq(endOfRevealPhase, auction.endOfRevealPhase);
+        assertEq(endOfSettlePhase, auction.endOfSettlePhase);
+        assertEq(firstBidTime, 0);
+        // bids
+    }
+
+    function test_CreateAuction_WhenFuture() public {
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: 1 days,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+
+        (, , uint32 startTime, , , , ) = auctions.auctionForSeller(address(seller));
+        require(startTime == 1 days);
+    }
+
+    function testRevert_CreateAuction_WhenSellerHasLiveAuction() public {
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: 1 days,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+
+        vm.expectRevert("ONLY_ONE_LIVE_AUCTION_PER_SELLER");
+
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: 1 days,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+    }
+
+    function testRevert_CreateAuction_WhenDidNotSpecifySellerFundsRecipient() public {
+        vm.expectRevert("INVALID_FUNDS_RECIPIENT");
+
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(0),
+            _startTime: 1 days,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        NOT DRY -- TODO Use better pattern
+    //////////////////////////////////////////////////////////////*/
+
+    struct Auction {
+        uint96 minimumRevenue;
+        address sellerFundsRecipient;
+        uint32 startTime;
+        uint32 endOfBidPhase;
+        uint32 endOfRevealPhase;
+        uint32 endOfSettlePhase;
+        uint32 firstBidTime;
+        // bids
+    }
+
+    event AuctionCreated(address indexed seller, Auction auction);
 }

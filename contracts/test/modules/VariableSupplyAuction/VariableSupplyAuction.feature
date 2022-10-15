@@ -68,7 +68,7 @@ Feature: Variable Supply Auctions
             | Bidder11 | 9.99 ETH  |
             | Bidder12 | 9.99 ETH  |
             | Bidder13 | 9.99 ETH  |
-        And The following accounts should own an NFT
+        And The following accounts should own 1 NFT
             | account  |
             | Bidder1  |
             | Bidder2  |
