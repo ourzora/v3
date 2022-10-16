@@ -198,20 +198,6 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function test_CreateAuction_WhenInstant() public {
-        Auction memory auction = Auction({
-            seller: address(seller),
-            minimumRevenue: 1 ether,
-            sellerFundsRecipient: address(sellerFundsRecipient),
-            startTime: uint32(block.timestamp),
-            endOfBidPhase: uint32(block.timestamp + 3 days),
-            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
-            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
-            totalBalance: uint96(0)
-        });
-
-        vm.expectEmit(true, true, true, true);
-        emit AuctionCreated(address(drop), auction);
-
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
@@ -234,14 +220,14 @@ contract VariableSupplyAuctionTest is Test {
             uint96 totalBalance
         ) = auctions.auctionForDrop(address(drop));
 
-        assertEq(sellerStored, auction.seller);
-        assertEq(minimumRevenue, auction.minimumRevenue);
-        assertEq(sellerFundsRecipientStored, auction.sellerFundsRecipient);
-        assertEq(startTime, auction.startTime);
-        assertEq(endOfBidPhase, auction.endOfBidPhase);
-        assertEq(endOfRevealPhase, auction.endOfRevealPhase);
-        assertEq(endOfSettlePhase, auction.endOfSettlePhase);
-        assertEq(totalBalance, 0);
+        assertEq(sellerStored, address(seller));
+        assertEq(minimumRevenue, 1 ether);
+        assertEq(sellerFundsRecipientStored, address(sellerFundsRecipient));
+        assertEq(startTime, uint32(block.timestamp));
+        assertEq(endOfBidPhase, uint32(block.timestamp + 3 days));
+        assertEq(endOfRevealPhase, uint32(block.timestamp + 3 days + 2 days));
+        assertEq(endOfSettlePhase, uint32(block.timestamp + 3 days + 2 days + 1 days));
+        assertEq(totalBalance, uint96(0));
     }
 
     function test_CreateAuction_WhenFuture() public {
@@ -270,6 +256,33 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(endOfBidPhase, 1 days + 3 days);
         assertEq(endOfRevealPhase, 1 days + 3 days + 2 days);
         assertEq(endOfSettlePhase, 1 days + 3 days + 2 days + 1 days);
+    }
+
+    function testEvent_createAuction() public {
+        Auction memory auction = Auction({
+            seller: address(seller),
+            minimumRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: uint96(0)
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit AuctionCreated(address(drop), auction);
+
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _tokenContract: address(drop),
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: block.timestamp,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
     }
 
     function testRevert_CreateAuction_WhenDropHasLiveAuction() public {
@@ -324,17 +337,6 @@ contract VariableSupplyAuctionTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_PlaceBid_WhenSingle() public {
-        Auction memory auction = Auction({
-            seller: address(seller),
-            minimumRevenue: 1 ether,
-            sellerFundsRecipient: address(sellerFundsRecipient),
-            startTime: uint32(block.timestamp),
-            endOfBidPhase: uint32(block.timestamp + 3 days),
-            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
-            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
-            totalBalance: uint96(1 ether) // expecting this totalBalance based on bid
-        });
-
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
@@ -347,9 +349,6 @@ contract VariableSupplyAuctionTest is Test {
         });
 
         bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
-
-        vm.expectEmit(true, true, true, true);
-        emit AuctionBid(address(drop), address(bidder1), auction);
 
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
@@ -373,17 +372,6 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function test_PlaceBid_WhenMultiple() public {
-        Auction memory auction = Auction({
-            seller: address(seller),
-            minimumRevenue: 1 ether,
-            sellerFundsRecipient: address(sellerFundsRecipient),
-            startTime: uint32(block.timestamp),
-            endOfBidPhase: uint32(block.timestamp + 3 days),
-            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
-            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
-            totalBalance: uint96(6 ether) // expecting this totalBalance based on bids
-        });
-
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
@@ -399,8 +387,6 @@ contract VariableSupplyAuctionTest is Test {
         bytes32 commitment1 = genSealedBid(1 ether, bytes32("setec astronomy"));
         bytes32 commitment2 = genSealedBid(1 ether, bytes32("too many secrets"));
         bytes32 commitment3 = genSealedBid(1 ether, bytes32("cray tomes on set"));
-
-        // TODO come up with pattern to assert events as totalBalance changes
 
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment1);
@@ -431,6 +417,56 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(commitmentStored1, commitment1);
         assertEq(commitmentStored2, commitment2);
         assertEq(commitmentStored3, commitment3);
+    }
+
+    function testEvent_PlaceBid_WhenMultiple() public {
+        Auction memory auction = Auction({
+            seller: address(seller),
+            minimumRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: uint96(1 ether) // expect this totalBalance in event based on first bid
+        });
+
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _tokenContract: address(drop),
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: block.timestamp,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+
+        bytes32 commitment1 = genSealedBid(1 ether, bytes32("setec astronomy"));
+        bytes32 commitment2 = genSealedBid(1 ether, bytes32("too many secrets"));
+        bytes32 commitment3 = genSealedBid(1 ether, bytes32("cray tomes on set"));
+
+        vm.expectEmit(true, true, true, true);
+        emit AuctionBid(address(drop), address(bidder1), auction);
+
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment1);
+
+        auction.totalBalance = 3 ether; // 2 ether more from bidder 2
+
+        vm.expectEmit(true, true, true, true);
+        emit AuctionBid(address(drop), address(bidder2), auction);
+
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 2 ether}(address(drop), commitment2);
+
+        auction.totalBalance = 6 ether; // 3 ether more from bidder 3
+
+        vm.expectEmit(true, true, true, true);
+        emit AuctionBid(address(drop), address(bidder3), auction);
+
+        vm.prank(address(bidder3));
+        auctions.placeBid{value: 3 ether}(address(drop), commitment3);
     }
 
     // function testRevert_PlaceBid_WhenBidderAlreadyPlacedBid() public {
@@ -490,15 +526,17 @@ contract VariableSupplyAuctionTest is Test {
     // TODO seller failure to settle auction sad paths
 
     /*//////////////////////////////////////////////////////////////
-                        Helper Functions
+                        TEST HELPERS
     //////////////////////////////////////////////////////////////*/
+
+    // TODO add modifier to concisely create auctions
 
     function genSealedBid(uint256 _amount, bytes32 _salt) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(_amount, _salt));
     }
 
     /*//////////////////////////////////////////////////////////////
-                        NOT DRY -- TODO Use better pattern
+                        TODO use better pattern to DRY up
     //////////////////////////////////////////////////////////////*/
 
     struct Auction {
