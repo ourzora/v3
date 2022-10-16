@@ -123,9 +123,20 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard {
         // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
 
-        // TODO checks
+        // Ensure the auction exists
+        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+
+        // Ensure the auction is still in bid phase
+        require(block.timestamp < auction.endOfBidPhase, "BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+
+        // Ensure the bidder has not placed a bid in auction already
+        require(balanceOf[_tokenContract][msg.sender] == 0, "ALREADY_PLACED_BID_IN_AUCTION");
+
+        // Ensure the bid is valid and includes some ether
+        require(msg.value > 0 ether, "VALID_BIDS_MUST_INCLUDE_ETHER");
 
         // Store the full amount of incoming ether for this auction
+        // (may be less than actual bid amount once revealed)
         auction.totalBalance += uint96(msg.value);
         
         // Store the amount of incoming ether for this bidder

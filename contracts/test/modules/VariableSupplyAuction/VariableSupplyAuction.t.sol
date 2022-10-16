@@ -106,11 +106,6 @@ contract VariableSupplyAuctionTest is Test {
         vm.deal(address(bidder14), 100 ether);
         vm.deal(address(bidder15), 100 ether);
 
-        // Deploy Variable Supply Auction module
-        // (moved before Deploy mocks so auctions address is available)
-        auctions = new VariableSupplyAuction();
-        registrar.registerModule(address(auctions));
-
         // Deploy mocks
         royaltyEngine = new RoyaltyEngine(address(royaltyRecipient));
         drop = new ERC721Drop();
@@ -133,9 +128,15 @@ contract VariableSupplyAuctionTest is Test {
             //     presaleMerkleRoot: bytes32(0)
             // })
         });
+        // weth = new WETH();
+
+        // Deploy Variable Supply Auction module
+        auctions = new VariableSupplyAuction();
+        registrar.registerModule(address(auctions));
+
+        // Grant auction minter role on drop contract
         vm.prank(address(seller));
         drop.grantRole(drop.MINTER_ROLE(), address(auctions));
-        // weth = new WETH();
 
         // Users approve module
         seller.setApprovalForModule(address(auctions), true);
@@ -185,6 +186,7 @@ contract VariableSupplyAuctionTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function testGas_CreateAuction() public {
+        // NOTE this basic setup can be applied to tests via setupBasicAuction modifier
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
@@ -197,18 +199,7 @@ contract VariableSupplyAuctionTest is Test {
         });
     }
 
-    function test_CreateAuction_WhenInstant() public {
-        vm.prank(address(seller));
-        auctions.createAuction({
-            _tokenContract: address(drop),
-            _minimumRevenue: 1 ether,
-            _sellerFundsRecipient: address(sellerFundsRecipient),
-            _startTime: block.timestamp,
-            _bidPhaseDuration: 3 days,
-            _revealPhaseDuration: 2 days,
-            _settlePhaseDuration: 1 days
-        });
-
+    function test_CreateAuction_WhenInstant() public setupBasicAuction {
         (
             address sellerStored,
             uint256 minimumRevenue,
@@ -285,18 +276,7 @@ contract VariableSupplyAuctionTest is Test {
         });
     }
 
-    function testRevert_CreateAuction_WhenDropHasLiveAuction() public {
-        vm.prank(address(seller));
-        auctions.createAuction({
-            _tokenContract: address(drop),
-            _minimumRevenue: 1 ether,
-            _sellerFundsRecipient: address(sellerFundsRecipient),
-            _startTime: 1 days,
-            _bidPhaseDuration: 3 days,
-            _revealPhaseDuration: 2 days,
-            _settlePhaseDuration: 1 days
-        });
-
+    function testRevert_CreateAuction_WhenDropHasLiveAuction() public setupBasicAuction {
         vm.expectRevert("ONLY_ONE_LIVE_AUCTION_PER_DROP");
 
         vm.prank(address(seller));
@@ -336,18 +316,7 @@ contract VariableSupplyAuctionTest is Test {
                         PLACE BID
     //////////////////////////////////////////////////////////////*/
 
-    function test_PlaceBid_WhenSingle() public {
-        vm.prank(address(seller));
-        auctions.createAuction({
-            _tokenContract: address(drop),
-            _minimumRevenue: 1 ether,
-            _sellerFundsRecipient: address(sellerFundsRecipient),
-            _startTime: block.timestamp,
-            _bidPhaseDuration: 3 days,
-            _revealPhaseDuration: 2 days,
-            _settlePhaseDuration: 1 days
-        });
-
+    function test_PlaceBid_WhenSingle() public setupBasicAuction {  
         bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
 
         vm.prank(address(bidder1));
@@ -371,18 +340,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(commitmentStored, commitment);
     }
 
-    function test_PlaceBid_WhenMultiple() public {
-        vm.prank(address(seller));
-        auctions.createAuction({
-            _tokenContract: address(drop),
-            _minimumRevenue: 1 ether,
-            _sellerFundsRecipient: address(sellerFundsRecipient),
-            _startTime: block.timestamp,
-            _bidPhaseDuration: 3 days,
-            _revealPhaseDuration: 2 days,
-            _settlePhaseDuration: 1 days
-        });
-
+    function test_PlaceBid_WhenMultiple() public setupBasicAuction {
         // NOTE sealed bid amount can be less than sent ether amount (allows for hiding bid amount until reveal)
         bytes32 commitment1 = genSealedBid(1 ether, bytes32("setec astronomy"));
         bytes32 commitment2 = genSealedBid(1 ether, bytes32("too many secrets"));
@@ -419,7 +377,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(commitmentStored3, commitment3);
     }
 
-    function testEvent_PlaceBid_WhenMultiple() public {
+    function testEvent_PlaceBid_WhenMultiple() public setupBasicAuction {
         Auction memory auction = Auction({
             seller: address(seller),
             minimumRevenue: 1 ether,
@@ -429,17 +387,6 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
             endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
             totalBalance: uint96(1 ether) // expect this totalBalance in event based on first bid
-        });
-
-        vm.prank(address(seller));
-        auctions.createAuction({
-            _tokenContract: address(drop),
-            _minimumRevenue: 1 ether,
-            _sellerFundsRecipient: address(sellerFundsRecipient),
-            _startTime: block.timestamp,
-            _bidPhaseDuration: 3 days,
-            _revealPhaseDuration: 2 days,
-            _settlePhaseDuration: 1 days
         });
 
         bytes32 commitment1 = genSealedBid(1 ether, bytes32("setec astronomy"));
@@ -469,36 +416,72 @@ contract VariableSupplyAuctionTest is Test {
         auctions.placeBid{value: 3 ether}(address(drop), commitment3);
     }
 
-    // function testRevert_PlaceBid_WhenBidderAlreadyPlacedBid() public {
+    function testRevert_PlaceBid_WhenAuctionDoesNotExist() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+    }
+
+    function testRevert_PlaceBid_WhenAuctionInRevealPhase() public setupBasicAuction {
+        vm.warp(3 days + 1 seconds); // reveal phase
+
+        vm.expectRevert("BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+    }
+
+    function testRevert_PlaceBid_WhenAuctionInSettlePhase() public setupBasicAuction {
+        vm.warp(3 days + 2 days + 1 seconds); // settle phase
+
+        vm.expectRevert("BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+    }
+
+    function testRevert_PlaceBid_WhenBidderAlreadyPlacedBid() public setupBasicAuction {
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+
+        vm.expectRevert("ALREADY_PLACED_BID_IN_AUCTION");
+
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+    }
+
+    function testRevert_PlaceBid_WhenNoEtherIncluded() public setupBasicAuction {
+        vm.expectRevert("VALID_BIDS_MUST_INCLUDE_ETHER");
+
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+        vm.prank(address(bidder1));
+        auctions.placeBid(address(drop), commitment);
+    }
+
+    // TODO once settleAuction is written
+    // function testRevert_PlaceBid_WhenAuctionIsCompleted() public setupBasicAuction {
         
     // }
 
-    // function testRevert_PlaceBid_WhenNoEtherIncluded() public {
+    // TODO once cancelAuction is written
+    // function testRevert_PlaceBid_WhenAuctionIsCancelled() public setupBasicAuction {
         
     // }
 
-    // function testRevert_PlaceBid_WhenSellerDidNotApproveModule() public {
-        
-    // }
+    // TODO revist – test may become relevant if we move minter role granting into TransferHelper
+    // function testRevert_PlaceBid_WhenSellerDidNotApproveModule() public setupBasicAuction {
+    //     seller.setApprovalForModule(address(auctions), false);
 
-    // function testRevert_PlaceBid_WhenAuctionInRevealPhase() public {
-        
-    // }
+    //     vm.expectRevert("module has not been approved by user");
 
-    // function testRevert_PlaceBid_WhenAuctionInSettlePhase() public {
-        
-    // }
-
-    // function testRevert_PlaceBid_WhenAuctionIsCompleted() public {
-        
-    // }
-
-    // function testRevert_PlaceBid_WhenAuctionIsCancelled() public {
-        
-    // }
-
-    // function testRevert_PlaceBid_WhenAuctionDoesNotExist() public {
-        
+    //     bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+    //     vm.prank(address(bidder1));
+    //     auctions.placeBid{value: 1 ether}(address(drop), commitment);
     // }
 
     /*//////////////////////////////////////////////////////////////
@@ -529,7 +512,22 @@ contract VariableSupplyAuctionTest is Test {
                         TEST HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    // TODO add modifier to concisely create auctions
+    // TODO improve modifier pattern to include parameters (could combine w/ fuzzing)
+
+    modifier setupBasicAuction() {
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _tokenContract: address(drop),
+            _minimumRevenue: 1 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: block.timestamp,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+
+        _;
+    }
 
     function genSealedBid(uint256 _amount, bytes32 _salt) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(_amount, _salt));
