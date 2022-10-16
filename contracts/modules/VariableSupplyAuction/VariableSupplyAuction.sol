@@ -161,7 +161,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard {
     event BidRevealed();
 
     ///
-    function revealBid(address _tokenContract, uint256 _bidAmount, bytes32 _salt) public nonReentrant {
+    function revealBid(address _tokenContract, uint256 _bidAmount, string calldata _salt) public nonReentrant {
         // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
 
@@ -178,7 +178,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard {
         require(_bidAmount <= balanceOf[_tokenContract][msg.sender], "REVEALED_BID_CANNOT_BE_GREATER_THAN_SENT_ETHER");
 
         // Ensure revealed bid matches sealed bid
-        require(keccak256(abi.encodePacked(_bidAmount, _salt)) == bid.commitmentHash, "REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
+        require(keccak256(abi.encodePacked(_bidAmount, bytes(_salt))) == bid.commitmentHash, "REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
 
         bid.revealedBidAmount = uint96(_bidAmount);
     }

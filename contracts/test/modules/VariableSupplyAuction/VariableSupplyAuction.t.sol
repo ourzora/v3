@@ -317,7 +317,7 @@ contract VariableSupplyAuctionTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_PlaceBid_WhenSingle() public setupBasicAuction {  
-        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
 
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
@@ -342,9 +342,9 @@ contract VariableSupplyAuctionTest is Test {
 
     function test_PlaceBid_WhenMultiple() public setupBasicAuction {
         // NOTE sealed bid amount can be less than sent ether amount (allows for hiding bid amount until reveal)
-        bytes32 commitment1 = genSealedBid(1 ether, bytes32("setec astronomy"));
-        bytes32 commitment2 = genSealedBid(1 ether, bytes32("too many secrets"));
-        bytes32 commitment3 = genSealedBid(1 ether, bytes32("cray tomes on set"));
+        bytes32 commitment1 = genSealedBid(1 ether, "setec astronomy");
+        bytes32 commitment2 = genSealedBid(1 ether, "too many secrets");
+        bytes32 commitment3 = genSealedBid(1 ether, "cray tomes on set");
 
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment1);
@@ -389,9 +389,9 @@ contract VariableSupplyAuctionTest is Test {
             totalBalance: uint96(1 ether) // expect this totalBalance in event based on first bid
         });
 
-        bytes32 commitment1 = genSealedBid(1 ether, bytes32("setec astronomy"));
-        bytes32 commitment2 = genSealedBid(1 ether, bytes32("too many secrets"));
-        bytes32 commitment3 = genSealedBid(1 ether, bytes32("cray tomes on set"));
+        bytes32 commitment1 = genSealedBid(1 ether, "setec astronomy");
+        bytes32 commitment2 = genSealedBid(1 ether, "too many secrets");
+        bytes32 commitment3 = genSealedBid(1 ether, "cray tomes on set");
 
         vm.expectEmit(true, true, true, true);
         emit BidPlaced(address(drop), address(bidder1), auction);
@@ -489,14 +489,14 @@ contract VariableSupplyAuctionTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function test_RevealBid_WhenSingle() public setupBasicAuction {
-        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
 
         vm.warp(3 days + 1 seconds);
 
         vm.prank(address(bidder1));
-        auctions.revealBid(address (drop), 1 ether, bytes32("setec astronomy"));
+        auctions.revealBid(address (drop), 1 ether, "setec astronomy");
 
         (, uint256 bidAmount) = auctions.bidOf(address(drop), address(bidder1));
         
@@ -518,18 +518,18 @@ contract VariableSupplyAuctionTest is Test {
     // }
 
     function testRevert_RevealBid_WhenAuctionInBidPhase() public setupBasicAuction {
-        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
 
         vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
 
         vm.prank(address(bidder1));
-        auctions.revealBid(address (drop), 1 ether, bytes32("setec astronomy"));
+        auctions.revealBid(address (drop), 1 ether, "setec astronomy");
     }
 
     function testRevert_RevealBid_WhenAuctionInSettlePhase() public setupBasicAuction {
-        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
 
@@ -538,7 +538,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
 
         vm.prank(address(bidder1));
-        auctions.revealBid(address (drop), 1 ether, bytes32("setec astronomy"));
+        auctions.revealBid(address (drop), 1 ether, "setec astronomy");
     }
 
     // TODO once settleAuction is written
@@ -557,11 +557,11 @@ contract VariableSupplyAuctionTest is Test {
         vm.expectRevert("NO_PLACED_BID_FOUND_FOR_ADDRESS");
 
         vm.prank(address(bidder1));
-        auctions.revealBid(address (drop), 1.1 ether, bytes32("setec astronomy"));
+        auctions.revealBid(address (drop), 1.1 ether, "setec astronomy");
     }
 
     function testRevert_RevealBid_WhenRevealedBidGreaterThanSentEther() public setupBasicAuction {
-        bytes32 commitment = genSealedBid(1.1 ether, bytes32("setec astronomy"));
+        bytes32 commitment = genSealedBid(1.1 ether, "setec astronomy");
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
 
@@ -570,11 +570,11 @@ contract VariableSupplyAuctionTest is Test {
         vm.expectRevert("REVEALED_BID_CANNOT_BE_GREATER_THAN_SENT_ETHER");
 
         vm.prank(address(bidder1));
-        auctions.revealBid(address (drop), 1.1 ether, bytes32("setec astronomy"));
+        auctions.revealBid(address (drop), 1.1 ether, "setec astronomy");
     }
 
     function testRevert_RevealBid_WhenRevealedAmountDoesNotMatchSealedBid() public setupBasicAuction {
-        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment); 
 
@@ -583,11 +583,11 @@ contract VariableSupplyAuctionTest is Test {
         vm.expectRevert("REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
 
         vm.prank(address(bidder1));
-        auctions.revealBid(address (drop), 0.9 ether, bytes32("setec astronomy")); // wrong amount
+        auctions.revealBid(address (drop), 0.9 ether, "setec astronomy"); // wrong amount
     }
 
     function testRevert_RevealBid_WhenRevealedSaltDoesNotMatchSealedBid() public setupBasicAuction {
-        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
 
@@ -596,7 +596,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.expectRevert("REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
 
         vm.prank(address(bidder1));
-        auctions.revealBid(address (drop), 1 ether, bytes32("too many secrets")); // wrong salt
+        auctions.revealBid(address (drop), 1 ether, "too many secrets"); // wrong salt
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -622,7 +622,6 @@ contract VariableSupplyAuctionTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     // TODO improve modifier pattern to include parameters (could combine w/ fuzzing)
-
     modifier setupBasicAuction() {
         vm.prank(address(seller));
         auctions.createAuction({
@@ -638,8 +637,9 @@ contract VariableSupplyAuctionTest is Test {
         _;
     }
 
-    function genSealedBid(uint256 _amount, bytes32 _salt) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_amount, _salt));
+    // IDEA could this not be moved to the hyperstructure module for better bidder usability ?!
+    function genSealedBid(uint256 _amount, string memory _salt) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_amount, bytes(_salt)));
     }
 
     /*//////////////////////////////////////////////////////////////

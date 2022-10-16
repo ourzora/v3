@@ -17,4 +17,10 @@ interface IVariableSupplyAuction {
         uint256 _revealPhaseDuration,
         uint256 _settlePhaseDuration
     ) external;
+
+    ///
+    function placeBid(address _tokenContract, bytes32 _commitmentHash) external payable;
+
+    ///
+    function revealBid(address _tokenContract, uint256 _bidAmount, string calldata _salt) external;
 }
