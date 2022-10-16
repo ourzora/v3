@@ -340,8 +340,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(commitmentStored, commitment);
     }
 
-    function test_PlaceBid_WhenMultiple() public setupBasicAuction {
-        // NOTE sealed bid amount can be less than sent ether amount (allows for hiding bid amount until reveal)
+    function test_PlaceBid_WhenMultiple() public setupBasicAuction {        
         bytes32 commitment1 = genSealedBid(1 ether, "setec astronomy");
         bytes32 commitment2 = genSealedBid(1 ether, "too many secrets");
         bytes32 commitment3 = genSealedBid(1 ether, "cray tomes on set");
@@ -375,6 +374,26 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(commitmentStored1, commitment1);
         assertEq(commitmentStored2, commitment2);
         assertEq(commitmentStored3, commitment3);
+    }
+
+    function testEvent_PlaceBid_WhenSingle() public setupBasicAuction {
+        Auction memory auction = Auction({
+            seller: address(seller),
+            minimumRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: uint96(1 ether)
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit BidPlaced(address(drop), address(bidder1), auction);
+
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
     }
 
     function testEvent_PlaceBid_WhenMultiple() public setupBasicAuction {
@@ -503,19 +522,101 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidAmount, 1 ether);
     }
 
-    // TODO
+    function test_RevealBid_WhenMultiple() public setupBasicAuction {
+        bytes32 commitment1 = genSealedBid(1 ether, "setec astronomy");
+        bytes32 commitment2 = genSealedBid(2 ether, "too many secrets");
+        bytes32 commitment3 = genSealedBid(3 ether, "cray tomes on set");
 
-    // function test_RevealBid_WhenMultiple() public setupBasicAuction {
-        
-    // }
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment1);
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 3 ether}(address(drop), commitment2);
+        vm.prank(address(bidder3));
+        auctions.placeBid{value: 5 ether}(address(drop), commitment3);        
 
-    // function testEvent_PlaceBid_WhenSingle() public setupBasicAuction {
-        
-    // }
+        vm.warp(3 days + 1 seconds);
 
-    // function testEvent_PlaceBid_WhenMultiple() public setupBasicAuction {
-        
-    // }
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, "setec astronomy");
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 2 ether, "too many secrets");
+        vm.prank(address(bidder3));
+        auctions.revealBid(address(drop), 3 ether, "cray tomes on set");
+
+        (, uint256 bidAmount1) = auctions.bidOf(address(drop), address(bidder1));
+        (, uint256 bidAmount2) = auctions.bidOf(address(drop), address(bidder2));
+        (, uint256 bidAmount3) = auctions.bidOf(address(drop), address(bidder3));
+
+        assertEq(bidAmount1, 1 ether);
+        assertEq(bidAmount2, 2 ether);
+        assertEq(bidAmount3, 3 ether);
+    }
+
+    function testEvent_RevealBid_WhenSingle() public setupBasicAuction {
+        Auction memory auction = Auction({
+            seller: address(seller),
+            minimumRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: uint96(1 ether)
+        });
+
+        bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.expectEmit(true, true, true, true);
+        emit BidRevealed(address(drop), address(bidder1), 1 ether,  auction);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, "setec astronomy");
+    }
+
+    function testEvent_RevealBid_WhenMultiple() public setupBasicAuction {
+        Auction memory auction = Auction({
+            seller: address(seller),
+            minimumRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: uint96(9 ether) // based on total sent ether amount
+        });
+
+        bytes32 commitment1 = genSealedBid(1 ether, "setec astronomy");
+        bytes32 commitment2 = genSealedBid(2 ether, "too many secrets");
+        bytes32 commitment3 = genSealedBid(3 ether, "cray tomes on set");
+
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment1);
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 3 ether}(address(drop), commitment2);
+        vm.prank(address(bidder3));
+        auctions.placeBid{value: 5 ether}(address(drop), commitment3);        
+
+        vm.warp(3 days + 1 seconds);
+
+        // We can assert all events at once, bc stored auction does not change
+        vm.expectEmit(true, true, true, true);
+        emit BidRevealed(address(drop), address(bidder1), 1 ether,  auction);
+        vm.expectEmit(true, true, true, true);
+        emit BidRevealed(address(drop), address(bidder2), 2 ether,  auction);
+        vm.expectEmit(true, true, true, true);
+        emit BidRevealed(address(drop), address(bidder3), 3 ether,  auction);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, "setec astronomy");
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 2 ether, "too many secrets");
+        vm.prank(address(bidder3));
+        auctions.revealBid(address(drop), 3 ether, "cray tomes on set");
+    }
 
     function testRevert_RevealBid_WhenAuctionInBidPhase() public setupBasicAuction {
         bytes32 commitment = genSealedBid(1 ether, "setec astronomy");
@@ -560,6 +661,8 @@ contract VariableSupplyAuctionTest is Test {
         auctions.revealBid(address (drop), 1.1 ether, "setec astronomy");
     }
 
+    // TODO should we then allow "topping up" the bidder's balance to support their bid?
+    // likely, no — introduces bad incentives
     function testRevert_RevealBid_WhenRevealedBidGreaterThanSentEther() public setupBasicAuction {
         bytes32 commitment = genSealedBid(1.1 ether, "setec astronomy");
         vm.prank(address(bidder1));
@@ -664,4 +767,5 @@ contract VariableSupplyAuctionTest is Test {
 
     event AuctionCreated(address indexed drop, Auction auction);
     event BidPlaced(address indexed tokenContract, address indexed bidder, Auction auction);    
+    event BidRevealed(address indexed tokenContract, address indexed bidder, uint256 indexed bidAmount, Auction auction);
 }
