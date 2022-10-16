@@ -394,7 +394,7 @@ contract VariableSupplyAuctionTest is Test {
         bytes32 commitment3 = genSealedBid(1 ether, bytes32("cray tomes on set"));
 
         vm.expectEmit(true, true, true, true);
-        emit AuctionBid(address(drop), address(bidder1), auction);
+        emit BidPlaced(address(drop), address(bidder1), auction);
 
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment1);
@@ -402,7 +402,7 @@ contract VariableSupplyAuctionTest is Test {
         auction.totalBalance = 3 ether; // 2 ether more from bidder 2
 
         vm.expectEmit(true, true, true, true);
-        emit AuctionBid(address(drop), address(bidder2), auction);
+        emit BidPlaced(address(drop), address(bidder2), auction);
 
         vm.prank(address(bidder2));
         auctions.placeBid{value: 2 ether}(address(drop), commitment2);
@@ -410,7 +410,7 @@ contract VariableSupplyAuctionTest is Test {
         auction.totalBalance = 6 ether; // 3 ether more from bidder 3
 
         vm.expectEmit(true, true, true, true);
-        emit AuctionBid(address(drop), address(bidder3), auction);
+        emit BidPlaced(address(drop), address(bidder3), auction);
 
         vm.prank(address(bidder3));
         auctions.placeBid{value: 3 ether}(address(drop), commitment3);
@@ -488,7 +488,116 @@ contract VariableSupplyAuctionTest is Test {
                         REVEAL BID
     //////////////////////////////////////////////////////////////*/
 
-    // TODO revealBid
+    function test_RevealBid_WhenSingle() public setupBasicAuction {
+        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1 ether, bytes32("setec astronomy"));
+
+        (, uint256 bidAmount) = auctions.bidOf(address(drop), address(bidder1));
+        
+        assertEq(bidAmount, 1 ether);
+    }
+
+    // TODO
+
+    // function test_RevealBid_WhenMultiple() public setupBasicAuction {
+        
+    // }
+
+    // function testEvent_PlaceBid_WhenSingle() public setupBasicAuction {
+        
+    // }
+
+    // function testEvent_PlaceBid_WhenMultiple() public setupBasicAuction {
+        
+    // }
+
+    function testRevert_RevealBid_WhenAuctionInBidPhase() public setupBasicAuction {
+        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
+
+        vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1 ether, bytes32("setec astronomy"));
+    }
+
+    function testRevert_RevealBid_WhenAuctionInSettlePhase() public setupBasicAuction {
+        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
+
+        vm.warp(3 days + 2 days + 1 seconds);
+
+        vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1 ether, bytes32("setec astronomy"));
+    }
+
+    // TODO once settleAuction is written
+    // function testRevert_RevealBid_WhenAuctionIsCompleted() public setupBasicAuction {
+        
+    // }
+
+    // TODO once cancelAuction is written
+    // function testRevert_RevealBid_WhenAuctionIsCancelled() public setupBasicAuction {
+        
+    // }
+
+    function testRevert_RevealBid_WhenNoCommittedBid() public setupBasicAuction {
+        vm.warp(3 days + 1 seconds);
+
+        vm.expectRevert("NO_PLACED_BID_FOUND_FOR_ADDRESS");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1.1 ether, bytes32("setec astronomy"));
+    }
+
+    function testRevert_RevealBid_WhenRevealedBidGreaterThanSentEther() public setupBasicAuction {
+        bytes32 commitment = genSealedBid(1.1 ether, bytes32("setec astronomy"));
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.expectRevert("REVEALED_BID_CANNOT_BE_GREATER_THAN_SENT_ETHER");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1.1 ether, bytes32("setec astronomy"));
+    }
+
+    function testRevert_RevealBid_WhenRevealedAmountDoesNotMatchSealedBid() public setupBasicAuction {
+        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment); 
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.expectRevert("REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 0.9 ether, bytes32("setec astronomy")); // wrong amount
+    }
+
+    function testRevert_RevealBid_WhenRevealedSaltDoesNotMatchSealedBid() public setupBasicAuction {
+        bytes32 commitment = genSealedBid(1 ether, bytes32("setec astronomy"));
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.expectRevert("REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1 ether, bytes32("too many secrets")); // wrong salt
+    }
 
     /*//////////////////////////////////////////////////////////////
                         FAILURE TO REVEAL BID
@@ -549,10 +658,10 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     struct Bid {
-        bytes32 commitment;
-        uint256 revealed;
+        bytes32 commitmentHash;
+        uint96 revealedBidAmount;
     }
 
     event AuctionCreated(address indexed drop, Auction auction);
-    event AuctionBid(address indexed tokenContract, address indexed bidder, Auction auction);    
+    event BidPlaced(address indexed tokenContract, address indexed bidder, Auction auction);    
 }

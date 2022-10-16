@@ -39,8 +39,8 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard {
 
     ///
     struct Bid {
-        bytes32 commitment;
-        uint96 revealed;
+        bytes32 commitmentHash;
+        uint96 revealedBidAmount;
     }
 
     /// @notice The auction for a given seller, if one exists
@@ -116,10 +116,10 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard {
     /// @param tokenContract The ERC-721 drop token contract of the auction
     /// @param bidder The address that placed a sealed bid
     /// @param auction The metadata of the auction
-    event AuctionBid(address indexed tokenContract, address indexed bidder, Auction auction);
+    event BidPlaced(address indexed tokenContract, address indexed bidder, Auction auction);
 
-    ///
-    function placeBid(address _tokenContract, bytes32 _commitment) public payable nonReentrant {
+    /// TODO
+    function placeBid(address _tokenContract, bytes32 _commitmentHash) public payable nonReentrant {
         // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
 
@@ -144,10 +144,42 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard {
 
         // Store the committed / unrevealed bid for this bidder
         bidOf[_tokenContract][msg.sender] = Bid({
-            commitment: _commitment,
-            revealed: 0
+            commitmentHash: _commitmentHash,
+            revealedBidAmount: 0
         });
 
-        emit AuctionBid(_tokenContract, msg.sender, auction);
+        emit BidPlaced(_tokenContract, msg.sender, auction);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        REVEAL BID
+    //////////////////////////////////////////////////////////////*/
+
+    // TODO add UML
+
+    ///
+    event BidRevealed();
+
+    ///
+    function revealBid(address _tokenContract, uint256 _bidAmount, bytes32 _salt) public nonReentrant {
+        // Get the auction for the specified drop
+        Auction storage auction = auctionForDrop[_tokenContract];
+
+        // Ensure auction is in reveal phase
+        require(block.timestamp >= auction.endOfBidPhase && block.timestamp < auction.endOfRevealPhase, "REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+
+        // Get the bid for the specified bidder
+        Bid storage bid = bidOf[_tokenContract][msg.sender];
+
+        // Ensure bidder placed bid in auction
+        require(balanceOf[_tokenContract][msg.sender] > 0 ether, "NO_PLACED_BID_FOUND_FOR_ADDRESS");
+
+        // Ensure revealed bid amount is not greater than sent ether
+        require(_bidAmount <= balanceOf[_tokenContract][msg.sender], "REVEALED_BID_CANNOT_BE_GREATER_THAN_SENT_ETHER");
+
+        // Ensure revealed bid matches sealed bid
+        require(keccak256(abi.encodePacked(_bidAmount, _salt)) == bid.commitmentHash, "REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
+
+        bid.revealedBidAmount = uint96(_bidAmount);
     }
 }
