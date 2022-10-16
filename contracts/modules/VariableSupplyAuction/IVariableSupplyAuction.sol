@@ -9,6 +9,7 @@ interface IVariableSupplyAuction {
 
     ///
     function createAuction(
+        address _tokenContract,
         uint256 _minimumRevenue,
         address _sellerFundsRecipient,
         uint256 _startTime,
