@@ -1,0 +1,6 @@
+Invariant 1: endOfBidPhase > startTime
+Invariant 2: endOfRevealPhase > endOfBidPhase
+Invariant 3: endOfSettlePhase > endOfRevealPhase
+Invariant 4: totalBalance == Σ all bidder balances, while now <= endOfSettlePhase
+Invariant 5: bidder balance >= revealedBidAmount, while now > endOfRevealPhase
+# TODO 

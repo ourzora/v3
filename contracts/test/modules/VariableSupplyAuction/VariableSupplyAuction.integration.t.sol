@@ -69,7 +69,7 @@ contract VariableSupplyAuctionIntegrationTest is DSTest {
         weth = new WETH();
 
         // Deploy Reserve Auction Core ETH
-        auctions = new VariableSupplyAuction();
+        auctions = new VariableSupplyAuction(address(erc721TransferHelper), address(royaltyEngine), address(ZPFS), address(weth));
         registrar.registerModule(address(auctions));
 
         // Set module fee

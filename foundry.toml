@@ -6,3 +6,9 @@ optimizer_runs = 500000
 out = 'dist/artifacts'
 src = 'contracts'
 test = 'test'
+
+[invariant]
+runs           = 10     # The number of times to run the invariant tests
+depth          = 10     # The number of calls to make in the invariant tests
+call_override  = false  # Override calls
+fail_on_revert = false  # Fail the test if the contract reverts
