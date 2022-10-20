@@ -227,6 +227,8 @@ contract VariableSupplyAuctionTest is Test {
             uint256 endOfSettlePhase,
             uint96 totalBalance,
             uint96 settledRevenue,
+            uint96 settledPricePoint,
+            uint96 settledEditionSize
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(sellerStored, address(seller));
@@ -238,6 +240,8 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(endOfSettlePhase, uint32(block.timestamp + 3 days + 2 days + 1 days));
         assertEq(totalBalance, uint96(0));
         assertEq(settledRevenue, uint96(0));
+        assertEq(settledPricePoint, uint96(0));
+        assertEq(settledEditionSize, uint96(0));
     }
 
     function test_CreateAuction_WhenFuture() public {
@@ -261,7 +265,8 @@ contract VariableSupplyAuctionTest is Test {
             uint32 endOfRevealPhase,
             uint32 endOfSettlePhase,
             ,
-            ,            
+            ,
+            ,
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(startTime, 1 days);
@@ -279,6 +284,7 @@ contract VariableSupplyAuctionTest is Test {
             endOfBidPhase: uint32(block.timestamp + 3 days),
             endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
             endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: 0,
             settledRevenue: 0,
             settledPricePoint: 0,
             settledEditionSize: 0
@@ -333,7 +339,82 @@ contract VariableSupplyAuctionTest is Test {
                         CANCEL AUCTION
     //////////////////////////////////////////////////////////////*/
 
-    // TODO
+    function test_CancelAuction_WhenNoBidsPlacedYet() public setupBasicAuction {
+        // precondition check
+        (
+            address sellerStored,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,   
+        ) = auctions.auctionForDrop(address(drop));
+        assertEq(sellerStored, address(seller));
+
+        vm.prank(address(seller));
+        auctions.cancelAuction(address(drop));
+
+        (
+            sellerStored,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+        ) = auctions.auctionForDrop(address(drop));
+        assertEq(sellerStored, address(0));
+    }
+
+    function testEvent_CancelAuction() public setupBasicAuction {
+        Auction memory auction = Auction({
+            seller: address(seller),
+            minimumViableRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: 0,
+            settledRevenue: 0,
+            settledPricePoint: 0,
+            settledEditionSize: 0
+        });
+
+        vm.expectEmit(true, true, true, true);
+        emit AuctionCanceled(address(drop), auction);
+
+        vm.prank(address(seller));
+        auctions.cancelAuction(address(drop));
+    }
+
+    function testRevert_CancelAuction_WhenNotSeller() public setupBasicAuction {
+        vm.expectRevert("ONLY_SELLER");
+
+        vm.prank(address(bidder1));
+        auctions.cancelAuction(address(drop));
+    }
+
+    function testRevert_CancelAuction_WhenBidAlreadyPlaced() public setupBasicAuction {
+        bytes32 commitment = _genSealedBid(1 ether, salt1);
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+
+        vm.expectRevert("CANNOT_CANCEL_AUCTION_WITH_BIDS");
+
+        vm.prank(address(seller));
+        auctions.cancelAuction(address(drop));
+    }
+
+    // TODO update biz logic to allow one other case -- cancelling auctions
+    // in settle phase that did not meet minimum viable revenue goal
 
     /*//////////////////////////////////////////////////////////////
                         PLACE BID
@@ -386,6 +467,7 @@ contract VariableSupplyAuctionTest is Test {
             endOfBidPhase: uint32(block.timestamp + 3 days),
             endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
             endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: 1 ether,
             settledRevenue: uint96(0),
             settledPricePoint: uint96(0),
             settledEditionSize: uint16(0)
@@ -408,7 +490,7 @@ contract VariableSupplyAuctionTest is Test {
             endOfBidPhase: uint32(block.timestamp + 3 days),
             endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
             endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
-            // totalBalance: 1 ether,
+            totalBalance: 1 ether,
             settledRevenue: uint96(0),
             settledPricePoint: uint96(0),
             settledEditionSize: uint16(0)
@@ -424,7 +506,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment1);
 
-        // auction.totalBalance = 3 ether; // 2 ether more from bidder 2
+        auction.totalBalance = 3 ether; // 2 ether more from bidder 2
 
         vm.expectEmit(true, true, true, true);
         emit BidPlaced(address(drop), address(bidder2), auction);
@@ -432,7 +514,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder2));
         auctions.placeBid{value: 2 ether}(address(drop), commitment2);
 
-        // auction.totalBalance = 6 ether; // 3 ether more from bidder 3
+        auction.totalBalance = 6 ether; // 3 ether more from bidder 3
 
         vm.expectEmit(true, true, true, true);
         emit BidPlaced(address(drop), address(bidder3), auction);
@@ -567,6 +649,7 @@ contract VariableSupplyAuctionTest is Test {
             endOfBidPhase: uint32(block.timestamp + 3 days),
             endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
             endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: 1 ether,
             settledRevenue: uint96(0),
             settledPricePoint: uint96(0),
             settledEditionSize: uint16(0)
@@ -594,6 +677,7 @@ contract VariableSupplyAuctionTest is Test {
             endOfBidPhase: uint32(block.timestamp + 3 days),
             endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
             endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: 9 ether,
             settledRevenue: uint96(0),
             settledPricePoint: uint96(0),
             settledEditionSize: uint16(0)
@@ -1111,6 +1195,7 @@ contract VariableSupplyAuctionTest is Test {
             endOfBidPhase: uint32(block.timestamp + 3 days),
             endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
             endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: uint96(0),
             settledRevenue: _settledPricePoint * _settledEditionSize,
             settledPricePoint: _settledPricePoint,
             settledEditionSize: _settledEditionSize
@@ -1137,10 +1222,10 @@ contract VariableSupplyAuctionTest is Test {
         uint32 endOfBidPhase;
         uint32 endOfRevealPhase;
         uint32 endOfSettlePhase;
+        uint96 totalBalance;
         uint96 settledRevenue;
         uint96 settledPricePoint;
         uint16 settledEditionSize;
-        // TODO do we still need totalBalance ?
     }
 
     struct Bid {
@@ -1149,6 +1234,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     event AuctionCreated(address indexed tokenContract, Auction auction);
+    event AuctionCanceled(address indexed tokenContract, Auction auction);
     event BidPlaced(address indexed tokenContract, address indexed bidder, Auction auction);    
     event BidRevealed(address indexed tokenContract, address indexed bidder, uint256 indexed bidAmount, Auction auction);
     event AuctionSettled(address indexed tokenContract, Auction auction);

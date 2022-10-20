@@ -19,8 +19,14 @@ interface IVariableSupplyAuction {
     ) external;
 
     ///
+    function cancelAuction(address _tokenContract) external;
+
+    ///
     function placeBid(address _tokenContract, bytes32 _commitmentHash) external payable;
 
     ///
     function revealBid(address _tokenContract, uint256 _bidAmount, string calldata _salt) external;
+
+    ///
+    function settleAuction(address _tokenContract, uint96 _settlePricePoint) external;
 }
