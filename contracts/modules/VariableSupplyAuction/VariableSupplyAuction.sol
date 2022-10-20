@@ -322,6 +322,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         ERC721Drop(_tokenContract).setEditionSize(uint64(winningBidders.length));
         
         // Mint NFTs to winning bidders
+        // TODO fix by moving winningBidders into auction storage
         ERC721Drop(_tokenContract).adminMintAirdrop(winningBidders);
 
         // Transfer the auction revenue to the funds recipient
@@ -334,6 +335,40 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                         CLAIM REFUND
     //////////////////////////////////////////////////////////////*/
 
-    // TODO 
+    // TODO add UML
 
+    /// @notice Emitted when a refund is claimed
+    /// @param tokenContract The address of the ERC-721 drop contract
+    /// @param bidder The address of the bidder claiming their refund
+    /// @param refundAmount The amount of the refund claimed
+    /// @param auction The metadata of the created auction
+    event RefundClaimed(address indexed tokenContract, address indexed bidder, uint96 refundAmount, Auction auction);
+
+    // TODO add checkAvailableRefund(address _tokenContract) external
+
+    /// @notice Claim refund -- if winner, for any additional ether sent above your
+    /// bid amount; if not winner, for the full amount of ether sent with you bid
+    /// @dev TODO doc re: temporal checks
+    /// @param _tokenContract The address of the ERC-721 drop contract
+    function claimRefund(address _tokenContract) external nonReentrant {
+        // Get the auction
+        Auction storage auction = auctionForDrop[_tokenContract];
+
+        // TODO add temporal checks
+
+        // Get the bid for the specified bidder
+        Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
+        uint96 bidderBalance = bid.bidderBalance;
+
+        // Ensure bidder has balance
+        require(bidderBalance > 0, "NO_REFUND_AVAILABLE");
+
+        // Clear bidder balance
+        bid.bidderBalance = 0;
+
+        // Transfer the bidder's available refund balance to the bidder
+        _handleOutgoingTransfer(msg.sender, bidderBalance, address(0), 50_000);        
+
+        emit RefundClaimed(_tokenContract, msg.sender, bidderBalance, auction);
+    }
 }

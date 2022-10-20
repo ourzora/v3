@@ -1067,29 +1067,139 @@ contract VariableSupplyAuctionTest is Test {
                         CLAIM REFUND
     //////////////////////////////////////////////////////////////*/
 
-    // function test_claimRefund() public setupBasicAuction {
-    //     vm.prank(address(bidder1));
-    //     auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
+    function test_claimRefund_WhenWinner() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
 
-    //     vm.warp(3 days + 1 seconds);
+        vm.warp(3 days + 1 seconds);
 
-    //     vm.prank(address(bidder1));
-    //     auctions.revealBid(address(drop), 1 ether, salt1);       
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);       
 
-    //     vm.warp(3 days + 2 days + 1 seconds);
+        vm.warp(3 days + 2 days + 1 seconds);
 
-    //     vm.prank(address(seller));
-    //     auctions.settleAuction(address(drop), 1 ether);
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 1 ether);
 
-    //     vm.warp(3 days + 2 days + 1 days + 1 seconds);
+        // Precondition checks        
+        assertEq(address(bidder1).balance, 98 ether);
+        (, uint96 bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        assertEq(bidderBalance, 1 ether);
 
-    //     // Precondition checks
-    //     assertEq(address(bidder1).balance, 98 ether);
-    //     assertEq(, expected);
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
 
-    //     vm.prank(address(bidder1));
+        assertEq(address(bidder1).balance, 99 ether);
+        (, bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        assertEq(bidderBalance, 0 ether);
+    }
 
+    function test_claimRefund_WhenNotWinner() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(2 ether, salt2)); 
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);  
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 2 ether, salt2);       
+
+        vm.warp(3 days + 2 days + 1 seconds);
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 2 ether);
+
+        // Precondition checks        
+        assertEq(address(bidder1).balance, 98 ether);
+        (, uint96 bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        assertEq(bidderBalance, 2 ether);
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+
+        assertEq(address(bidder1).balance, 100 ether); // claim their full amount of sent ether
+        (, bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        assertEq(bidderBalance, 0 ether);
+    }
+
+    function testEvent_claimRefund() public setupBasicAuction {
+        Auction memory auction = Auction({
+            seller: address(seller),
+            minimumViableRevenue: 1 ether,
+            sellerFundsRecipient: address(sellerFundsRecipient),
+            startTime: uint32(block.timestamp),
+            endOfBidPhase: uint32(block.timestamp + 3 days),
+            endOfRevealPhase: uint32(block.timestamp + 3 days + 2 days),
+            endOfSettlePhase: uint32(block.timestamp + 3 days + 2 days + 1 days),
+            totalBalance: 1 ether,
+            settledRevenue: 1 ether,
+            settledPricePoint: 1 ether,
+            settledEditionSize: uint16(1)
+        });
+
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);       
+
+        vm.warp(3 days + 2 days + 1 seconds);
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 1 ether);
+
+        vm.expectEmit(true, true, true, true);
+        emit RefundClaimed(address(drop), address(bidder1), 1 ether, auction);
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
+
+    function testRevert_ClaimRefund_WhenNoBidPlaced() public setupBasicAuction {
+        vm.warp(3 days + 2 days + 1 seconds);
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 1 ether);
+
+        vm.expectRevert("NO_REFUND_AVAILABLE");
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
+
+    // function testRevert_ClaimRefund_WhenNoBidRevealed() public setupBasicAuction {
+    //     // TODO
     // }
+
+    function testRevert_ClaimRefund_WhenAlreadyClaimed() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);       
+
+        vm.warp(3 days + 2 days + 1 seconds);
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 1 ether);
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+
+        vm.expectRevert("NO_REFUND_AVAILABLE");
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
+
+    // TODO add temporal sad paths
 
     // TODO add minimum viable revenue sad paths
 
@@ -1238,4 +1348,5 @@ contract VariableSupplyAuctionTest is Test {
     event BidPlaced(address indexed tokenContract, address indexed bidder, Auction auction);    
     event BidRevealed(address indexed tokenContract, address indexed bidder, uint256 indexed bidAmount, Auction auction);
     event AuctionSettled(address indexed tokenContract, Auction auction);
+    event RefundClaimed(address indexed tokenContract, address indexed bidder, uint96 refundAmount, Auction auction);
 }

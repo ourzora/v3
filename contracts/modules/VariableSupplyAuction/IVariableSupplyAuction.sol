@@ -29,4 +29,7 @@ interface IVariableSupplyAuction {
 
     ///
     function settleAuction(address _tokenContract, uint96 _settlePricePoint) external;
+
+    ///
+    function claimRefund(address _tokenContract) external;
 }
