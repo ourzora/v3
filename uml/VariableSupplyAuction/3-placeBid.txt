@@ -1,0 +1,11 @@
+@startuml
+actor bidder
+participant VariableSupplyAuction
+
+Bidder -> VariableSupplyAuction : placeBid()
+
+VariableSupplyAuction -> VariableSupplyAuction : validate auction is in bid phase
+VariableSupplyAuction -> VariableSupplyAuction : update auction balance and store sealed bid
+VariableSupplyAuction -> VariableSupplyAuction : emit BidPlaced()
+
+@enduml

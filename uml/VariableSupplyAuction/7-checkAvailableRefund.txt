@@ -1,0 +1,10 @@
+@startuml
+actor bidder
+participant VariableSupplyAuction
+
+Bidder -> VariableSupplyAuction : checkAvailableRefund()
+
+VariableSupplyAuction -> VariableSupplyAuction : validate auction is in cleanup phase
+VariableSupplyAuction -> VariableSupplyAuction : return stored available refund for bidder
+
+@enduml

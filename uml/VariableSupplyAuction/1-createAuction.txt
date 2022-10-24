@@ -1,0 +1,11 @@
+@startuml
+actor Seller
+participant VariableSupplyAuction
+
+Seller -> VariableSupplyAuction : createAuction()
+
+VariableSupplyAuction -> VariableSupplyAuction : calculate phase end times
+VariableSupplyAuction -> VariableSupplyAuction : store auction metadata
+VariableSupplyAuction -> VariableSupplyAuction : emit AuctionCreated()
+
+@enduml

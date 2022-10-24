@@ -1,0 +1,11 @@
+@startuml
+actor Seller
+participant VariableSupplyAuction
+
+Seller -> VariableSupplyAuction : cancelAuction()
+
+VariableSupplyAuction -> VariableSupplyAuction : validate no bids placed yet
+VariableSupplyAuction -> VariableSupplyAuction : emit AuctionCanceled()
+VariableSupplyAuction -> VariableSupplyAuction : delete auction
+
+@enduml

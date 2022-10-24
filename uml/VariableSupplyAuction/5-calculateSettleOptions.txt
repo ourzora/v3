@@ -1,0 +1,17 @@
+@startuml
+actor caller
+participant VariableSupplyAuction
+
+Caller -> VariableSupplyAuction : calculateSettleOptions()
+
+alt Not calculated yet?
+    
+    VariableSupplyAuction ->  VariableSupplyAuction : calculate and store settle options
+
+else noop
+
+end
+
+    VariableSupplyAuction ->  VariableSupplyAuction : return stored settle options
+
+@enduml

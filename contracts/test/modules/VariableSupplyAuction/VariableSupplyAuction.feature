@@ -8,7 +8,8 @@ Feature: Variable Supply Auctions
     - Created
     - Bid Phase
     - Reveal Phase
-    - Sizing Phase
+    - Settle Phase
+    - TODO consider Cleanup phase
     - Completed / Cancelled
 
     Background: VSA creation and bidding

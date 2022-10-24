@@ -363,11 +363,13 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Get the balances for this auction
         mapping(address => Bid) storage bids = bidsForDrop[_tokenContract];
 
-        // Loop through bids to determine winners and edition size
+        // Loop through bids to determine edition size and winning bidders
+        // TODO consolidate business logic with calculateSettleOptions
         // TODO document pragmatic max edition size / winning bidders
         // TODO switch to dynamically sized array
-        address[] memory winningBidders = new address[](1000);      
+        // TODO consider moving winningBidders into storage
         uint16 editionSize;
+        address[] memory winningBidders = new address[](1000);      
         for (uint256 i = 0; i < bidders.length; i++) {
             // Cache the bidder
             address bidder = bidders[i];
@@ -394,7 +396,6 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         ERC721Drop(_tokenContract).setEditionSize(uint64(winningBidders.length));
         
         // Mint NFTs to winning bidders
-        // TODO consider moving winningBidders into storage
         ERC721Drop(_tokenContract).adminMintAirdrop(winningBidders);
 
         // Transfer the auction revenue to the funds recipient
@@ -420,11 +421,11 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// bid amount; if not winner, the full amount of ether sent with your bid
     /// @param _tokenContract The address of the ERC-721 drop contract    
     function checkAvailableRefund(address _tokenContract) external view returns (uint96) {
-        // TODO add checks
+        // TODO add checks, including cleanup phase
 
         // Get the balance for the specified bidder
         Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
-        
+
         return bid.bidderBalance;
     }
 
@@ -453,4 +454,6 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
         emit RefundClaimed(_tokenContract, msg.sender, bidderBalance, auction);
     }
+
+    // TODO consider cleanup function
 }

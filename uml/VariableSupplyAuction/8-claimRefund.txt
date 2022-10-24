@@ -1,0 +1,12 @@
+@startuml
+actor bidder
+participant VariableSupplyAuction
+
+Bidder -> VariableSupplyAuction : claimRefund()
+
+VariableSupplyAuction -> VariableSupplyAuction : validate auction is in cleanup phase
+VariableSupplyAuction -> VariableSupplyAuction : clear bidder available refund
+VariableSupplyAuction -> VariableSupplyAuction : handle bidder available refund payout
+VariableSupplyAuction -> VariableSupplyAuction : emit RefundClaimed()
+
+@enduml
