@@ -1107,7 +1107,39 @@ contract VariableSupplyAuctionTest is Test {
                         CLAIM REFUND
     //////////////////////////////////////////////////////////////*/
 
-    function test_claimRefund_WhenWinner() public setupBasicAuction {
+    function test_CheckAvailableRefund() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(2 ether, salt2));
+        vm.prank(address(bidder3));
+        auctions.placeBid{value: 3 ether}(address(drop), _genSealedBid(2 ether, salt3));
+
+        vm.warp(3 days + 1 seconds);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 2 ether, salt2);
+        vm.prank(address(bidder3));
+        auctions.revealBid(address(drop), 2 ether, salt3);
+
+        vm.warp(3 days + 2 days + 1 seconds);
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 2 ether);
+
+        vm.prank(address(bidder1));
+        assertEq(auctions.checkAvailableRefund(address(drop)), 2 ether); // = full amount sent, not winning bid
+
+        vm.prank(address(bidder2));
+        assertEq(auctions.checkAvailableRefund(address(drop)), 0 ether); // = 2 ether sent - 2 ether winning bid
+
+        vm.prank(address(bidder3));
+        assertEq(auctions.checkAvailableRefund(address(drop)), 1 ether); // = 3 ether sent - 2 ether winning bid
+    }
+
+    function test_ClaimRefund_WhenWinner() public setupBasicAuction {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
 
@@ -1134,7 +1166,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance, 0 ether);
     }
 
-    function test_claimRefund_WhenNotWinner() public setupBasicAuction {
+    function test_ClaimRefund_WhenNotWinner() public setupBasicAuction {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
         vm.prank(address(bidder2));
@@ -1165,7 +1197,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance, 0 ether);
     }
 
-    function testEvent_claimRefund() public setupBasicAuction {
+    function testEvent_ClaimRefund() public setupBasicAuction {
         Auction memory auction = Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,

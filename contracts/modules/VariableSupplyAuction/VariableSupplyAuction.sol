@@ -292,7 +292,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// @return A tuple of 3 arrays representing the settle options --
     /// the possible price points at which to settle, along with the 
     /// resulting edition sizes and amounts of revenue generated
-    function calculateSettleOptions(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
+    function calculateSettleOptions(address _tokenContract) external returns (uint96[] memory, uint16[] memory, uint96[] memory) {
 
         // TODO gas optimization -- algorithm =P
         // TODO gas optimization -- consider other, less storage-intensive options
@@ -416,10 +416,20 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// @param auction The metadata of the created auction
     event RefundClaimed(address indexed tokenContract, address indexed bidder, uint96 refundAmount, Auction auction);
 
-    // TODO add checkAvailableRefund(address _tokenContract) external
+    /// @notice Check available refund -- if winner, any additional ether sent above your
+    /// bid amount; if not winner, the full amount of ether sent with your bid
+    /// @param _tokenContract The address of the ERC-721 drop contract    
+    function checkAvailableRefund(address _tokenContract) external view returns (uint96) {
+        // TODO add checks
 
-    /// @notice Claim refund -- if winner, for any additional ether sent above your
-    /// bid amount; if not winner, for the full amount of ether sent with you bid
+        // Get the balance for the specified bidder
+        Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
+        
+        return bid.bidderBalance;
+    }
+
+    /// @notice Claim refund -- if winner, any additional ether sent above your
+    /// bid amount; if not winner, the full amount of ether sent with your bid
     /// @dev TODO doc re: temporal checks
     /// @param _tokenContract The address of the ERC-721 drop contract
     function claimRefund(address _tokenContract) external nonReentrant {
@@ -428,7 +438,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
         // TODO add temporal checks
 
-        // Get the bid for the specified bidder
+        // Get the balance for the specified bidder
         Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
         uint96 bidderBalance = bid.bidderBalance;
 
