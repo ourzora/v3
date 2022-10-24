@@ -271,15 +271,86 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
     // TODO add UML
 
-    // TODO add view function for price point + edition size options based on revealed bids
-
     /// @notice Emitted when an auction is settled
     /// @param tokenContract The address of the ERC-721 drop contract
     /// @param auction The metadata of the created auction
     event AuctionSettled(address indexed tokenContract, Auction auction);
 
+    struct SettleOption {
+        uint16 editionSize;
+        uint96 revenue;
+    }
+
+    uint96[] public settlePricePoints;
+
+    mapping(uint96 => SettleOption) public settleMapping;
+
+    /// @notice Calculate edition size and revenue for each possible price point
+    /// @dev Cheaper on subsequent calls, after the initial call when
+    /// calculations have been performed and saved
+    /// @param _tokenContract The address of the ERC-721 drop contract
+    /// @return A tuple of 3 arrays representing the settle options --
+    /// the possible price points at which to settle, along with the 
+    /// resulting edition sizes and amounts of revenue generated
+    function calculateSettleOptions(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
+
+        // TODO gas optimization -- algorithm =P
+        // TODO gas optimization -- consider other, less storage-intensive options
+        // TODO gas optimization -- don't redo if already calculated
+
+        address[] storage bidders = revealedBiddersForDrop[_tokenContract];
+
+        for (uint256 i = 0; i < bidders.length; i++) {
+            address bidder = bidders[i];
+            uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
+            SettleOption storage settleOption = settleMapping[bidAmount];
+
+            if (settleOption.editionSize == 0) {
+                settlePricePoints.push(bidAmount);
+                settleOption.editionSize = 1;
+            }
+        }
+
+        for (uint256 j = 0; j < bidders.length; j++) {
+            address bidder = bidders[j];
+            uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
+
+            for (uint256 k = 0; k < settlePricePoints.length; k++) {
+                uint96 settlePricePoint = settlePricePoints[k];
+                SettleOption storage settleOption = settleMapping[settlePricePoint];
+
+                if (bidAmount >= settlePricePoint) {
+                    settleOption.editionSize++;
+                    settleOption.revenue += settlePricePoint;
+                }
+            }
+        }
+
+        uint96[] memory pricePoints = new uint96[](settlePricePoints.length);
+        uint16[] memory editionSizes = new uint16[](settlePricePoints.length);
+        uint96[] memory revenues = new uint96[](settlePricePoints.length);
+
+        for (uint256 m = 0; m < settlePricePoints.length; m++) {
+            uint96 settlePricePoint = settlePricePoints[m];
+            SettleOption storage settleOption = settleMapping[settlePricePoint];
+
+            pricePoints[m] = settlePricePoint;
+            editionSizes[m] = settleOption.editionSize - 1; // because 1st bidder at this settle price was double counted
+            revenues[m] = settleOption.revenue;
+            
+        }
+
+        return (pricePoints, editionSizes, revenues);
+    }
+
+    /// @notice Settle an auction at a given price point
+    /// @param _tokenContract The address of the ERC-721 drop contract
+    /// @param _settlePricePoint The price point at which to settle the auction
     function settleAuction(address _tokenContract, uint96 _settlePricePoint) external nonReentrant {
+
         // TODO checks
+
+        // TODO decide how to store the fact that this auction is settled
 
         // TODO gas optimizations
 
@@ -294,6 +365,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
         // Loop through bids to determine winners and edition size
         // TODO document pragmatic max edition size / winning bidders
+        // TODO switch to dynamically sized array
         address[] memory winningBidders = new address[](1000);      
         uint16 editionSize;
         for (uint256 i = 0; i < bidders.length; i++) {
@@ -322,7 +394,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         ERC721Drop(_tokenContract).setEditionSize(uint64(winningBidders.length));
         
         // Mint NFTs to winning bidders
-        // TODO fix by moving winningBidders into auction storage
+        // TODO consider moving winningBidders into storage
         ERC721Drop(_tokenContract).adminMintAirdrop(winningBidders);
 
         // Transfer the auction revenue to the funds recipient

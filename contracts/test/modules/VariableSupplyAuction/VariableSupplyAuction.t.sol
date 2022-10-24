@@ -420,6 +420,8 @@ contract VariableSupplyAuctionTest is Test {
                         PLACE BID
     //////////////////////////////////////////////////////////////*/
 
+    // TODO add more assertions around new storage variables
+
     function test_PlaceBid_WhenSingle() public setupBasicAuction {  
         bytes32 commitment = _genSealedBid(1 ether, salt1);
 
@@ -805,6 +807,44 @@ contract VariableSupplyAuctionTest is Test {
     /*//////////////////////////////////////////////////////////////
                         SETTLE AUCTION
     //////////////////////////////////////////////////////////////*/
+
+    function test_CalculateSettleOptions() public setupBasicAuction throughRevealPhaseComplex {
+        (uint96[] memory pricePoints, uint16[] memory editionSizes, uint96[] memory revenues) = 
+            auctions.calculateSettleOptions(address(drop));
+
+        assertEq(editionSizes.length, pricePoints.length);
+        assertEq(revenues.length, pricePoints.length);
+
+        // for (uint256 i = 0; i < pricePoints.length; i++) {
+        //     emit log_string("Option -------------");
+        //     emit log_named_uint("Price point", pricePoints[i] / 1 ether);
+        //     emit log_named_uint("Edition size", editionSizes[i]);
+        //     emit log_named_uint("Revenue", revenues[i] / 1 ether);
+        // }
+
+        /*
+
+        Expected output:
+        
+        [Price Point]       [Edition Size]      [Revenue]
+        [1]                 [13]                [13]
+        [6]                 [3]                 [18]
+        [11]                [1]                 [11]
+
+         */
+
+         assertEq(pricePoints[0], 1 ether);
+         assertEq(editionSizes[0], 13);
+         assertEq(revenues[0], 13 ether);
+
+         assertEq(pricePoints[1], 6 ether);
+         assertEq(editionSizes[1], 3);
+         assertEq(revenues[1], 18 ether);
+
+         assertEq(pricePoints[2], 11 ether);
+         assertEq(editionSizes[2], 1);
+         assertEq(revenues[2], 11 ether);
+    }
 
     /*
 
