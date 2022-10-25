@@ -1,0 +1,22 @@
+        ,-.                                                                      
+        `-'                                                                      
+        /|\                                                                      
+         |             ,---------------------.                                   
+        / \            |VariableSupplyAuction|                                   
+      Bidder           `----------+----------'                                   
+        | checkAvailableRefund()  |                                              
+        | ----------------------->|                                              
+        |                         |                                              
+        |                         ----.                                          
+        |                             | validate auction is in cleanup phase     
+        |                         <---'                                          
+        |                         |                                              
+        |                         ----.                                          
+        |                             | return stored available refund for bidder
+        |                         <---'                                          
+      Bidder           ,----------+----------.                                   
+        ,-.            |VariableSupplyAuction|                                   
+        `-'            `---------------------'                                   
+        /|\                                                                      
+         |                                                                       
+        / \                                                                      

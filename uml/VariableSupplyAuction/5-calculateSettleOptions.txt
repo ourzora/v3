@@ -1,5 +1,5 @@
 @startuml
-actor caller
+actor Caller
 participant VariableSupplyAuction
 
 Caller -> VariableSupplyAuction : calculateSettleOptions()

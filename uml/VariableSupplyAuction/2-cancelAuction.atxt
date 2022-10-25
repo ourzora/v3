@@ -1,0 +1,26 @@
+        ,-.                                                        
+        `-'                                                        
+        /|\                                                        
+         |             ,---------------------.                     
+        / \            |VariableSupplyAuction|                     
+      Seller           `----------+----------'                     
+        |     cancelAuction()     |                                
+        | ----------------------->|                                
+        |                         |                                
+        |                         ----.                            
+        |                             | validate no bids placed yet
+        |                         <---'                            
+        |                         |                                
+        |                         ----.                            
+        |                             | emit AuctionCanceled()     
+        |                         <---'                            
+        |                         |                                
+        |                         ----.                            
+        |                             | delete auction             
+        |                         <---'                            
+      Seller           ,----------+----------.                     
+        ,-.            |VariableSupplyAuction|                     
+        `-'            `---------------------'                     
+        /|\                                                        
+         |                                                         
+        / \                                                        

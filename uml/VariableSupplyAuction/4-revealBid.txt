@@ -1,5 +1,5 @@
 @startuml
-actor bidder
+actor Bidder
 participant VariableSupplyAuction
 
 Bidder -> VariableSupplyAuction : revealBid()

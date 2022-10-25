@@ -1,0 +1,26 @@
+        ,-.                                                      
+        `-'                                                      
+        /|\                                                      
+         |             ,---------------------.                   
+        / \            |VariableSupplyAuction|                   
+      Seller           `----------+----------'                   
+        |     createAuction()     |                              
+        | ----------------------->|                              
+        |                         |                              
+        |                         ----.                          
+        |                             | calculate phase end times
+        |                         <---'                          
+        |                         |                              
+        |                         ----.                          
+        |                             | store auction metadata   
+        |                         <---'                          
+        |                         |                              
+        |                         ----.                          
+        |                             | emit AuctionCreated()    
+        |                         <---'                          
+      Seller           ,----------+----------.                   
+        ,-.            |VariableSupplyAuction|                   
+        `-'            `---------------------'                   
+        /|\                                                      
+         |                                                       
+        / \                                                      
