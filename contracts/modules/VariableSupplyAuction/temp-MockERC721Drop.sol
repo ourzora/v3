@@ -6,7 +6,12 @@ pragma solidity 0.8.10;
 //////////////////////////////////////////////////////////////*/
 
 // TODO consider other approaches that keep VSA module ignorant of ERC-721 Drop
-// implementation specifics, including wrapping in a new TransferHelper for Drops
+// implementation specifics, including wrapping in a ERC721DropHelper or similar,
+// which could extend BaseTransferHelper
+
+// TODO improve mocking pattern for OZ AccessControlEnumerable
+
+// TODO get the function for setting edition sizes post-initialization from Iain
 
 contract ERC721Drop {
     //
@@ -28,8 +33,6 @@ contract ERC721Drop {
     /*//////////////////////////////////////////////////////////////
                         OZ Access Control
     //////////////////////////////////////////////////////////////*/
-
-    // TODO use better mocking pattern for OZ AccessControlEnumerable
 
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     address internal minter;
@@ -88,7 +91,6 @@ contract ERC721Drop {
         return 0;
     }
 
-    // TODO ask Iain for gist of actual function name
     function setEditionSize(uint64 _editionSize) public {
         //
     }

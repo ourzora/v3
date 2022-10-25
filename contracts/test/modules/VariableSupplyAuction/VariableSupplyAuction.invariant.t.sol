@@ -208,8 +208,7 @@ contract VariableSupplyAuctionInvariantTest is InvariantTest {
 
         targetContract(address(auctions));
 
-        // Setup invariant target senders (for actor-based invariant testing)
-        // TODO
+        // TODO x setup invariant target senders (for actor-based invariant testing)
 
         // Setup one auction
         vm.prank(address(seller));

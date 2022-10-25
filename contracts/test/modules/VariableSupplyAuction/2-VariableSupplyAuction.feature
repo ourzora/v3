@@ -9,7 +9,6 @@ Feature: Variable Supply Auctions
     - Bid Phase
     - Reveal Phase
     - Settle Phase
-    - TODO consider Cleanup phase
     - Completed / Cancelled
 
     Background: VSA creation and bidding
@@ -31,24 +30,23 @@ Feature: Variable Supply Auctions
             | Bidder12 | 6 ETH      | 9 ETH      |
             | Bidder13 | 11 ETH     | 12 ETH     |
 
-    # TODO tbd if calculate at reveal time, or save for settle time
     Scenario: Bidders reveal bids
         When All bids are revealed
-        Then The revealed bids and reimbursements available should be
-            | account  | bid amount | reimbursement available |
-            | Bidder1  | 1 ETH      | 0 ETH                   |
-            | Bidder2  | 1 ETH      | 8 ETH                   |
-            | Bidder3  | 1 ETH      | 7 ETH                   |
-            | Bidder4  | 1 ETH      | 6 ETH                   |
-            | Bidder5  | 1 ETH      | 5 ETH                   |
-            | Bidder6  | 1 ETH      | 4 ETH                   |
-            | Bidder7  | 1 ETH      | 3 ETH                   |
-            | Bidder8  | 1 ETH      | 2 ETH                   |
-            | Bidder9  | 1 ETH      | 1 ETH                   |
-            | Bidder10 | 1 ETH      | 9 ETH                   |
-            | Bidder11 | 6 ETH      | 0 ETH                   |
-            | Bidder12 | 6 ETH      | 3 ETH                   |
-            | Bidder13 | 11 ETH     | 1 ETH                   |
+        Then The revealed bids should be
+            | account  | bid amount |
+            | Bidder1  | 1 ETH      |
+            | Bidder2  | 1 ETH      |
+            | Bidder3  | 1 ETH      |
+            | Bidder4  | 1 ETH      |
+            | Bidder5  | 1 ETH      |
+            | Bidder6  | 1 ETH      |
+            | Bidder7  | 1 ETH      |
+            | Bidder8  | 1 ETH      |
+            | Bidder9  | 1 ETH      |
+            | Bidder10 | 1 ETH      |
+            | Bidder11 | 6 ETH      |
+            | Bidder12 | 6 ETH      |
+            | Bidder13 | 11 ETH     |
 
     Scenario: Seller settles VSA at 1 ETH
         When All bids are revealed
@@ -85,6 +83,21 @@ Feature: Variable Supply Auctions
             | Bidder11 |
             | Bidder12 |
             | Bidder13 |
+        And The available refunds should be
+            | account  | available refund |
+            | Bidder1  | 0 ETH            |
+            | Bidder2  | 8 ETH            |
+            | Bidder3  | 7 ETH            |
+            | Bidder4  | 6 ETH            |
+            | Bidder5  | 5 ETH            |
+            | Bidder6  | 4 ETH            |
+            | Bidder7  | 3 ETH            |
+            | Bidder8  | 2 ETH            |
+            | Bidder9  | 1 ETH            |
+            | Bidder10 | 9 ETH            |
+            | Bidder11 | 5 ETH            |
+            | Bidder12 | 8 ETH            |
+            | Bidder13 | 11 ETH           |
 
     Scenario: Seller settles VSA at 6 ETH
         When All bids are revealed
@@ -110,6 +123,21 @@ Feature: Variable Supply Auctions
             | Bidder11 |
             | Bidder12 |
             | Bidder13 |
+        And The available refunds should be
+            | account  | available refund |
+            | Bidder1  | 1 ETH            |
+            | Bidder2  | 9 ETH            |
+            | Bidder3  | 8 ETH            |
+            | Bidder4  | 7 ETH            |
+            | Bidder5  | 6 ETH            |
+            | Bidder6  | 5 ETH            |
+            | Bidder7  | 4 ETH            |
+            | Bidder8  | 3 ETH            |
+            | Bidder9  | 2 ETH            |
+            | Bidder10 | 10 ETH           |
+            | Bidder11 | 0 ETH            |
+            | Bidder12 | 3 ETH            |
+            | Bidder13 | 6 ETH            |
 
     Scenario: Seller settles VSA at 11 ETH
         When All bids are revealed
@@ -133,11 +161,26 @@ Feature: Variable Supply Auctions
             | Bidder13 | 89 ETH  |
         And The following accounts should own 1 NFT
             | Bidder13 |
+        And The available refunds should be
+            | account  | available refund |
+            | Bidder1  | 1 ETH            |
+            | Bidder2  | 9 ETH            |
+            | Bidder3  | 8 ETH            |
+            | Bidder4  | 7 ETH            |
+            | Bidder5  | 6 ETH            |
+            | Bidder6  | 5 ETH            |
+            | Bidder7  | 4 ETH            |
+            | Bidder8  | 3 ETH            |
+            | Bidder9  | 2 ETH            |
+            | Bidder10 | 10 ETH           |
+            | Bidder11 | 6 ETH            |
+            | Bidder12 | 9 ETH            |
+            | Bidder13 | 1 ETH            |
 
-# TODO handle bid space bounding
+# TODO handle additional bid space bounding, beyond minimum viable revenue
 ## Seller sets maximum edition size commitment
 ## Bidder sets maximum edition size interest
-## Seller sets minimum viable revenue
-# TODO address cancel auction sad path
 # TODO address failure to reveal sad paths
 # TODO address failure to settle sad paths
+# TODO consider Cleanup function to delete auction, once all refunds have been claimed
+# TODO add Cucumber feature for bidder functionality

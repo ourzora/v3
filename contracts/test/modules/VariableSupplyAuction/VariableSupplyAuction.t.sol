@@ -3,7 +3,7 @@ pragma solidity 0.8.10;
 
 import "forge-std/Test.sol";
 
-import {VariableSupplyAuction} from "../../../modules/VariableSupplyAuction/VariableSupplyAuction.sol";
+import "../../../modules/VariableSupplyAuction/VariableSupplyAuction.sol";
 import {ERC721Drop} from "../../../modules/VariableSupplyAuction/temp-MockERC721Drop.sol";
 
 import {Zorb} from "../../utils/users/Zorb.sol";
@@ -16,6 +16,11 @@ import {RoyaltyEngine} from "../../utils/modules/RoyaltyEngine.sol";
 import {TestERC721} from "../../utils/tokens/TestERC721.sol";
 import {WETH} from "../../utils/tokens/WETH.sol";
 import {VM} from "../../utils/VM.sol";
+
+// TODO x more temporal checks
+// TODO x more auction metadata test assertions
+// TODO x improve settle auction biz logic and storage
+// TODO x review
 
 /// @title VariableSupplyAuctionTest
 /// @notice Unit Tests for Variable Supply Auctions
@@ -276,7 +281,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testEvent_createAuction() public {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -374,7 +379,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testEvent_CancelAuction() public setupBasicAuction {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -413,14 +418,14 @@ contract VariableSupplyAuctionTest is Test {
         auctions.cancelAuction(address(drop));
     }
 
-    // TODO update biz logic to allow one other case -- cancelling auctions
+    // TODO x update biz logic to allow one other case -- cancelling auctions
     // in settle phase that did not meet minimum viable revenue goal
 
     /*//////////////////////////////////////////////////////////////
                         PLACE BID
     //////////////////////////////////////////////////////////////*/
 
-    // TODO add more assertions around new storage variables
+    // TODO x add more assertions around new storage variables
 
     function test_PlaceBid_WhenSingle() public setupBasicAuction {  
         bytes32 commitment = _genSealedBid(1 ether, salt1);
@@ -461,7 +466,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testEvent_PlaceBid_WhenSingle() public setupBasicAuction {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -484,7 +489,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testEvent_PlaceBid_WhenMultiple() public setupBasicAuction {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -553,12 +558,12 @@ contract VariableSupplyAuctionTest is Test {
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
     }
 
-    // TODO once settleAuction is written
+    // TODO x once settleAuction is written
     // function testRevert_PlaceBid_WhenAuctionIsCompleted() public setupBasicAuction {
         
     // }
 
-    // TODO once cancelAuction is written
+    // TODO x once cancelAuction is written
     // function testRevert_PlaceBid_WhenAuctionIsCancelled() public setupBasicAuction {
         
     // }
@@ -582,7 +587,7 @@ contract VariableSupplyAuctionTest is Test {
         auctions.placeBid(address(drop), commitment);
     }
 
-    // TODO revist – test may become relevant if we move minter role granting into TransferHelper
+    // TODO revisit -– may become relevant if we move minter role granting into an ERC721DropTransferHelper
     // function testRevert_PlaceBid_WhenSellerDidNotApproveModule() public setupBasicAuction {
     //     seller.setApprovalForModule(address(auctions), false);
 
@@ -643,7 +648,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testEvent_RevealBid_WhenSingle() public setupBasicAuction {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -671,7 +676,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testEvent_RevealBid_WhenMultiple() public setupBasicAuction {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -738,12 +743,12 @@ contract VariableSupplyAuctionTest is Test {
         auctions.revealBid(address (drop), 1 ether, salt1);
     }
 
-    // TODO once settleAuction is written
+    // TODO x once settleAuction is written
     // function testRevert_RevealBid_WhenAuctionIsCompleted() public setupBasicAuction {
         
     // }
 
-    // TODO once cancelAuction is written
+    // TODO x once cancelAuction is written
     // function testRevert_RevealBid_WhenAuctionIsCancelled() public setupBasicAuction {
         
     // }
@@ -757,8 +762,8 @@ contract VariableSupplyAuctionTest is Test {
         auctions.revealBid(address (drop), 1.1 ether, salt1);
     }
 
-    // TODO should we then allow "topping up" the bidder's balance to support their bid?
-    // likely, no — introduces bad incentives
+    // TODO should we allow "topping up" the bidder's balance to support their bid?
+    // likely, no — could introduce bad incentives
     function testRevert_RevealBid_WhenRevealedBidGreaterThanSentEther() public setupBasicAuction {
         bytes32 commitment = _genSealedBid(1.1 ether, salt1);
         vm.prank(address(bidder1));
@@ -1198,7 +1203,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testEvent_ClaimRefund() public setupBasicAuction {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -1245,7 +1250,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     // function testRevert_ClaimRefund_WhenNoBidRevealed() public setupBasicAuction {
-    //     // TODO
+    //     // TODO x
     // }
 
     function testRevert_ClaimRefund_WhenAlreadyClaimed() public setupBasicAuction {
@@ -1271,21 +1276,13 @@ contract VariableSupplyAuctionTest is Test {
         auctions.claimRefund(address(drop));
     }
 
-    // TODO add temporal sad paths
-
-    // TODO add minimum viable revenue sad paths
-
-    /*//////////////////////////////////////////////////////////////
-                        FAILURE TO CLAIM REFUND
-    //////////////////////////////////////////////////////////////*/
-
-    // TODO seller failure to claim sad paths
+    // TODO x add temporal sad paths
 
     /*//////////////////////////////////////////////////////////////
                         TEST HELPERS
     //////////////////////////////////////////////////////////////*/
 
-    // TODO improve modifier pattern to include parameters (could combine w/ fuzzing)
+    // TODO parameterize modifier pattern to support fuzzing
     modifier setupBasicAuction() {
         vm.prank(address(seller));
         auctions.createAuction({
@@ -1369,7 +1366,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function _expectSettledAuctionEvent(uint96 _settledPricePoint, uint16 _settledEditionSize) internal {
-        Auction memory auction = Auction({
+        VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
@@ -1387,38 +1384,19 @@ contract VariableSupplyAuctionTest is Test {
         emit AuctionSettled(address(drop), auction);
     }
 
-    // IDEA could this not be moved to the hyperstructure module for better bidder usability ?!
+    // IDEA could this be moved onto the hyperstructure module for better bidder usability ?!
     function _genSealedBid(uint256 _amount, string memory _salt) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(_amount, bytes(_salt)));
     }
 
     /*//////////////////////////////////////////////////////////////
-                        TODO DRY up w/ better pattern
+                        EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    struct Auction {
-        address seller;
-        uint96 minimumViableRevenue;
-        address sellerFundsRecipient;
-        uint32 startTime;
-        uint32 endOfBidPhase;
-        uint32 endOfRevealPhase;
-        uint32 endOfSettlePhase;
-        uint96 totalBalance;
-        uint96 settledRevenue;
-        uint96 settledPricePoint;
-        uint16 settledEditionSize;
-    }
-
-    struct Bid {
-        bytes32 commitmentHash;
-        uint96 revealedBidAmount;
-    }
-
-    event AuctionCreated(address indexed tokenContract, Auction auction);
-    event AuctionCanceled(address indexed tokenContract, Auction auction);
-    event BidPlaced(address indexed tokenContract, address indexed bidder, Auction auction);    
-    event BidRevealed(address indexed tokenContract, address indexed bidder, uint256 indexed bidAmount, Auction auction);
-    event AuctionSettled(address indexed tokenContract, Auction auction);
-    event RefundClaimed(address indexed tokenContract, address indexed bidder, uint96 refundAmount, Auction auction);
+    event AuctionCreated(address indexed tokenContract, VariableSupplyAuction.Auction auction);
+    event AuctionCanceled(address indexed tokenContract, VariableSupplyAuction.Auction auction);
+    event BidPlaced(address indexed tokenContract, address indexed bidder, VariableSupplyAuction.Auction auction);    
+    event BidRevealed(address indexed tokenContract, address indexed bidder, uint256 indexed bidAmount, VariableSupplyAuction.Auction auction);
+    event AuctionSettled(address indexed tokenContract, VariableSupplyAuction.Auction auction);
+    event RefundClaimed(address indexed tokenContract, address indexed bidder, uint96 refundAmount, VariableSupplyAuction.Auction auction);
 }
