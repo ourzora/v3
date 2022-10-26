@@ -82,10 +82,10 @@ contract AuctionDataStorageTest is DSTest {
         assertEq(auction.ongoingAuction.firstBidTime, 0);
         assertEq(auction.ongoingAuction.highestBidder, address(0x0));
         assertEq(auction.ongoingAuction.highestBid, 0);
-        assertEq(auction.listingFee.listingFeeBps, 0, "listingfee wrong");
-        assertEq(auction.listingFee.listingFeeRecipient, address(0x0), "listingfee recipient wrong");
-        assertEq(auction.tokenGate.token, address(0x0), "tokengate wrong");
-        assertEq(auction.tokenGate.minAmount, 0, "tokengate wrong");
+        assertEq(auction.listingFeeBps, 0, "listingfee wrong");
+        assertEq(auction.listingFeeRecipient, address(0x0), "listingfee recipient wrong");
+        assertEq(auction.tokenGateToken, address(0x0), "tokengate wrong");
+        assertEq(auction.tokenGateMinAmount, 0, "tokengate wrong");
         assertEq(auction.expiry, 0, "expiry wrong");
         assertEq(auction.fundsRecipient, address(0), "funds recipient wrong");
     }
@@ -104,10 +104,10 @@ contract AuctionDataStorageTest is DSTest {
         assertEq(auction.ongoingAuction.firstBidTime, 0);
         assertEq(auction.ongoingAuction.highestBidder, address(0x0));
         assertEq(auction.ongoingAuction.highestBid, 0);
-        assertEq(auction.listingFee.listingFeeBps, 1, "listingfee wrong");
-        assertEq(auction.listingFee.listingFeeRecipient, address(0x004), "listingfee recipient wrong");
-        assertEq(auction.tokenGate.token, address(0x003), "tokengate wrong");
-        assertEq(auction.tokenGate.minAmount, 0.1 ether, "tokengate wrong");
+        assertEq(auction.listingFeeBps, 1, "listingfee wrong");
+        assertEq(auction.listingFeeRecipient, address(0x004), "listingfee recipient wrong");
+        assertEq(auction.tokenGateToken, address(0x003), "tokengate wrong");
+        assertEq(auction.tokenGateMinAmount, 0.1 ether, "tokengate wrong");
         assertEq(auction.expiry, uint96(block.timestamp) + 2 days, "expiry wrong");
         assertEq(auction.fundsRecipient, address(0x005), "funds recipient wrong");
     }

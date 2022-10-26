@@ -5,6 +5,7 @@ import {DSTest} from "ds-test/test.sol";
 
 import {ReserveAuctionDataStorage, FEATURE_MASK_LISTING_FEE, FEATURE_MASK_FINDERS_FEE, FEATURE_MASK_ERC20_CURRENCY, FEATURE_MASK_TOKEN_GATE, FEATURE_MASK_START_TIME, FEATURE_MASK_RECIPIENT_OR_EXPIRY} from "../../../../modules/ReserveAuction/Omnibus/ReserveAuctionDataStorage.sol";
 import {ReserveAuctionOmnibus} from "../../../../modules/ReserveAuction/Omnibus/ReserveAuctionOmnibus.sol";
+import {IReserveAuctionOmnibus} from "../../../../modules/ReserveAuction/Omnibus/IReserveAuctionOmnibus.sol";
 import {Zorb} from "../../../utils/users/Zorb.sol";
 import {ZoraRegistrar} from "../../../utils/users/ZoraRegistrar.sol";
 import {ZoraModuleManager} from "../../../../ZoraModuleManager.sol";
@@ -127,18 +128,25 @@ contract ReserveAuctionOmnibusTest is DSTest {
 
     function test_CreateAuction() public {
         vm.prank(address(seller));
+
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            block.timestamp + 3 days,
-            block.timestamp + 1 days,
-            address(weth),
-            1,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 2, listingFeeRecipient: address(0x001)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(erc20), minAmount: 2 ether})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                block.timestamp + 3 days,
+                block.timestamp + 1 days,
+                2 ether,
+                address(token),
+                1 days,
+                1,
+                0,
+                address(sellerFundsRecipient),
+                2,
+                0,
+                address(0x001),
+                address(erc20),
+                address(weth)
+            )
         );
 
         ReserveAuctionDataStorage.FullAuction memory auction = auctions.getFullAuction(address(token), 0);
@@ -164,10 +172,10 @@ contract ReserveAuctionOmnibusTest is DSTest {
         require(auction.ongoingAuction.firstBidTime == 0);
         require(auction.ongoingAuction.highestBidder == address(0));
         require(auction.ongoingAuction.highestBid == 0);
-        require(auction.listingFee.listingFeeRecipient == address(0x001));
-        require(auction.listingFee.listingFeeBps == 2);
-        require(auction.tokenGate.token == address(erc20));
-        require(auction.tokenGate.minAmount == 2 ether);
+        require(auction.listingFeeRecipient == address(0x001));
+        require(auction.listingFeeBps == 2);
+        require(auction.tokenGateToken == address(erc20));
+        require(auction.tokenGateMinAmount == 2 ether);
     }
 
     function test_CreateAuctionMinimal() public {
@@ -189,26 +197,32 @@ contract ReserveAuctionOmnibusTest is DSTest {
         require(auction.ongoingAuction.firstBidTime == 0);
         require(auction.ongoingAuction.highestBidder == address(0));
         require(auction.ongoingAuction.highestBid == 0);
-        require(auction.listingFee.listingFeeRecipient == address(0));
-        require(auction.listingFee.listingFeeBps == 0);
-        require(auction.tokenGate.token == address(0));
-        require(auction.tokenGate.minAmount == 0 ether);
+        require(auction.listingFeeRecipient == address(0));
+        require(auction.listingFeeBps == 0);
+        require(auction.tokenGateToken == address(0));
+        require(auction.tokenGateMinAmount == 0 ether);
     }
 
     function test_CreateAuctionAndCancelPrevious() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            1000,
-            ReserveAuctionDataStorage.ListingFee({listingFeeRecipient: address(0), listingFeeBps: 0}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                1000,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
 
         vm.prank(address(seller));
@@ -219,17 +233,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
         vm.startPrank(address(sellerFundsRecipient));
         token.setApprovalForAll(address(erc721TransferHelper), true);
         auctions.createAuction(
-            address(token),
-            0,
-            5 days,
-            12 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            1000,
-            ReserveAuctionDataStorage.ListingFee({listingFeeRecipient: address(0), listingFeeBps: 0}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                12 ether,
+                0,
+                0,
+                0,
+                address(token),
+                5 days,
+                1000,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.stopPrank();
 
@@ -240,55 +260,49 @@ contract ReserveAuctionOmnibusTest is DSTest {
     }
 
     function testRevert_MustBeTokenOwnerOrOperator() public {
-        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            1000,
-            ReserveAuctionDataStorage.ListingFee({listingFeeRecipient: address(0), listingFeeBps: 0}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
-        );
-    }
-
-    function testRevert_FindersFeeBPSCannotExceed10000() public {
-        vm.prank(address(seller));
-        vm.expectRevert("createAsk finders fee bps must be less than or equal to 10000");
-        auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            10001,
-            ReserveAuctionDataStorage.ListingFee({listingFeeRecipient: address(0), listingFeeBps: 0}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                1000,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
     }
 
     function testRevert_FindersFeePlusListingFeeCannotExceed10000() public {
         vm.prank(address(seller));
-        vm.expectRevert("listingFee + findersFee must be less than or equal to 10000");
+        vm.expectRevert(abi.encodeWithSignature("INVALID_FEES()"));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            5000,
-            ReserveAuctionDataStorage.ListingFee({listingFeeRecipient: address(0), listingFeeBps: 5001}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                5000,
+                0,
+                address(sellerFundsRecipient),
+                5001,
+                0,
+                address(sellerFundsRecipient),
+                address(0),
+                address(weth)
+            )
         );
     }
 
@@ -297,17 +311,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function test_SetReservePrice() public {
         vm.startPrank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
         vm.stopPrank();
@@ -315,50 +335,94 @@ contract ReserveAuctionOmnibusTest is DSTest {
         require(auction.reservePrice == 5 ether);
     }
 
-    function testRevert_UpdateMustBeSeller() public {
+    function test_SetReservePriceOperator() public {
+        vm.startPrank(address(seller));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
+        );
+        token.setApprovalForAll(address(sellerFundsRecipient), true);
+        vm.stopPrank();
+        vm.prank(address(sellerFundsRecipient));
+        auctions.setAuctionReservePrice(address(token), 0, 5 ether);
+        ReserveAuctionDataStorage.FullAuction memory auction = auctions.getFullAuction(address(token), 0);
+        require(auction.reservePrice == 5 ether);
+    }
+
+    function testRevert_UpdateMustBeTokenOwnerOrOperator() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
-        vm.expectRevert("ONLY_SELLER");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
     }
 
     function testRevert_CannotUpdateAuctionDoesNotExist() public {
-        vm.expectRevert("ONLY_SELLER");
+        ReserveAuctionDataStorage.FullAuction memory auction = auctions.getFullAuction(address(token), 0);
+        assertEq(auction.seller, address(0));
+        vm.prank(token.ownerOf(0));
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_DOES_NOT_EXIST()"));
         auctions.setAuctionReservePrice(address(token), 0, 5 ether);
     }
 
     function testRevert_CannotUpdateActiveAuction() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 hours);
         vm.prank(address(bidder));
         auctions.createBid(address(token), 0, 5 ether, address(finder));
         vm.prank(address(seller));
-        vm.expectRevert("Auction started");
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_STARTED()"));
         auctions.setAuctionReservePrice(address(token), 0, 20 ether);
     }
 
@@ -367,17 +431,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function test_CancelAuction() public {
         vm.startPrank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 minutes);
         auctions.cancelAuction(address(token), 0);
@@ -386,45 +456,83 @@ contract ReserveAuctionOmnibusTest is DSTest {
         require(auction.seller == address(0));
     }
 
-    function testRevert_OnlySellerOrOwnerCanCancel() public {
+    function testRevert_OnlySellerOrOperatorCanCancelValidAuction() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
-        vm.expectRevert("ONLY_SELLER_OR_TOKEN_OWNER");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
+        auctions.cancelAuction(address(token), 0);
+    }
+
+    function testRevert_PublicCanCancelInalidAuction() public {
+        vm.startPrank(address(seller));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
+        );
+        token.safeTransferFrom(address(seller), address(sellerFundsRecipient), 0);
+        vm.stopPrank();
         auctions.cancelAuction(address(token), 0);
     }
 
     function testRevert_CannotCancelActiveAuction() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 hours);
         vm.prank(address(bidder));
         auctions.createBid(address(token), 0, 1 ether, address(finder));
         vm.prank(address(seller));
-        vm.expectRevert("AUCTION_STARTED");
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_STARTED()"));
         auctions.cancelAuction(address(token), 0);
     }
 
@@ -433,17 +541,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function test_CreateFirstBid() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.prank(address(bidder));
         vm.warp(1 hours);
@@ -458,17 +572,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function test_RefundPreviousBidder() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 hours);
         vm.prank(address(bidder));
@@ -483,17 +603,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function test_TransferNFTIntoEscrow() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.prank(address(bidder));
         auctions.createBid(address(token), 0, 1 ether, address(finder));
@@ -503,17 +629,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function test_ExtendAuction() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 hours,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 hours,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(5 minutes);
         vm.prank(address(bidder));
@@ -525,21 +657,58 @@ contract ReserveAuctionOmnibusTest is DSTest {
         require(auction.duration == 1 hours + 5 minutes);
     }
 
+    function test_ExtendAuctionWithCustomBuffer() public {
+        vm.prank(address(seller));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                3 hours,
+                0,
+                1 hours,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
+        );
+        vm.warp(10 minutes);
+        vm.prank(address(bidder));
+        auctions.createBid(address(token), 0, 1 ether, address(finder));
+        vm.warp(2 hours + 20 minutes);
+        vm.prank(address(otherBidder));
+        auctions.createBid(address(token), 0, 2 ether, address(finder));
+        ReserveAuctionDataStorage.FullAuction memory auction = auctions.getFullAuction(address(token), 0);
+        assertEq(auction.duration, 3 hours + 10 minutes);
+    }
+
     function testRevert_MustApproveModule() public {
         seller.setApprovalForModule(address(auctions), false);
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 hours,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 hours,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.prank(address(bidder));
         vm.expectRevert("module has not been approved by user");
@@ -551,17 +720,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
         token.setApprovalForAll(address(erc721TransferHelper), false);
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 hours,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 hours,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.prank(address(bidder));
         vm.expectRevert("ERC721: transfer caller is not owner nor approved");
@@ -571,17 +746,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function testRevert_InvalidTransferBeforeFirstBid() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 hours,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 hours,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.prank(address(seller));
         token.transferFrom(address(seller), address(otherBidder), 0);
@@ -593,94 +774,152 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function testRevert_CannotBidOnExpiredAuction() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            10 hours,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                10 hours,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 hours);
         vm.prank(address(bidder));
         auctions.createBid(address(token), 0, 1 ether, address(finder));
         vm.warp(12 hours);
         vm.prank(address(otherBidder));
-        vm.expectRevert("AUCTION_OVER");
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_OVER()"));
         auctions.createBid(address(token), 0, 2 ether, address(finder));
     }
 
     function testRevert_CannotBidOnAuctionNotStarted() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            10 hours,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            block.timestamp + 1 days,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                block.timestamp + 1 days,
+                0,
+                address(token),
+                10 hours,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.prank(address(bidder));
-        vm.expectRevert("AUCTION_NOT_STARTED");
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_NOT_STARTED()"));
         auctions.createBid(address(token), 0, 1 ether, address(finder));
     }
 
     function testRevert_CannotBidOnNonExistentAuction() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_DOES_NOT_EXIST()"));
         auctions.createBid(address(token), 0, 1 ether, address(finder));
     }
 
     function testRevert_BidMustMeetReservePrice() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.prank(address(bidder));
-        vm.expectRevert("RESERVE_PRICE_NOT_MET");
+        vm.expectRevert(abi.encodeWithSignature("RESERVE_PRICE_NOT_MET()"));
         auctions.createBid(address(token), 0, 0.5 ether, address(finder));
     }
 
-    function testRevert_BidMustBe10PercentGreaterThanPrevious() public {
+    function testRevert_BidMustBeDefaultPercentGreaterThanPrevious() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 hours);
         vm.prank(address(bidder));
         auctions.createBid(address(token), 0, 1 ether, address(finder));
         vm.warp(1 hours + 1 minutes);
-        vm.prank(address(otherBidder));
-        vm.expectRevert("MINIMUM_BID_NOT_MET");
+        vm.startPrank(address(otherBidder));
+        vm.expectRevert(abi.encodeWithSignature("MINIMUM_BID_NOT_MET()"));
         auctions.createBid(address(token), 0, 1.01 ether, address(finder));
+        auctions.createBid(address(token), 0, 1.10 ether, address(finder));
+        vm.stopPrank();
+    }
+
+    function testRevert_BidMustBeCustomPercentGreaterThanPrevious() public {
+        vm.prank(address(seller));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                15,
+                address(0),
+                address(0),
+                address(weth)
+            )
+        );
+        vm.warp(1 hours);
+        vm.prank(address(bidder));
+        auctions.createBid(address(token), 0, 1 ether, address(finder));
+        vm.warp(1 hours + 1 minutes);
+        vm.startPrank(address(otherBidder));
+        vm.expectRevert(abi.encodeWithSignature("MINIMUM_BID_NOT_MET()"));
+        auctions.createBid(address(token), 0, 1.10 ether, address(finder));
+        auctions.createBid(address(token), 0, 1.15 ether, address(finder));
+        vm.stopPrank();
     }
 
     /// ------------ SETTLE AUCTION ------------ ///
@@ -688,17 +927,23 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function test_SettleAuction() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 hours);
         vm.prank(address(bidder));
@@ -714,42 +959,54 @@ contract ReserveAuctionOmnibusTest is DSTest {
     function testRevert_AuctionNotStarted() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
-        vm.expectRevert("AUCTION_NOT_STARTED");
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_NOT_STARTED()"));
         auctions.settleAuction(address(token), 0);
     }
 
     function testRevert_AuctionNotOver() public {
         vm.prank(address(seller));
         auctions.createAuction(
-            address(token),
-            0,
-            1 days,
-            1 ether,
-            address(sellerFundsRecipient),
-            0,
-            0,
-            address(weth),
-            0,
-            ReserveAuctionDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)}),
-            ReserveAuctionDataStorage.TokenGate({token: address(0), minAmount: 0})
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
         );
         vm.warp(1 hours);
         vm.prank(address(bidder));
         auctions.createBid(address(token), 0, 1 ether, address(finder));
         vm.warp(10 hours);
-        vm.expectRevert("AUCTION_NOT_OVER");
+        vm.expectRevert(abi.encodeWithSignature("AUCTION_NOT_OVER()"));
         auctions.settleAuction(address(token), 0);
     }
 }

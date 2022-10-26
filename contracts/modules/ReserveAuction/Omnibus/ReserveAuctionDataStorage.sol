@@ -7,6 +7,7 @@ uint32 constant FEATURE_MASK_ERC20_CURRENCY = 1 << 5;
 uint32 constant FEATURE_MASK_TOKEN_GATE = 1 << 6;
 uint32 constant FEATURE_MASK_START_TIME = 1 << 7;
 uint32 constant FEATURE_MASK_RECIPIENT_OR_EXPIRY = 1 << 8;
+uint32 constant FEATURE_MASK_BUFFER_AND_INCREMENT = 1 << 9;
 
 contract ReserveAuctionDataStorage {
     struct StoredAuction {
@@ -43,10 +44,10 @@ contract ReserveAuctionDataStorage {
         address finder;
     }
 
-    function _getListingFee(StoredAuction storage auction) internal view returns (ListingFee memory) {
+    function _getListingFee(StoredAuction storage auction) internal view returns (uint16 listingFeeBps, address listingFeeRecipient) {
         uint256 data = auction.featureData[FEATURE_MASK_LISTING_FEE];
-
-        return ListingFee({listingFeeBps: uint16(data), listingFeeRecipient: address(uint160(data >> 16))});
+        listingFeeBps = uint16(data);
+        listingFeeRecipient = address(uint160(data >> 16));
     }
 
     function _setListingFee(
@@ -58,9 +59,9 @@ contract ReserveAuctionDataStorage {
         auction.featureData[FEATURE_MASK_LISTING_FEE] = listingFeeBps | (uint256(uint160(listingFeeRecipient)) << 16);
     }
 
-    function _getTokenGate(StoredAuction storage auction) internal view returns (TokenGate memory tokenGate) {
-        tokenGate.token = address(uint160(auction.featureData[FEATURE_MASK_TOKEN_GATE]));
-        tokenGate.minAmount = auction.featureData[FEATURE_MASK_TOKEN_GATE + 1];
+    function _getTokenGate(StoredAuction storage auction) internal view returns (address token, uint256 minAmount) {
+        token = address(uint160(auction.featureData[FEATURE_MASK_TOKEN_GATE]));
+        minAmount = auction.featureData[FEATURE_MASK_TOKEN_GATE + 1];
     }
 
     function _setTokenGate(
@@ -124,9 +125,25 @@ contract ReserveAuctionDataStorage {
         auction.featureData[FEATURE_MASK_RECIPIENT_OR_EXPIRY] = expiry | (uint256(uint160(fundsRecipient)) << 96);
     }
 
+    function _getBufferAndIncrement(StoredAuction storage auction) internal view returns (uint16 timeBuffer, uint8 percentIncrement) {
+        uint256 data = auction.featureData[FEATURE_MASK_BUFFER_AND_INCREMENT];
+        timeBuffer = uint16(data);
+        percentIncrement = uint8(data >> 16);
+    }
+
+    function _setBufferAndIncrement(
+        StoredAuction storage auction,
+        uint16 timeBuffer,
+        uint8 percentIncrement
+    ) internal {
+        auction.features |= FEATURE_MASK_BUFFER_AND_INCREMENT;
+        auction.featureData[FEATURE_MASK_BUFFER_AND_INCREMENT] = uint256(timeBuffer) | (uint256(percentIncrement) << 16);
+    }
+
     struct FullAuction {
         uint256 reservePrice;
         uint256 startTime;
+        uint256 tokenGateMinAmount;
         address seller;
         uint96 expiry;
         address currency;
@@ -134,10 +151,13 @@ contract ReserveAuctionDataStorage {
         uint32 features;
         address finder;
         uint16 findersFeeBps;
+        uint16 timeBuffer;
+        uint8 percentIncrement;
         address fundsRecipient;
+        address listingFeeRecipient;
+        address tokenGateToken;
+        uint16 listingFeeBps;
         OngoingAuction ongoingAuction;
-        ListingFee listingFee;
-        TokenGate tokenGate;
     }
 
     function _hasFeature(uint32 features, uint32 feature) internal pure returns (bool) {
@@ -153,11 +173,11 @@ contract ReserveAuctionDataStorage {
         fullAuction.currency = _getERC20CurrencyWithFallback(auction);
 
         if (_hasFeature(features, FEATURE_MASK_TOKEN_GATE)) {
-            fullAuction.tokenGate = _getTokenGate(auction);
+            (fullAuction.tokenGateToken, fullAuction.tokenGateMinAmount) = _getTokenGate(auction);
         }
 
         if (_hasFeature(features, FEATURE_MASK_LISTING_FEE)) {
-            fullAuction.listingFee = _getListingFee(auction);
+            (fullAuction.listingFeeBps, fullAuction.listingFeeRecipient) = _getListingFee(auction);
         }
 
         if (_hasFeature(features, FEATURE_MASK_START_TIME)) {
@@ -178,6 +198,10 @@ contract ReserveAuctionDataStorage {
             (uint96 _expiry, address _fundsRecipient) = _getExpiryAndFundsRecipient(auction);
             fullAuction.expiry = _expiry;
             fullAuction.fundsRecipient = _fundsRecipient;
+        }
+
+        if (_hasFeature(features, FEATURE_MASK_BUFFER_AND_INCREMENT)) {
+            (fullAuction.timeBuffer, fullAuction.percentIncrement) = _getBufferAndIncrement(auction);
         }
 
         OngoingAuction memory _ongoingAuction = ongoingAuctionForNFT[tokenContract][tokenId];
