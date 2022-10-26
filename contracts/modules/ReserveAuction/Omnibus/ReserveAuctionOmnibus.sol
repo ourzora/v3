@@ -26,9 +26,12 @@ contract ReserveAuctionOmnibus is
 {
     /// @notice The minimum amount of time left in an auction after a new bid is created
     uint16 constant DEFAULT_TIME_BUFFER = 15 minutes;
+    uint16 constant MINIMUM_TIME_BUFFER = 1 minutes;
+    uint16 constant MAXIMUM_TIME_BUFFER = 1 hours;
 
     /// @notice The minimum percentage difference between two bids
     uint8 constant DEFAULT_MIN_BID_INCREMENT_PERCENTAGE = 10;
+    uint8 constant MAXIMUM_MIN_BID_INCREMENT_PERCENTAGE = 50;
 
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
@@ -125,6 +128,7 @@ contract ReserveAuctionOmnibus is
     }
 
     /// @notice Creates an auction for a given NFT
+    /// @param auctionData The CreateAuctionParameters struct containing the auction parameters
     function createAuction(IReserveAuctionOmnibus.CreateAuctionParameters calldata auctionData) external nonReentrant {
         // Get the owner of the specified token
         address tokenOwner = IERC721(auctionData.tokenContract).ownerOf(auctionData.tokenId);
@@ -183,6 +187,10 @@ contract ReserveAuctionOmnibus is
         }
 
         if (auctionData.timeBuffer > 0 || auctionData.percentIncrement > 0) {
+            if (auctionData.timeBuffer > 0 && (auctionData.timeBuffer < MINIMUM_TIME_BUFFER || auctionData.timeBuffer > MAXIMUM_TIME_BUFFER))
+                revert INVALID_TIME_BUFFER();
+            if (auctionData.percentIncrement > 0 && auctionData.percentIncrement > MAXIMUM_MIN_BID_INCREMENT_PERCENTAGE)
+                revert INVALID_PERCENT_INCREMENT();
             _setBufferAndIncrement(auction, auctionData.timeBuffer, auctionData.percentIncrement);
         }
 
@@ -329,7 +337,7 @@ contract ReserveAuctionOmnibus is
             }
             if (percentIncrement == 0) percentIncrement = DEFAULT_MIN_BID_INCREMENT_PERCENTAGE;
 
-            // Calculate the minimum bid required (10% higher than the highest bid)
+            // Calculate the minimum bid required
             // TODO: audit overflow potential now that prices are uint256
             unchecked {
                 minValidBid = highestBid + ((highestBid * percentIncrement) / 100);

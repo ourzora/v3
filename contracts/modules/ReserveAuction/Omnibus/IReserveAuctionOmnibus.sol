@@ -21,6 +21,10 @@ interface IReserveAuctionOmnibus {
 
     error INVALID_START_TIME();
 
+    error INVALID_TIME_BUFFER();
+
+    error INVALID_PERCENT_INCREMENT();
+
     error RESERVE_PRICE_NOT_MET();
 
     error AUCTION_STARTED();

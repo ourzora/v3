@@ -306,6 +306,75 @@ contract ReserveAuctionOmnibusTest is DSTest {
         );
     }
 
+    function testRevert_TimeBufferMustBeValid() public {
+        vm.startPrank(address(seller));
+        vm.expectRevert(abi.encodeWithSignature("INVALID_TIME_BUFFER()"));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                3 hours,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
+        );
+        vm.expectRevert(abi.encodeWithSignature("INVALID_TIME_BUFFER()"));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                1 seconds,
+                address(sellerFundsRecipient),
+                0,
+                0,
+                address(0),
+                address(0),
+                address(weth)
+            )
+        );
+        vm.stopPrank();
+    }
+
+    function testRevert_PercentIncrementMustBeValid() public {
+        vm.prank(address(seller));
+        vm.expectRevert(abi.encodeWithSignature("INVALID_PERCENT_INCREMENT()"));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                0,
+                0,
+                0,
+                address(token),
+                1 days,
+                0,
+                0,
+                address(sellerFundsRecipient),
+                0,
+                51,
+                address(0),
+                address(0),
+                address(weth)
+            )
+        );
+    }
+
     /// ------------ SET AUCTION RESERVE PRICE ------------ ///
 
     function test_SetReservePrice() public {
