@@ -46,7 +46,8 @@ interface IOffersOmnibus {
         uint256 _offerAmount,
         uint96 _expiry,
         uint16 _findersFeeBps,
-        OffersDataStorage.ListingFee memory _listingFee
+        uint16 _listingFeeBps,
+        address _listingFeeRecipient
     ) external payable returns (uint256);
 
     function setOfferAmount(

@@ -20,15 +20,10 @@ contract OffersDataStorage {
     uint32 constant FEATURE_MASK_EXPIRY = 1 << 5;
     uint32 constant FEATURE_MASK_ERC20_CURRENCY = 1 << 6;
 
-    struct ListingFee {
-        uint16 listingFeeBps;
-        address listingFeeRecipient;
-    }
-
-    function _getListingFee(StoredOffer storage offer) internal view returns (ListingFee memory) {
+    function _getListingFee(StoredOffer storage offer) internal view returns (uint16 listingFeeBps, address listingFeeRecipient) {
         uint256 data = offer.featureData[FEATURE_MASK_LISTING_FEE];
-
-        return ListingFee({listingFeeBps: uint16(data), listingFeeRecipient: address(uint160(data >> 16))});
+        listingFeeBps = uint16(data);
+        listingFeeRecipient = address(uint160(data >> 16));
     }
 
     function _setListingFee(
@@ -89,9 +84,10 @@ contract OffersDataStorage {
         uint256 amount;
         address maker;
         uint96 expiry;
-        uint16 findersFeeBps;
         address currency;
-        ListingFee listingFee;
+        uint16 findersFeeBps;
+        uint16 listingFeeBps;
+        address listingFeeRecipient;
     }
 
     function _hasFeature(uint32 features, uint32 feature) internal pure returns (bool) {
@@ -103,7 +99,7 @@ contract OffersDataStorage {
         FullOffer memory fullOffer;
 
         if (_hasFeature(features, FEATURE_MASK_LISTING_FEE)) {
-            fullOffer.listingFee = _getListingFee(offer);
+            (fullOffer.listingFeeBps, fullOffer.listingFeeRecipient) = _getListingFee(offer);
         }
 
         if (_hasFeature(features, FEATURE_MASK_FINDERS_FEE)) {

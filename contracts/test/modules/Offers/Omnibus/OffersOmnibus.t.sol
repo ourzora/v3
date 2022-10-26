@@ -97,15 +97,7 @@ contract OffersOmnibusTest is DSTest {
 
     function testGas_CreateOffer() public {
         vm.prank(address(maker));
-        offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            uint96(block.timestamp + 100000),
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer(address(token), 0, address(weth), 1 ether, uint96(block.timestamp + 100000), 100, 200, address(listingFeeRecipient));
     }
 
     function testGas_CreateOfferMinimal() public {
@@ -117,15 +109,7 @@ contract OffersOmnibusTest is DSTest {
         uint256 makerBalanceBefore = address(maker).balance;
         uint256 makerWethBalanceBefore = weth.balanceOf(address(maker));
         vm.prank(address(maker));
-        offers.createOffer{value: 1 ether}(
-            address(token),
-            0,
-            address(0),
-            1 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 0, 100, 200, address(listingFeeRecipient));
         uint256 makerBalanceAfter = address(maker).balance;
         uint256 makerWethBalanceAfter = weth.balanceOf(address(maker));
         assertEq(makerBalanceBefore - makerBalanceAfter, 1 ether);
@@ -136,29 +120,21 @@ contract OffersOmnibusTest is DSTest {
         assertEq(offer.expiry, 0);
         assertEq(offer.findersFeeBps, 100);
         assertEq(offer.currency, address(0));
-        assertEq(offer.listingFee.listingFeeRecipient, address(listingFeeRecipient));
-        assertEq(offer.listingFee.listingFeeBps, 200);
+        assertEq(offer.listingFeeRecipient, address(listingFeeRecipient));
+        assertEq(offer.listingFeeBps, 200);
     }
 
     function test_CreateERC20Offer() public {
         vm.prank(address(maker));
-        offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer(address(token), 0, address(weth), 1 ether, 0, 100, 200, address(listingFeeRecipient));
         OffersDataStorage.FullOffer memory offer = offers.getFullOffer(address(token), 0, 1);
         assertEq(offer.amount, 1 ether);
         assertEq(offer.maker, address(maker));
         assertEq(offer.expiry, 0);
         assertEq(offer.findersFeeBps, 100);
         assertEq(offer.currency, address(weth));
-        assertEq(offer.listingFee.listingFeeRecipient, address(listingFeeRecipient));
-        assertEq(offer.listingFee.listingFeeBps, 200);
+        assertEq(offer.listingFeeRecipient, address(listingFeeRecipient));
+        assertEq(offer.listingFeeBps, 200);
     }
 
     function test_CreateOfferMinimal() public {
@@ -170,8 +146,8 @@ contract OffersOmnibusTest is DSTest {
         assertEq(offer.expiry, 0);
         assertEq(offer.findersFeeBps, 0);
         assertEq(offer.currency, address(0));
-        assertEq(offer.listingFee.listingFeeRecipient, address(0));
-        assertEq(offer.listingFee.listingFeeBps, 0);
+        assertEq(offer.listingFeeRecipient, address(0));
+        assertEq(offer.listingFeeBps, 0);
     }
 
     function test_CreateOfferWithExpiry() public {
@@ -180,15 +156,7 @@ contract OffersOmnibusTest is DSTest {
         vm.prank(address(maker));
         uint96 start = uint96(block.timestamp);
         uint96 tomorrow = start + 1 days;
-        offers.createOffer{value: 1 ether}(
-            address(token),
-            0,
-            address(0),
-            1 ether,
-            tomorrow,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, tomorrow, 100, 200, address(listingFeeRecipient));
         vm.warp(tomorrow + 1 days);
         vm.startPrank(address(taker));
         vm.expectRevert(abi.encodeWithSignature("OFFER_EXPIRED()"));
@@ -199,110 +167,46 @@ contract OffersOmnibusTest is DSTest {
 
     function testFail_CannotCreateOfferWithoutAttachingFunds() public {
         vm.prank(address(maker));
-        offers.createOffer(
-            address(token),
-            0,
-            address(0),
-            1 ether,
-            0,
-            0,
-            OffersDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)})
-        );
+        offers.createOffer(address(token), 0, address(0), 1 ether, 0, 0, 0, address(0));
     }
 
     function testFail_CannotCreateOfferWithInvalidFindersFeeBps() public {
         vm.prank(address(maker));
-        offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            0,
-            10001,
-            OffersDataStorage.ListingFee({listingFeeBps: 0, listingFeeRecipient: address(0)})
-        );
+        offers.createOffer(address(token), 0, address(weth), 1 ether, 0, 10001, 0, address(0));
     }
 
     function testFail_CannotCreateOfferWithInvalidFindersAndListingFeeBps() public {
         vm.prank(address(maker));
-        offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            0,
-            5000,
-            OffersDataStorage.ListingFee({listingFeeBps: 5001, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer(address(token), 0, address(weth), 1 ether, 0, 5000, 5001, address(listingFeeRecipient));
     }
 
     function testFail_CannotCreateOfferWithInvalidExpiry() public {
         vm.prank(address(maker));
         vm.warp(1000);
-        offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            500,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer(address(token), 0, address(weth), 1 ether, 500, 100, 200, address(listingFeeRecipient));
     }
 
     function testFail_CannotCreateERC20OfferWithMsgValue() public {
         vm.prank(address(maker));
-        offers.createOffer{value: 1 ether}(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer{value: 1 ether}(address(token), 0, address(weth), 1 ether, 0, 100, 200, address(listingFeeRecipient));
     }
 
     function testFail_CannotCreateERC20OfferInsufficientBalance() public {
         vm.prank(address(maker));
-        offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1000 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer(address(token), 0, address(weth), 1000 ether, 0, 100, 200, address(listingFeeRecipient));
     }
 
     function testFail_CannotCreateETHOfferInsufficientWethAllowance() public {
         vm.startPrank(address(maker));
         weth.approve(address(erc20TransferHelper), 0);
-        offers.createOffer{value: 1 ether}(
-            address(token),
-            0,
-            address(0),
-            1 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 0, 100, 200, address(listingFeeRecipient));
         vm.stopPrank();
     }
 
     function testFail_CannotCreateERC20OfferInsufficientAllowance() public {
         vm.startPrank(address(maker));
         weth.approve(address(erc20TransferHelper), 0);
-        offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        offers.createOffer(address(token), 0, address(weth), 1 ether, 0, 100, 200, address(listingFeeRecipient));
         vm.stopPrank();
     }
 

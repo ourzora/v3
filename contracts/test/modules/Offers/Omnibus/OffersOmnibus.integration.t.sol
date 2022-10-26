@@ -97,15 +97,7 @@ contract OffersOmnibusIntegrationTest is DSTest {
 
     function runETH() public {
         vm.prank(address(buyer));
-        uint256 id = offers.createOffer{value: 1 ether}(
-            address(token),
-            0,
-            address(0),
-            1 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        uint256 id = offers.createOffer{value: 1 ether}(address(token), 0, address(0), 1 ether, 0, 100, 200, address(listingFeeRecipient));
 
         vm.prank(address(seller));
         offers.fillOffer(address(token), 0, id, 1 ether, address(0), address(finder));
@@ -143,15 +135,7 @@ contract OffersOmnibusIntegrationTest is DSTest {
 
     function runERC20() public {
         vm.prank(address(buyer));
-        uint256 id = offers.createOffer(
-            address(token),
-            0,
-            address(weth),
-            1 ether,
-            0,
-            100,
-            OffersDataStorage.ListingFee({listingFeeBps: 200, listingFeeRecipient: address(listingFeeRecipient)})
-        );
+        uint256 id = offers.createOffer(address(token), 0, address(weth), 1 ether, 0, 100, 200, address(listingFeeRecipient));
 
         vm.prank(address(seller));
         offers.fillOffer(address(token), 0, id, 1 ether, address(weth), address(finder));

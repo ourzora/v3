@@ -111,7 +111,8 @@ contract OffersOmnibus is IOffersOmnibus, ReentrancyGuard, IncomingTransferSuppo
     /// @param _offerCurrency Address of ERC20 token
     /// @param _expiry Timestamp after which the ask expires
     /// @param _findersFeeBps Finders fee basis points
-    /// @param _listingFee ListingFee struct specifying fee and recipient
+    /// @param _listingFeeBps Listing fee basis points
+    /// @param _listingFeeRecipient Listing fee recipient
     function createOffer(
         address _tokenContract,
         uint256 _tokenId,
@@ -119,7 +120,8 @@ contract OffersOmnibus is IOffersOmnibus, ReentrancyGuard, IncomingTransferSuppo
         uint256 _offerAmount,
         uint96 _expiry,
         uint16 _findersFeeBps,
-        OffersDataStorage.ListingFee memory _listingFee
+        uint16 _listingFeeBps,
+        address _listingFeeRecipient
     ) external payable nonReentrant returns (uint256) {
         if (_offerAmount == 0) revert NO_ZERO_OFFERS();
 
@@ -147,10 +149,10 @@ contract OffersOmnibus is IOffersOmnibus, ReentrancyGuard, IncomingTransferSuppo
 
         _setETHorERC20Currency(offer, _offerCurrency);
 
-        if (_findersFeeBps + _listingFee.listingFeeBps > 10000) revert INVALID_FEES();
+        if (_findersFeeBps + _listingFeeBps > 10000) revert INVALID_FEES();
 
-        if (_listingFee.listingFeeBps > 0) {
-            _setListingFee(offer, _listingFee.listingFeeBps, _listingFee.listingFeeRecipient);
+        if (_listingFeeBps > 0) {
+            _setListingFee(offer, _listingFeeBps, _listingFeeRecipient);
         }
 
         if (_findersFeeBps > 0) {
@@ -233,9 +235,9 @@ contract OffersOmnibus is IOffersOmnibus, ReentrancyGuard, IncomingTransferSuppo
         uint256 findersFee;
 
         if (_hasFeature(offer.features, FEATURE_MASK_LISTING_FEE)) {
-            ListingFee memory listingFeeData = _getListingFee(offer);
-            listingFee = (remainingProfit * listingFeeData.listingFeeBps) / 10000;
-            listingFeeRecipient = listingFeeData.listingFeeRecipient;
+            uint16 listingFeeBps;
+            (listingFeeBps, listingFeeRecipient) = _getListingFee(offer);
+            listingFee = (remainingProfit * listingFeeBps) / 10000;
         }
 
         if (_finder != address(0) && _hasFeature(offer.features, FEATURE_MASK_FINDERS_FEE)) {
