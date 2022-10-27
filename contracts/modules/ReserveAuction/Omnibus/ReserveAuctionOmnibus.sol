@@ -111,6 +111,8 @@ contract ReserveAuctionOmnibus is
 
         // Ensure the caller is the owner or an approved operator
         if (msg.sender != tokenOwner && !IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender)) revert NOT_TOKEN_OWNER_OR_OPERATOR();
+        if (!erc721TransferHelper.isModuleApproved(msg.sender)) revert MODULE_NOT_APPROVED();
+        if (!IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper))) revert TRANSFER_HELPER_NOT_APPROVED();
 
         if (_duration <= DEFAULT_TIME_BUFFER) revert DURATION_LTE_TIME_BUFFER();
 
@@ -136,6 +138,8 @@ contract ReserveAuctionOmnibus is
         // Ensure the caller is the owner or an approved operator
         if (msg.sender != tokenOwner && !IERC721(auctionData.tokenContract).isApprovedForAll(tokenOwner, msg.sender))
             revert NOT_TOKEN_OWNER_OR_OPERATOR();
+        if (!erc721TransferHelper.isModuleApproved(msg.sender)) revert MODULE_NOT_APPROVED();
+        if (!IERC721(auctionData.tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper))) revert TRANSFER_HELPER_NOT_APPROVED();
 
         if (auctionData.timeBuffer > 0) {
             if (auctionData.duration <= auctionData.timeBuffer) revert DURATION_LTE_TIME_BUFFER();

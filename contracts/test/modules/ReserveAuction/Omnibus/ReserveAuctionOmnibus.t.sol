@@ -282,6 +282,55 @@ contract ReserveAuctionOmnibusTest is DSTest {
         );
     }
 
+    function testRevert_CreateAuctionModuleOrTransferHelperNotApproved() public {
+        vm.startPrank(address(seller));
+        token.setApprovalForAll(address(erc721TransferHelper), false);
+        vm.expectRevert(abi.encodeWithSignature("TRANSFER_HELPER_NOT_APPROVED()"));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                block.timestamp + 1 days,
+                2 ether,
+                address(token),
+                1 days,
+                1,
+                0,
+                address(sellerFundsRecipient),
+                uint96(block.timestamp + 3 days),
+                address(0x001),
+                2,
+                0,
+                address(erc20),
+                address(weth)
+            )
+        );
+
+        token.setApprovalForAll(address(erc721TransferHelper), true);
+        seller.setApprovalForModule(address(auctions), false);
+        vm.expectRevert(abi.encodeWithSignature("MODULE_NOT_APPROVED()"));
+        auctions.createAuction(
+            IReserveAuctionOmnibus.CreateAuctionParameters(
+                0,
+                1 ether,
+                block.timestamp + 1 days,
+                2 ether,
+                address(token),
+                1 days,
+                1,
+                0,
+                address(sellerFundsRecipient),
+                uint96(block.timestamp + 3 days),
+                address(0x001),
+                2,
+                0,
+                address(erc20),
+                address(weth)
+            )
+        );
+        vm.stopPrank();
+    }
+
     function testRevert_FindersFeePlusListingFeeCannotExceed10000() public {
         vm.prank(address(seller));
         vm.expectRevert(abi.encodeWithSignature("INVALID_FEES()"));
@@ -758,8 +807,7 @@ contract ReserveAuctionOmnibusTest is DSTest {
     }
 
     function testRevert_MustApproveModule() public {
-        seller.setApprovalForModule(address(auctions), false);
-        vm.prank(address(seller));
+        vm.startPrank(address(seller));
         auctions.createAuction(
             IReserveAuctionOmnibus.CreateAuctionParameters(
                 0,
@@ -779,15 +827,16 @@ contract ReserveAuctionOmnibusTest is DSTest {
                 address(weth)
             )
         );
+        seller.setApprovalForModule(address(auctions), false);
+        vm.stopPrank();
+
         vm.prank(address(bidder));
         vm.expectRevert("module has not been approved by user");
         auctions.createBid(address(token), 0, 1 ether, address(finder));
     }
 
     function testRevert_SellerMustApproveERC721TransferHelper() public {
-        vm.prank(address(seller));
-        token.setApprovalForAll(address(erc721TransferHelper), false);
-        vm.prank(address(seller));
+        vm.startPrank(address(seller));
         auctions.createAuction(
             IReserveAuctionOmnibus.CreateAuctionParameters(
                 0,
@@ -807,6 +856,9 @@ contract ReserveAuctionOmnibusTest is DSTest {
                 address(weth)
             )
         );
+        token.setApprovalForAll(address(erc721TransferHelper), false);
+        vm.stopPrank();
+
         vm.prank(address(bidder));
         vm.expectRevert("ERC721: transfer caller is not owner nor approved");
         auctions.createBid(address(token), 0, 1 ether, address(finder));

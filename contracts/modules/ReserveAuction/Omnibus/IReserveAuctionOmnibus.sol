@@ -9,6 +9,10 @@ import {ReserveAuctionDataStorage} from "./ReserveAuctionDataStorage.sol";
 interface IReserveAuctionOmnibus {
     error NOT_TOKEN_OWNER_OR_OPERATOR();
 
+    error MODULE_NOT_APPROVED();
+
+    error TRANSFER_HELPER_NOT_APPROVED();
+
     error DURATION_LTE_TIME_BUFFER();
 
     error INVALID_EXPIRY();
