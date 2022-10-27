@@ -18,20 +18,10 @@ contract AsksDataStorage {
     uint32 constant FEATURE_MASK_RECIPIENT_OR_EXPIRY = 1 << 7;
     uint32 constant FEATURE_MASK_BUYER = 1 << 8;
 
-    struct ListingFee {
-        uint16 listingFeeBps;
-        address listingFeeRecipient;
-    }
-
-    struct TokenGate {
-        address token;
-        uint256 minAmount;
-    }
-
-    function _getListingFee(StoredAsk storage ask) internal view returns (ListingFee memory) {
+    function _getListingFee(StoredAsk storage ask) internal view returns (uint16 listingFeeBps, address listingFeeRecipient) {
         uint256 data = ask.featureData[FEATURE_MASK_LISTING_FEE];
-
-        return ListingFee({listingFeeBps: uint16(data), listingFeeRecipient: address(uint160(data >> 16))});
+        listingFeeBps = uint16(data);
+        listingFeeRecipient = address(uint160(data >> 16));
     }
 
     function _setListingFee(
@@ -52,9 +42,9 @@ contract AsksDataStorage {
         ask.featureData[FEATURE_MASK_FINDERS_FEE] = uint256(_findersFeeBps);
     }
 
-    function _getAskTokenGate(StoredAsk storage ask) internal view returns (TokenGate memory tokenGate) {
-        tokenGate.token = address(uint160(ask.featureData[FEATURE_MASK_TOKEN_GATE]));
-        tokenGate.minAmount = ask.featureData[FEATURE_MASK_TOKEN_GATE + 1];
+    function _getAskTokenGate(StoredAsk storage auction) internal view returns (address token, uint256 minAmount) {
+        token = address(uint160(auction.featureData[FEATURE_MASK_TOKEN_GATE]));
+        minAmount = auction.featureData[FEATURE_MASK_TOKEN_GATE + 1];
     }
 
     function _setTokenGate(
@@ -124,12 +114,14 @@ contract AsksDataStorage {
         uint256 price;
         address seller;
         uint96 expiry;
+        uint256 tokenGateMinAmount;
+        address tokenGateToken;
         address sellerFundsRecipient;
-        uint16 findersFeeBps;
         address currency;
         address buyer;
-        TokenGate tokenGate;
-        ListingFee listingFee;
+        address listingFeeRecipient;
+        uint16 listingFeeBps;
+        uint16 findersFeeBps;
     }
 
     function _hasFeature(uint32 features, uint32 feature) internal pure returns (bool) {
@@ -144,11 +136,11 @@ contract AsksDataStorage {
         fullAsk.buyer = _getBuyerWithFallback(ask);
 
         if (_hasFeature(features, FEATURE_MASK_TOKEN_GATE)) {
-            fullAsk.tokenGate = _getAskTokenGate(ask);
+            (fullAsk.tokenGateToken, fullAsk.tokenGateMinAmount) = _getAskTokenGate(ask);
         }
 
         if (_hasFeature(features, FEATURE_MASK_LISTING_FEE)) {
-            fullAsk.listingFee = _getListingFee(ask);
+            (fullAsk.listingFeeBps, fullAsk.listingFeeRecipient) = _getListingFee(ask);
         }
 
         if (_hasFeature(features, FEATURE_MASK_FINDERS_FEE)) {

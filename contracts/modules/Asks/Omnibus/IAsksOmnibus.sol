@@ -22,8 +22,10 @@ interface IAsksOmnibus {
         address _askCurrency,
         address _buyer,
         uint16 _findersFeeBps,
-        AsksDataStorage.ListingFee memory _listingFee,
-        AsksDataStorage.TokenGate memory _tokenGate
+        uint16 _listingFeeBps,
+        address _listingFeeRecipient,
+        address _tokenGateToken,
+        uint256 _tokenGateMinAmount
     ) external;
 
     function cancelAsk(address _tokenContract, uint256 _tokenId) external;

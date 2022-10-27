@@ -354,7 +354,7 @@ contract ReserveAuctionOmnibus is
         }
 
         if (_hasFeature(auction.features, FEATURE_MASK_FINDERS_FEE)) {
-            uint16 findersFeeBps = (_getFindersFee(auction)).findersFeeBps;
+            (uint16 findersFeeBps, ) = _getFindersFee(auction);
             _setFindersFee(auction, findersFeeBps, _finder);
         }
 
@@ -416,10 +416,9 @@ contract ReserveAuctionOmnibus is
         }
 
         if (_hasFeature(auction.features, FEATURE_MASK_FINDERS_FEE)) {
-            FindersFee memory findersFeeAndRecipient = _getFindersFee(auction);
-            if (findersFeeAndRecipient.finder != address(0)) {
-                finder = findersFeeAndRecipient.finder;
-                uint16 findersFeeBps = findersFeeAndRecipient.findersFeeBps;
+            uint16 findersFeeBps;
+            (findersFeeBps, finder) = _getFindersFee(auction);
+            if (finder != address(0)) {
                 findersFee = (remainingProfit * findersFeeBps) / 10000;
             }
         }

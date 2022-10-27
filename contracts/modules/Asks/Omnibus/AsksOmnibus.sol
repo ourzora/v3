@@ -108,8 +108,10 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     /// @param _askCurrency Address of ERC20 token (or 0x0 for ETH)
     /// @param _buyer Specifid buyer for private asks
     /// @param _findersFeeBps Finders fee basis points
-    /// @param _listingFee ListingFee struct specifying fee and recipient
-    /// @param _tokenGate TokenGate struct specifying currency and minimum amount
+    /// @param _listingFeeBps Listing fee basis points
+    /// @param _listingFeeRecipient Listing fee recipient
+    /// @param _tokenGateToken Token gate erc20 token
+    /// @param _tokenGateMinAmount Token gate bidder minimum amount
     function createAsk(
         address _tokenContract,
         uint256 _tokenId,
@@ -119,8 +121,10 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         address _askCurrency,
         address _buyer,
         uint16 _findersFeeBps,
-        AsksDataStorage.ListingFee memory _listingFee,
-        AsksDataStorage.TokenGate memory _tokenGate
+        uint16 _listingFeeBps,
+        address _listingFeeRecipient,
+        address _tokenGateToken,
+        uint256 _tokenGateMinAmount
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
@@ -132,20 +136,20 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
 
         ask.features = 0;
 
-        if (_listingFee.listingFeeBps > 0) {
-            require(_listingFee.listingFeeBps <= 10000, "INVALID_LISTING_FEE");
-            _setListingFee(ask, _listingFee.listingFeeBps, _listingFee.listingFeeRecipient);
+        if (_listingFeeBps > 0) {
+            require(_listingFeeBps <= 10000, "INVALID_LISTING_FEE");
+            _setListingFee(ask, _listingFeeBps, _listingFeeRecipient);
         }
 
         if (_findersFeeBps > 0) {
             require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
-            require(_findersFeeBps + _listingFee.listingFeeBps <= 10000, "listingFee and findersFee must be less than or equal to 10000");
+            require(_findersFeeBps + _listingFeeBps <= 10000, "listingFee and findersFee must be less than or equal to 10000");
             _setFindersFee(ask, _findersFeeBps);
         }
 
-        if (_tokenGate.token != address(0)) {
-            require(_tokenGate.minAmount > 0, "Min amt cannot be 0");
-            _setTokenGate(ask, _tokenGate.token, _tokenGate.minAmount);
+        if (_tokenGateToken != address(0)) {
+            require(_tokenGateMinAmount > 0, "Min amt cannot be 0");
+            _setTokenGate(ask, _tokenGateToken, _tokenGateMinAmount);
         }
 
         if (_expiry > 0 || (_sellerFundsRecipient != address(0) && _sellerFundsRecipient != tokenOwner)) {
@@ -223,9 +227,9 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         uint256 findersFee;
 
         if (_hasFeature(ask.features, FEATURE_MASK_LISTING_FEE)) {
-            ListingFee memory listingFeeData = _getListingFee(ask);
-            listingFee = (remainingProfit * listingFeeData.listingFeeBps) / 10000;
-            listingFeeRecipient = listingFeeData.listingFeeRecipient;
+            uint16 listingFeeBps;
+            (listingFeeBps, listingFeeRecipient) = _getListingFee(ask);
+            listingFee = (remainingProfit * listingFeeBps) / 10000;
         }
 
         if (finder != address(0) && _hasFeature(ask.features, FEATURE_MASK_FINDERS_FEE)) {
@@ -233,7 +237,7 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         }
 
         if (listingFee > 0) {
-            _handleOutgoingTransfer((_getListingFee(ask)).listingFeeRecipient, listingFee, currency, 50000);
+            _handleOutgoingTransfer(listingFeeRecipient, listingFee, currency, 50000);
             remainingProfit -= listingFee;
         }
         if (findersFee > 0) {
@@ -287,8 +291,8 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         }
 
         if (_hasFeature(ask.features, FEATURE_MASK_TOKEN_GATE)) {
-            AsksDataStorage.TokenGate memory tokenGate = _getAskTokenGate(ask);
-            require(IERC20(tokenGate.token).balanceOf(msg.sender) >= tokenGate.minAmount, "Token gate not satisfied");
+            (address tokenGateToken, uint256 tokenGateMinAmount) = _getAskTokenGate(ask);
+            require(IERC20(tokenGateToken).balanceOf(msg.sender) >= tokenGateMinAmount, "Token gate not satisfied");
         }
 
         if (_hasFeature(ask.features, FEATURE_MASK_BUYER)) {

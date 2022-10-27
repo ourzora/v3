@@ -29,21 +29,6 @@ contract ReserveAuctionDataStorage {
     mapping(address => mapping(uint256 => StoredAuction)) public auctionForNFT;
     mapping(address => mapping(uint256 => OngoingAuction)) public ongoingAuctionForNFT;
 
-    struct ListingFee {
-        uint16 listingFeeBps;
-        address listingFeeRecipient;
-    }
-
-    struct TokenGate {
-        address token;
-        uint256 minAmount;
-    }
-
-    struct FindersFee {
-        uint16 findersFeeBps;
-        address finder;
-    }
-
     function _getListingFee(StoredAuction storage auction) internal view returns (uint16 listingFeeBps, address listingFeeRecipient) {
         uint256 data = auction.featureData[FEATURE_MASK_LISTING_FEE];
         listingFeeBps = uint16(data);
@@ -74,10 +59,11 @@ contract ReserveAuctionDataStorage {
         auction.featureData[FEATURE_MASK_TOKEN_GATE + 1] = minAmount;
     }
 
-    function _getFindersFee(StoredAuction storage auction) internal view returns (FindersFee memory) {
+    function _getFindersFee(StoredAuction storage auction) internal view returns (uint16 findersFeeBps, address finder) {
         uint256 data = auction.featureData[FEATURE_MASK_FINDERS_FEE];
 
-        return FindersFee({findersFeeBps: uint16(data), finder: address(uint160(data >> 16))});
+        findersFeeBps = uint16(data);
+        finder = address(uint160(data >> 16));
     }
 
     function _setFindersFee(
@@ -185,9 +171,7 @@ contract ReserveAuctionDataStorage {
         }
 
         if (_hasFeature(features, FEATURE_MASK_FINDERS_FEE)) {
-            FindersFee memory findersFee = _getFindersFee(auction);
-            fullAuction.findersFeeBps = findersFee.findersFeeBps;
-            fullAuction.finder = findersFee.finder;
+            (fullAuction.findersFeeBps, fullAuction.finder) = _getFindersFee(auction);
         }
 
         if (_hasFeature(features, FEATURE_MASK_ERC20_CURRENCY)) {

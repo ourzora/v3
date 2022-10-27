@@ -122,10 +122,10 @@ contract AsksOmnibusTest is DSTest {
         assertEq(ask.expiry, 0);
         assertEq(ask.findersFeeBps, 0);
         assertEq(ask.price, 1 ether);
-        assertEq(ask.tokenGate.token, address(0));
-        assertEq(ask.tokenGate.minAmount, 0);
-        assertEq(ask.listingFee.listingFeeBps, 0);
-        assertEq(ask.listingFee.listingFeeRecipient, address(0));
+        assertEq(ask.tokenGateToken, address(0));
+        assertEq(ask.tokenGateMinAmount, 0);
+        assertEq(ask.listingFeeBps, 0);
+        assertEq(ask.listingFeeRecipient, address(0));
     }
 
     function testRevert_CreateAskMinimalNotTokenOwnerOrOperator() public {
@@ -161,8 +161,10 @@ contract AsksOmnibusTest is DSTest {
             address(weth),
             address(buyer),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         AsksDataStorage.FullAsk memory ask = asks.getFullAsk(address(token), 0);
         assertEq(ask.seller, address(seller));
@@ -172,10 +174,10 @@ contract AsksOmnibusTest is DSTest {
         assertEq(ask.expiry, uint96(block.timestamp + 1 days));
         assertEq(ask.findersFeeBps, 1000);
         assertEq(ask.price, 1 ether);
-        assertEq(ask.tokenGate.token, address(erc20));
-        assertEq(ask.tokenGate.minAmount, 1);
-        assertEq(ask.listingFee.listingFeeBps, 1);
-        assertEq(ask.listingFee.listingFeeRecipient, address(listingFeeRecipient));
+        assertEq(ask.tokenGateToken, address(erc20));
+        assertEq(ask.tokenGateMinAmount, 1);
+        assertEq(ask.listingFeeBps, 1);
+        assertEq(ask.listingFeeRecipient, address(listingFeeRecipient));
     }
 
     function testRevert_CreateAskNotTokenOwnerOrOperator() public {
@@ -190,8 +192,10 @@ contract AsksOmnibusTest is DSTest {
             address(weth),
             address(buyer),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
     }
 
@@ -208,8 +212,10 @@ contract AsksOmnibusTest is DSTest {
             address(weth),
             address(buyer),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         vm.stopPrank();
     }
@@ -227,8 +233,10 @@ contract AsksOmnibusTest is DSTest {
             address(weth),
             address(buyer),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         vm.stopPrank();
     }
@@ -246,8 +254,10 @@ contract AsksOmnibusTest is DSTest {
             address(weth),
             address(buyer),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
 
         vm.prank(address(buyer));
@@ -273,8 +283,10 @@ contract AsksOmnibusTest is DSTest {
             address(weth),
             address(buyer),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         asks.setAskPrice(address(token), 0, 2 ether, address(weth));
         vm.stopPrank();
@@ -287,10 +299,10 @@ contract AsksOmnibusTest is DSTest {
         assertEq(ask.expiry, uint96(block.timestamp + 1 days));
         assertEq(ask.findersFeeBps, 1000);
         assertEq(ask.price, 2 ether);
-        assertEq(ask.tokenGate.token, address(erc20));
-        assertEq(ask.tokenGate.minAmount, 1);
-        assertEq(ask.listingFee.listingFeeBps, 1);
-        assertEq(ask.listingFee.listingFeeRecipient, address(listingFeeRecipient));
+        assertEq(ask.tokenGateToken, address(erc20));
+        assertEq(ask.tokenGateMinAmount, 1);
+        assertEq(ask.listingFeeBps, 1);
+        assertEq(ask.listingFeeRecipient, address(listingFeeRecipient));
     }
 
     /// ------------ CANCEL ASK ------------ ///
@@ -307,8 +319,10 @@ contract AsksOmnibusTest is DSTest {
             address(weth),
             address(buyer),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
 
         asks.cancelAsk(address(token), 0);
@@ -321,10 +335,10 @@ contract AsksOmnibusTest is DSTest {
         assertEq(ask.expiry, 0);
         assertEq(ask.findersFeeBps, 0);
         assertEq(ask.price, 0);
-        assertEq(ask.tokenGate.token, address(0));
-        assertEq(ask.tokenGate.minAmount, 0);
-        assertEq(ask.listingFee.listingFeeBps, 0);
-        assertEq(ask.listingFee.listingFeeRecipient, address(0));
+        assertEq(ask.tokenGateToken, address(0));
+        assertEq(ask.tokenGateMinAmount, 0);
+        assertEq(ask.listingFeeBps, 0);
+        assertEq(ask.listingFeeRecipient, address(0));
         vm.stopPrank();
 
         vm.startPrank(address(buyer));
