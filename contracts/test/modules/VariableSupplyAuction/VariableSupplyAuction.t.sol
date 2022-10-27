@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 import "forge-std/Test.sol";
 
 import "../../../modules/VariableSupplyAuction/VariableSupplyAuction.sol";
-import {ERC721Drop} from "../../../modules/VariableSupplyAuction/temp-MockERC721Drop.sol";
+import "../../../modules/VariableSupplyAuction/temp-MockERC721Drop.sol";
 
 import {Zorb} from "../../utils/users/Zorb.sol";
 import {ZoraRegistrar} from "../../utils/users/ZoraRegistrar.sol";
@@ -35,6 +35,7 @@ contract VariableSupplyAuctionTest is Test {
 
     VariableSupplyAuction internal auctions;
     ERC721Drop internal drop;
+    DummyMetadataRenderer internal dummyRenderer;
     WETH internal weth;
 
     Zorb internal seller;
@@ -132,24 +133,25 @@ contract VariableSupplyAuctionTest is Test {
         // Deploy mocks
         royaltyEngine = new RoyaltyEngine(address(royaltyRecipient));
         drop = new ERC721Drop();
+        dummyRenderer = new DummyMetadataRenderer();
         drop.initialize({
             _contractName: "Test Mutant Ninja Turtles",
             _contractSymbol: "TMNT",
             _initialOwner: address(seller),
             _fundsRecipient: payable(sellerFundsRecipient),
-            _editionSize: 1, // to be updated during settle phase
-            _royaltyBPS: 1000
-            // _metadataRenderer: dummyRenderer,
-            // _metadataRendererInit: "",
-            // _salesConfig: IERC721Drop.SalesConfiguration({
-            //     publicSaleStart: 0,
-            //     publicSaleEnd: 0,
-            //     presaleStart: 0,
-            //     presaleEnd: 0,
-            //     publicSalePrice: 0,
-            //     maxSalePurchasePerAddress: 0,
-            //     presaleMerkleRoot: bytes32(0)
-            // })
+            _editionSize: 1, // to be updated by seller during settle phase
+            _royaltyBPS: 1000,
+            _metadataRenderer: dummyRenderer,
+            _metadataRendererInit: "",
+            _salesConfig: ERC721Drop.SalesConfiguration({
+                publicSaleStart: 0,
+                publicSaleEnd: 0,
+                presaleStart: 0,
+                presaleEnd: 0,
+                publicSalePrice: 0,
+                maxSalePurchasePerAddress: 0,
+                presaleMerkleRoot: bytes32(0)
+            })
         });
         weth = new WETH();
 
@@ -195,13 +197,13 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(drop.getRoleMember(drop.MINTER_ROLE(), 0), address(auctions));
 
         (
-            // IMetadataRenderer renderer,
+            IMetadataRenderer renderer,
             uint64 editionSize,
             uint16 royaltyBPS,
             address payable fundsRecipient
         ) = drop.config();
 
-        // assertEq(address(renderer), address(dummyRenderer));
+        assertEq(address(renderer), address(dummyRenderer));
         assertEq(editionSize, 1);
         assertEq(royaltyBPS, 1000);
         assertEq(fundsRecipient, payable(sellerFundsRecipient));
