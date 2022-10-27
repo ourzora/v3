@@ -86,7 +86,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
     /// @notice The addresses who have placed and revealed a bid in a given auction
     /// @dev ERC-721 token contract => all bidders who have revealed their bid
-    mapping(address => address[]) public revealedBiddersForDrop;
+    mapping(address => address[]) internal _revealedBiddersForDrop;
 
     /*//////////////////////////////////////////////////////////////
                         CREATE AUCTION
@@ -358,7 +358,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         require(keccak256(abi.encodePacked(_bidAmount, bytes(_salt))) == bid.commitmentHash, "REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
 
         // Store the bidder
-        revealedBiddersForDrop[_tokenContract].push(msg.sender);
+        _revealedBiddersForDrop[_tokenContract].push(msg.sender);
 
         // Store the revealed bid amount
         uint96 bidAmount = uint96(_bidAmount);
@@ -451,7 +451,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // TODO x gas optimization -- consider other, less storage-intensive options
         // TODO x gas optimization -- don't redo if already calculated
 
-        address[] storage bidders = revealedBiddersForDrop[_tokenContract];
+        address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
 
         for (uint256 i = 0; i < bidders.length; i++) {
             address bidder = bidders[i];
@@ -509,7 +509,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Auction storage auction = auctionForDrop[_tokenContract];
 
         // Get the bidders who revealed in this auction
-        address[] storage bidders = revealedBiddersForDrop[_tokenContract];
+        address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
 
         // Get the balances for this auction
         mapping(address => Bid) storage bids = bidsForDrop[_tokenContract];
