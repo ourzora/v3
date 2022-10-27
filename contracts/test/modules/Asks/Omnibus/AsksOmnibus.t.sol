@@ -130,14 +130,14 @@ contract AsksOmnibusTest is DSTest {
 
     function testRevert_CreateAskMinimalNotTokenOwnerOrOperator() public {
         vm.prank(address(other));
-        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
         asks.createAskMinimal(address(token), 0, 1 ether);
     }
 
     function testRevert_CreateAskMinimalModuleNotApproved() public {
         vm.startPrank(address(seller));
         seller.setApprovalForModule(address(asks), false);
-        vm.expectRevert("MODULE_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("MODULE_NOT_APPROVED()"));
         asks.createAskMinimal(address(token), 0, 1 ether);
         vm.stopPrank();
     }
@@ -145,7 +145,7 @@ contract AsksOmnibusTest is DSTest {
     function testRevert_CreateAskMinimalTransferHelperNotApproved() public {
         vm.startPrank(address(seller));
         token.setApprovalForAll(address(erc721TransferHelper), false);
-        vm.expectRevert("TRANSFER_HELPER_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("TRANSFER_HELPER_NOT_APPROVED()"));
         asks.createAskMinimal(address(token), 0, 1 ether);
         vm.stopPrank();
     }
@@ -182,7 +182,7 @@ contract AsksOmnibusTest is DSTest {
 
     function testRevert_CreateAskNotTokenOwnerOrOperator() public {
         vm.prank(address(other));
-        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
         asks.createAsk(
             address(token),
             0,
@@ -202,7 +202,7 @@ contract AsksOmnibusTest is DSTest {
     function testRevert_CreateAskModuleNotApproved() public {
         vm.startPrank(address(seller));
         seller.setApprovalForModule(address(asks), false);
-        vm.expectRevert("MODULE_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("MODULE_NOT_APPROVED()"));
         asks.createAsk(
             address(token),
             0,
@@ -223,7 +223,7 @@ contract AsksOmnibusTest is DSTest {
     function testRevert_CreateAskTransferHelperNotApproved() public {
         vm.startPrank(address(seller));
         token.setApprovalForAll(address(erc721TransferHelper), false);
-        vm.expectRevert("TRANSFER_HELPER_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("TRANSFER_HELPER_NOT_APPROVED()"));
         asks.createAsk(
             address(token),
             0,
@@ -342,7 +342,7 @@ contract AsksOmnibusTest is DSTest {
         vm.stopPrank();
 
         vm.startPrank(address(buyer));
-        vm.expectRevert("INACTIVE_ASK");
+        vm.expectRevert(abi.encodeWithSignature("ASK_INACTIVE()"));
         asks.fillAsk(address(token), 0, 1 ether, address(weth), address(0));
     }
 }

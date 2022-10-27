@@ -46,7 +46,6 @@ interface IReserveAuctionOmnibus {
     struct CreateAuctionParameters {
         uint256 tokenId;
         uint256 reservePrice;
-        uint256 expiry;
         uint256 startTime;
         uint256 tokenGateMinAmount;
         address tokenContract;
@@ -54,9 +53,10 @@ interface IReserveAuctionOmnibus {
         uint16 findersFeeBps;
         uint16 timeBuffer;
         address fundsRecipient;
+        uint96 expiry;
+        address listingFeeRecipient;
         uint16 listingFeeBps;
         uint8 percentIncrement;
-        address listingFeeRecipient;
         address tokenGateToken;
         address bidCurrency;
     }

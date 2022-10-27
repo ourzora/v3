@@ -149,8 +149,8 @@ contract ReserveAuctionOmnibus is
         auction.features = 0;
 
         if (auctionData.expiry > 0 || (auctionData.fundsRecipient != address(0) && auctionData.fundsRecipient != tokenOwner)) {
-            if (auctionData.expiry != 0 && (auctionData.expiry <= block.timestamp || auctionData.expiry > type(uint96).max)) revert INVALID_EXPIRY();
-            _setExpiryAndFundsRecipient(auction, uint96(auctionData.expiry), auctionData.fundsRecipient);
+            if (auctionData.expiry != 0 && auctionData.expiry <= block.timestamp) revert INVALID_EXPIRY();
+            _setExpiryAndFundsRecipient(auction, auctionData.expiry, auctionData.fundsRecipient);
         }
 
         if (

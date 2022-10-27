@@ -16,7 +16,7 @@ import {AsksDataStorage} from "./AsksDataStorage.sol";
 /// @title Asks
 /// @author jgeary
 /// @notice Omnibus module for multi-featured asks for ERC-721 tokens
-contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1, AsksDataStorage {
+contract AsksOmnibus is IAsksOmnibus, ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSupportV1, ModuleNamingSupportV1, AsksDataStorage {
     /// @notice The ZORA ERC-721 Transfer Helper
     ERC721TransferHelper public immutable erc721TransferHelper;
 
@@ -86,10 +86,10 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
         // Ensure the caller is the owner or an approved operator
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
+        if (msg.sender != tokenOwner && !IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender)) revert NOT_TOKEN_OWNER_OR_OPERATOR();
 
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
-        require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "TRANSFER_HELPER_NOT_APPROVED");
+        if (!erc721TransferHelper.isModuleApproved(msg.sender)) revert MODULE_NOT_APPROVED();
+        if (!IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper))) revert TRANSFER_HELPER_NOT_APPROVED();
 
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
         ask.features = 0;
@@ -128,32 +128,35 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     ) external nonReentrant {
         address tokenOwner = IERC721(_tokenContract).ownerOf(_tokenId);
 
-        require(msg.sender == tokenOwner || IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender), "ONLY_TOKEN_OWNER_OR_OPERATOR");
-        require(erc721TransferHelper.isModuleApproved(msg.sender), "MODULE_NOT_APPROVED");
-        require(IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper)), "TRANSFER_HELPER_NOT_APPROVED");
+        if (msg.sender != tokenOwner && !IERC721(_tokenContract).isApprovedForAll(tokenOwner, msg.sender)) revert NOT_TOKEN_OWNER_OR_OPERATOR();
+        if (!erc721TransferHelper.isModuleApproved(msg.sender)) revert MODULE_NOT_APPROVED();
+        if (!IERC721(_tokenContract).isApprovedForAll(tokenOwner, address(erc721TransferHelper))) revert TRANSFER_HELPER_NOT_APPROVED();
 
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
 
         ask.features = 0;
 
+        if ((_listingFeeBps > 0 && _listingFeeRecipient == address(0)) || (_listingFeeBps == 0 && _listingFeeRecipient != address(0)))
+            revert INVALID_LISTING_FEE();
+        if (_listingFeeBps + _findersFeeBps > 10000) revert INVALID_FEES();
+
         if (_listingFeeBps > 0) {
-            require(_listingFeeBps <= 10000, "INVALID_LISTING_FEE");
             _setListingFee(ask, _listingFeeBps, _listingFeeRecipient);
         }
 
         if (_findersFeeBps > 0) {
-            require(_findersFeeBps <= 10000, "createAsk finders fee bps must be less than or equal to 10000");
-            require(_findersFeeBps + _listingFeeBps <= 10000, "listingFee and findersFee must be less than or equal to 10000");
             _setFindersFee(ask, _findersFeeBps);
         }
 
+        if ((_tokenGateMinAmount > 0 && _tokenGateToken == address(0)) || (_tokenGateMinAmount == 0 && _tokenGateToken != address(0)))
+            revert INVALID_TOKEN_GATE();
+
         if (_tokenGateToken != address(0)) {
-            require(_tokenGateMinAmount > 0, "Min amt cannot be 0");
             _setTokenGate(ask, _tokenGateToken, _tokenGateMinAmount);
         }
 
         if (_expiry > 0 || (_sellerFundsRecipient != address(0) && _sellerFundsRecipient != tokenOwner)) {
-            require(_expiry == 0 || _expiry > block.timestamp, "Expiry must be in the future");
+            if (_expiry != 0 && _expiry <= block.timestamp) revert INVALID_EXPIRY();
             _setExpiryAndFundsRecipient(ask, _expiry, _sellerFundsRecipient);
         }
 
@@ -184,7 +187,9 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
     ) external nonReentrant {
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
 
-        require(ask.seller == msg.sender, "setAskPrice must be seller");
+        if (msg.sender != ask.seller && !IERC721(_tokenContract).isApprovedForAll(ask.seller, msg.sender)) {
+            revert NOT_TOKEN_OWNER_OR_OPERATOR();
+        }
 
         ask.price = _askPrice;
 
@@ -200,14 +205,14 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         // Get the ask for the specified token
         StoredAsk storage ask = askForNFT[_tokenContract][_tokenId];
 
-        // Ensure the caller is the seller or a new owner of the token
-        require(
-            msg.sender == ask.seller ||
-                msg.sender == IERC721(_tokenContract).ownerOf(_tokenId) ||
-                IERC721(_tokenContract).isApprovedForAll(ask.seller, msg.sender) ||
-                IERC721(_tokenContract).isApprovedForAll(IERC721(_tokenContract).ownerOf(_tokenId), msg.sender),
-            "ONLY_SELLER_OR_OPERATOR_OR_TOKEN_OWNER"
-        );
+        // If token is still owned by seller, only seller or operator can cancel (otherwise public)
+        if (
+            IERC721(_tokenContract).ownerOf(_tokenId) == ask.seller &&
+            msg.sender != ask.seller &&
+            !IERC721(_tokenContract).isApprovedForAll(ask.seller, msg.sender)
+        ) {
+            revert NOT_TOKEN_OWNER_OR_OPERATOR();
+        }
 
         emit AskCanceled(_tokenContract, _tokenId, _getFullAsk(ask));
 
@@ -266,19 +271,14 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
         address seller = ask.seller;
 
         // Ensure the ask is active
-        require(seller != address(0), "INACTIVE_ASK");
+        if (seller == address(0)) revert ASK_INACTIVE();
 
         // Cache the price
         uint256 price = ask.price;
-
-        // Ensure the specified price matches the ask price
-        require(_price == price, "MUST_MATCH_PRICE");
-
-        // Cache the currency
         address currency = _getERC20CurrencyWithFallback(ask);
 
-        // Ensure the specified currency matches the ask currency
-        require(_currency == currency, "MUST_MATCH_CURRENCY");
+        // Ensure the specified price matches the ask price
+        if (_price != price || _currency != currency) revert INCORRECT_CURRENCY_OR_AMOUNT();
 
         address fundsRecipient = ask.seller;
 
@@ -287,16 +287,16 @@ contract AsksOmnibus is ReentrancyGuard, IncomingTransferSupportV1, FeePayoutSup
             if (storedFundsRecipient != address(0)) {
                 fundsRecipient = storedFundsRecipient;
             }
-            require(expiry >= block.timestamp, "Ask has expired");
+            if (expiry < block.timestamp) revert ASK_EXPIRED();
         }
 
         if (_hasFeature(ask.features, FEATURE_MASK_TOKEN_GATE)) {
             (address tokenGateToken, uint256 tokenGateMinAmount) = _getAskTokenGate(ask);
-            require(IERC20(tokenGateToken).balanceOf(msg.sender) >= tokenGateMinAmount, "Token gate not satisfied");
+            if (IERC20(tokenGateToken).balanceOf(msg.sender) < tokenGateMinAmount) revert TOKEN_GATE_INSUFFICIENT_BALANCE();
         }
 
         if (_hasFeature(ask.features, FEATURE_MASK_BUYER)) {
-            require(msg.sender == _getBuyerWithFallback(ask), "Ask is reserved for a specific buyer");
+            if (msg.sender != _getBuyerWithFallback(ask)) revert NOT_DESIGNATED_BUYER();
         }
 
         // Transfer the ask price from the buyer
