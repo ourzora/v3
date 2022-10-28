@@ -5,7 +5,7 @@ Core Functional Job-to-be-done: To discover optimal price point and edition size
 Job Map:
 1. (Define) Create digital product
 2. (Prepare) Decide on drop parameters:
-    - Content -- HMW help seller preview their content to potential bidders?
+    - Content -- (HMW help seller preview their content to potential bidders?)
     - Metadata -- name, symbol, initial owner, royalty bips, funds recipient, metadata renderer, and sales config
 3. (Prepare) Decide on auction parameters:
     - Money -- minimum viable revenue and seller funds recipient

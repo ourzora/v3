@@ -88,6 +88,8 @@ contract ERC721Drop {
 
     SalesConfiguration public salesConfig;
 
+    bytes public metadataRendererInit;
+
     function initialize(
         string memory _contractName,
         string memory _contractSymbol,
@@ -109,6 +111,7 @@ contract ERC721Drop {
             fundsRecipient: _fundsRecipient
         });
         salesConfig = _salesConfig;
+        metadataRendererInit = _metadataRendererInit; // to silence warning
     }
 
     function adminMint(address to, uint256 quantity) public returns (uint256) {

@@ -179,7 +179,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     //     | ----------------------->|                                
     //     |                         |                                
     //     |                         ----.                            
-    //     |                             | validate no bids placed yet
+    //     |                             | validate no bids placed yet TODO x add validate minimum viable revenue check
     //     |                         <---'                            
     //     |                         |                                
     //     |                         ----.                            
@@ -429,14 +429,17 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// @param auction The metadata of the created auction
     event AuctionSettled(address indexed tokenContract, Auction auction);
 
+    /// TODO
     struct SettleOption {
         uint16 editionSize;
         uint96 revenue;
     }
 
-    uint96[] public settlePricePoints;
+    /// TODO
+    mapping(address => uint96[]) public _settlePricePointsForAuction;
 
-    mapping(uint96 => SettleOption) public settleMapping;
+    /// TODO
+    mapping(address => mapping(uint96 => SettleOption)) public _settleOptionsForPricePoint;
 
     /// @notice Calculate edition size and revenue for each possible price point
     /// @dev Cheaper on subsequent calls, after the initial call when
@@ -445,37 +448,43 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// @return A tuple of 3 arrays representing the settle options --
     /// the possible price points at which to settle, along with the 
     /// resulting edition sizes and amounts of revenue generated
-    function calculateSettleOptions(address _tokenContract) external returns (uint96[] memory, uint16[] memory, uint96[] memory) {
+    function calculateSettleOptions(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
 
         // TODO x gas optimization -- algorithm =P
         // TODO x gas optimization -- consider other, less storage-intensive options
-        // TODO x gas optimization -- don't redo if already calculated
 
+        Auction storage auction = auctionForDrop[_tokenContract];
         address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
+        uint96[] storage settlePricePoints = _settlePricePointsForAuction[_tokenContract];
+        mapping(uint96 => SettleOption) storage settleOptions = _settleOptionsForPricePoint[_tokenContract];
 
-        for (uint256 i = 0; i < bidders.length; i++) {
-            address bidder = bidders[i];
-            uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
-            SettleOption storage settleOption = settleMapping[bidAmount];
+        if (settlePricePoints.length == 0) { // only calculate and store once, otherwise just return from storage
+            for (uint256 i = 0; i < bidders.length; i++) {
+                address bidder = bidders[i];
+                uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
+                SettleOption storage settleOption = settleOptions[bidAmount];
 
-            if (settleOption.editionSize == 0) {
-                settlePricePoints.push(bidAmount);
-                settleOption.editionSize = 1;
-            }
-        }
-
-        for (uint256 j = 0; j < bidders.length; j++) {
-            address bidder = bidders[j];
-            uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
-
-            for (uint256 k = 0; k < settlePricePoints.length; k++) {
-                uint96 settlePricePoint = settlePricePoints[k];
-                SettleOption storage settleOption = settleMapping[settlePricePoint];
-
-                if (bidAmount >= settlePricePoint) {
-                    settleOption.editionSize++;
-                    settleOption.revenue += settlePricePoint;
+                if (settleOption.editionSize == 0) {
+                    settlePricePoints.push(bidAmount);
+                    settleOption.editionSize = 1;
                 }
+            }
+
+            for (uint256 j = 0; j < settlePricePoints.length; j++) {
+                uint96 settlePricePoint = settlePricePoints[j];
+                SettleOption storage settleOption = settleOptions[settlePricePoint];
+                
+                for (uint256 k = 0; k < bidders.length; k++) {
+                    address bidder = bidders[k];
+                    uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
+
+                    if (bidAmount >= settlePricePoint) {
+                        settleOption.editionSize++;
+                        settleOption.revenue += settlePricePoint;
+                    }
+                }
+
+                settleOption.editionSize--; // because 1st bidder at this settle price was double counted
             }
         }
 
@@ -485,12 +494,15 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
         for (uint256 m = 0; m < settlePricePoints.length; m++) {
             uint96 settlePricePoint = settlePricePoints[m];
-            SettleOption storage settleOption = settleMapping[settlePricePoint];
+            SettleOption storage settleOption = settleOptions[settlePricePoint];
+
+            if (settleOption.revenue < auction.minimumViableRevenue) {
+                settleOption.revenue = 0; // zero out, because not viable settle option
+            }
 
             pricePoints[m] = settlePricePoint;
-            editionSizes[m] = settleOption.editionSize - 1; // because 1st bidder at this settle price was double counted
-            revenues[m] = settleOption.revenue;
-            
+            editionSizes[m] = settleOption.editionSize;
+            revenues[m] = settleOption.revenue;            
         }
 
         return (pricePoints, editionSizes, revenues);
@@ -502,8 +514,10 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     function settleAuction(address _tokenContract, uint96 _settlePricePoint) external nonReentrant {
 
         // TODO x checks
-        // TODO x decide how to store the fact that this auction is settled
         // TODO x gas optimizations
+        // TODO x look for more ways to consolidate business logic with calculateSettleOptions
+        // TODO x document pragmatic max edition size / winning bidders
+        // TODO x consider storing winningBidders during calculateSettleOptions
 
         // Get the auction
         Auction storage auction = auctionForDrop[_tokenContract];
@@ -511,40 +525,46 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Get the bidders who revealed in this auction
         address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
 
-        // Get the balances for this auction
+        if (_settlePricePointsForAuction[_tokenContract].length == 0) {
+            calculateSettleOptions(_tokenContract);
+        }
+
+        // Get the settle option at this price point
+        SettleOption storage settleOption = _settleOptionsForPricePoint[_tokenContract][_settlePricePoint];
+
+        // Check that revenue meets minimum viable revenue
+        require(settleOption.revenue >= auction.minimumViableRevenue, "DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
+
+        // Store the current total balance and final auction details
+        auction.totalBalance -= settleOption.revenue;
+        auction.settledRevenue = settleOption.revenue;
+        auction.settledPricePoint = _settlePricePoint;
+        auction.settledEditionSize = settleOption.editionSize;
+
+        // TODO x store the fact that an auction has been settled and clean up unneeded storage
+
+        // Get the bids for this auction
         mapping(address => Bid) storage bids = bidsForDrop[_tokenContract];
 
-        // TODO x consolidate business logic with calculateSettleOptions
-        // TODO x document pragmatic max edition size / winning bidders
-        // TODO x switch to dynamically sized array
-        // TODO x consider moving winningBidders into storage
-        // Loop through bids to determine edition size and winning bidders
-        uint16 editionSize;
-        address[] memory winningBidders = new address[](1000);      
+        // Loop through bids to determine winning bidders and update bidder balances
+        uint256 index;
+        address[] memory winningBidders = new address[](auction.settledEditionSize);   
         for (uint256 i = 0; i < bidders.length; i++) {
             // Cache the bidder
             address bidder = bidders[i];
 
             // Check if bid qualifies
-            if (bidsForDrop[_tokenContract][bidder].revealedBidAmount >= _settlePricePoint) {
+            if (bids[bidder].revealedBidAmount >= _settlePricePoint) {
                 // Mark winning bidder and increment edition size
-                winningBidders[editionSize++] = bidder;
-
-                // Update final revenue
-                auction.settledRevenue += _settlePricePoint;
+                winningBidders[index++] = bidder;
 
                 // Update their balance
                 bids[bidder].bidderBalance -= _settlePricePoint;
             }
         }
 
-        // Store the current total balance and final auction details
-        auction.totalBalance -= auction.settledRevenue;
-        auction.settledPricePoint = _settlePricePoint;
-        auction.settledEditionSize = editionSize;
-
-        // Update edition size
-        ERC721Drop(_tokenContract).setEditionSize(uint64(winningBidders.length));
+        // Update edition size of drop
+        ERC721Drop(_tokenContract).setEditionSize(uint64(auction.settledEditionSize));
         
         // Mint NFTs to winning bidders
         ERC721Drop(_tokenContract).adminMintAirdrop(winningBidders);

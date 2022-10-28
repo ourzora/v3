@@ -218,7 +218,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
-            _minimumViableRevenue: 1 ether,
+            _minimumViableRevenue: 10 ether,
             _sellerFundsRecipient: address(sellerFundsRecipient),
             _startTime: TIME0,
             _bidPhaseDuration: 3 days,
@@ -243,7 +243,7 @@ contract VariableSupplyAuctionTest is Test {
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(sellerStored, address(seller));
-        assertEq(minimumViableRevenue, 1 ether);
+        assertEq(minimumViableRevenue, 10 ether);
         assertEq(sellerFundsRecipientStored, address(sellerFundsRecipient));
         assertEq(startTime, uint32(block.timestamp));
         assertEq(endOfBidPhase, uint32(block.timestamp + 3 days));
@@ -259,7 +259,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
-            _minimumViableRevenue: 1 ether,
+            _minimumViableRevenue: 10 ether,
             _sellerFundsRecipient: address(sellerFundsRecipient),
             _startTime: 1 days,
             _bidPhaseDuration: 3 days,
@@ -289,7 +289,7 @@ contract VariableSupplyAuctionTest is Test {
     function testEvent_createAuction() public {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
-            minimumViableRevenue: 1 ether,
+            minimumViableRevenue: 10 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
             startTime: uint32(TIME0),
             endOfBidPhase: uint32(TIME0 + 3 days),
@@ -307,7 +307,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
-            _minimumViableRevenue: 1 ether,
+            _minimumViableRevenue: 10 ether,
             _sellerFundsRecipient: address(sellerFundsRecipient),
             _startTime: TIME0,
             _bidPhaseDuration: 3 days,
@@ -322,7 +322,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
-            _minimumViableRevenue: 1 ether,
+            _minimumViableRevenue: 10 ether,
             _sellerFundsRecipient: address(sellerFundsRecipient),
             _startTime: TIME0,
             _bidPhaseDuration: 3 days,
@@ -337,7 +337,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
-            _minimumViableRevenue: 1 ether,
+            _minimumViableRevenue: 10 ether,
             _sellerFundsRecipient: address(0),
             _startTime: TIME0,
             _bidPhaseDuration: 3 days,
@@ -345,6 +345,8 @@ contract VariableSupplyAuctionTest is Test {
             _settlePhaseDuration: 1 days
         });
     }
+
+    // TODO add tests for multiple valid auctions at once
 
     /*//////////////////////////////////////////////////////////////
                         CANCEL AUCTION
@@ -387,7 +389,7 @@ contract VariableSupplyAuctionTest is Test {
     function testEvent_CancelAuction() public setupBasicAuction {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
-            minimumViableRevenue: 1 ether,
+            minimumViableRevenue: 10 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
             startTime: uint32(TIME0),
             endOfBidPhase: uint32(TIME0 + 3 days),
@@ -423,6 +425,10 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
     }
+
+    // function test_CancelAuction_WhenMinimumViableRevenueNotMet() public {
+        // TODO x
+    // }
 
     // TODO x update biz logic to allow one other case -- cancelling auctions
     // in settle phase that did not meet minimum viable revenue goal
@@ -474,7 +480,7 @@ contract VariableSupplyAuctionTest is Test {
     function testEvent_PlaceBid_WhenSingle() public setupBasicAuction {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
-            minimumViableRevenue: 1 ether,
+            minimumViableRevenue: 10 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
             startTime: uint32(TIME0),
             endOfBidPhase: uint32(TIME0 + 3 days),
@@ -497,7 +503,7 @@ contract VariableSupplyAuctionTest is Test {
     function testEvent_PlaceBid_WhenMultiple() public setupBasicAuction {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
-            minimumViableRevenue: 1 ether,
+            minimumViableRevenue: 10 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
             startTime: uint32(TIME0),
             endOfBidPhase: uint32(TIME0 + 3 days),
@@ -656,7 +662,7 @@ contract VariableSupplyAuctionTest is Test {
     function testEvent_RevealBid_WhenSingle() public setupBasicAuction {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
-            minimumViableRevenue: 1 ether,
+            minimumViableRevenue: 10 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
             startTime: uint32(TIME0),
             endOfBidPhase: uint32(TIME0 + 3 days),
@@ -684,7 +690,7 @@ contract VariableSupplyAuctionTest is Test {
     function testEvent_RevealBid_WhenMultiple() public setupBasicAuction {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
-            minimumViableRevenue: 1 ether,
+            minimumViableRevenue: 10 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
             startTime: uint32(TIME0),
             endOfBidPhase: uint32(TIME0 + 3 days),
@@ -838,15 +844,20 @@ contract VariableSupplyAuctionTest is Test {
         Expected output:
         
         [Price Point]       [Edition Size]      [Revenue]
-        [1]                 [13]                [13]
+        [1]                 [14]                [14]
+        [2]                 [4]                 [0]
         [6]                 [3]                 [18]
         [11]                [1]                 [11]
+
+        Note that revenue is set to 0 at price point 2 ether
+        because 8 ether would not meet minimum viable revenue
+        (and therefore this won't be a viable settle option)
 
          */
 
          assertEq(pricePoints[0], 1 ether);
-         assertEq(editionSizes[0], 13);
-         assertEq(revenues[0], 13 ether);
+         assertEq(editionSizes[0], 14);
+         assertEq(revenues[0], 14 ether);
 
          assertEq(pricePoints[1], 6 ether);
          assertEq(editionSizes[1], 3);
@@ -855,11 +866,41 @@ contract VariableSupplyAuctionTest is Test {
          assertEq(pricePoints[2], 11 ether);
          assertEq(editionSizes[2], 1);
          assertEq(revenues[2], 11 ether);
+
+         assertEq(pricePoints[3], 2 ether);
+         assertEq(editionSizes[3], 4);
+         assertEq(revenues[3], 0);
+    }
+
+    // 1_794_872-1_691_644 = 103_228 more than once
+    // 1_703_719-1_691_757 = 11_962 more than once (with optimization)
+
+    function testGas_AndIdempotent_CalculateSettleOptions_WhenCalledTwice() public setupBasicAuction throughRevealPhaseComplex {
+        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOptions(address(drop));
+    }
+
+    // 1_899_651-1_794_851 = 104_800 more than twice
+    // 1_717_252-1_703_719 = 13_533 more than twice (with optimization)
+
+    function testGas_AndIdempotent_CalculateSettleOptions_WhenCalledThrice() public setupBasicAuction throughRevealPhaseComplex {
+        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOptions(address(drop));
+    }
+
+    // 1_730_788-1_717_253 = 13_535 more than thrice (with optimization)
+
+    function testGas_AndIdempotent_CalculateSettleOptions_WhenCalledFrice() public setupBasicAuction throughRevealPhaseComplex {
+        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOptions(address(drop));
     }
 
     /*
 
-    Scenario for the following 3 settleAuction unit tests
+    Scenario for the following 4 settleAuction tests
 
         Given The following sealed bids are placed
             | account  | bid amount | sent value |
@@ -876,10 +917,12 @@ contract VariableSupplyAuctionTest is Test {
             | Bidder11 | 6 ETH      | 6 ETH      |
             | Bidder12 | 6 ETH      | 9 ETH      |
             | Bidder13 | 11 ETH     | 12 ETH     |
+            | Bidder14 | 2 ETH      | 2 ETH      |
         When The seller settles the auction
         Then The seller can choose one of the following edition sizes and revenue amounts
             | edition size | revenue generated |
             | 13           | 13 ether          |
+            | 5            | 0 ether           |
             | 3            | 18 ether          |
             | 1            | 11 ether          |
 
@@ -904,6 +947,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(drop.balanceOf(address(bidder11)), 0);
         assertEq(drop.balanceOf(address(bidder12)), 0);
         assertEq(drop.balanceOf(address(bidder13)), 0);
+        assertEq(drop.balanceOf(address(bidder14)), 0);
 
         // seller funds recipient has 100 ether
         assertEq(address(sellerFundsRecipient).balance, 100 ether);
@@ -921,7 +965,7 @@ contract VariableSupplyAuctionTest is Test {
             ,
             ,
         ) = auctions.auctionForDrop(address(drop));
-        assertEq(totalBalance, 82 ether);
+        assertEq(totalBalance, 84 ether);
 
         // bidder auction balances each still full amount of sent ether
         (, uint96 bidderBalance1, ) = auctions.bidsForDrop(address(drop), address(bidder1));
@@ -937,6 +981,7 @@ contract VariableSupplyAuctionTest is Test {
         (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
         (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
         (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
         assertEq(bidderBalance1, 1 ether);
         assertEq(bidderBalance2, 9 ether);
         assertEq(bidderBalance3, 8 ether);
@@ -950,10 +995,11 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance11, 6 ether);
         assertEq(bidderBalance12, 9 ether);
         assertEq(bidderBalance13, 12 ether);
+        assertEq(bidderBalance14, 2 ether);
     }
 
     function test_SettleAuction_WhenSettlingAtLowPriceHighSupply() public setupBasicAuction throughRevealPhaseComplex {
-        _expectSettledAuctionEvent(82 ether, 1 ether, 13);        
+        _expectSettledAuctionEvent(84 ether, 1 ether, 14);        
 
         // When -- seller settles auction at price point of 1 ether
         vm.prank(address(seller));
@@ -961,8 +1007,8 @@ contract VariableSupplyAuctionTest is Test {
 
         // Then assert --
         // 1) all bidders have 1 NFT
-        // 2) seller funds recipient has 113 ether
-        // 3) auction total balance is sent ether less settled revenue of 13 ether
+        // 2) seller funds recipient has 114 ether
+        // 3) auction total balance is sent ether less settled revenue of 14 ether
         // 4) auction settled revenue, price point, and edition size are correct
         // 5) bidder auction balances (available to withdraw) are their amount of
         // sent ether less the settled price point of 1 ether
@@ -980,8 +1026,9 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(drop.balanceOf(address(bidder11)), 1);
         assertEq(drop.balanceOf(address(bidder12)), 1);
         assertEq(drop.balanceOf(address(bidder13)), 1);
+        assertEq(drop.balanceOf(address(bidder14)), 1);
 
-        assertEq(address(sellerFundsRecipient).balance, 113 ether);
+        assertEq(address(sellerFundsRecipient).balance, 114 ether);
 
         (
             ,
@@ -997,11 +1044,11 @@ contract VariableSupplyAuctionTest is Test {
             uint16 settledEditionSize
         ) = auctions.auctionForDrop(address(drop));
 
-        assertEq(totalBalance, 82 ether - 13 ether);
+        assertEq(totalBalance, 84 ether - 14 ether);
 
-        assertEq(settledRevenue, 13 ether);
+        assertEq(settledRevenue, 14 ether);
         assertEq(settledPricePoint, 1 ether);
-        assertEq(settledEditionSize, 13);
+        assertEq(settledEditionSize, 14);
 
         (, uint96 bidderBalance1, ) = auctions.bidsForDrop(address(drop), address(bidder1));
         (, uint96 bidderBalance2, ) = auctions.bidsForDrop(address(drop), address(bidder2));
@@ -1016,6 +1063,7 @@ contract VariableSupplyAuctionTest is Test {
         (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
         (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
         (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
         assertEq(bidderBalance1, 0 ether);
         assertEq(bidderBalance2, 8 ether);
         assertEq(bidderBalance3, 7 ether);
@@ -1029,10 +1077,11 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance11, 5 ether);
         assertEq(bidderBalance12, 8 ether);
         assertEq(bidderBalance13, 11 ether);
+        assertEq(bidderBalance14, 1 ether);
     }
 
     function test_SettleAuction_WhenSettlingAtMidPriceMidSupply() public setupBasicAuction throughRevealPhaseComplex {
-        _expectSettledAuctionEvent(82 ether, 6 ether, 3);        
+        _expectSettledAuctionEvent(84 ether, 6 ether, 3);        
 
          // When -- seller settles auction at price point of 6 ether
         vm.prank(address(seller));
@@ -1044,7 +1093,7 @@ contract VariableSupplyAuctionTest is Test {
         // 3) auction total balance is sent ether less settled revenue of 18 ether
         // 4) auction settled revenue, price point, and edition size are correct
         // 5) bidders 11–13 balance is their sent ether less settled price point of 6 ether
-        // 6) bidders 1–10 balances (available to withdraw) are their full sent ether
+        // 6) bidders 1–10 and 14 balances (available to withdraw) are their full sent ether
 
         assertEq(drop.balanceOf(address(bidder1)), 0);
         assertEq(drop.balanceOf(address(bidder2)), 0);
@@ -1059,6 +1108,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(drop.balanceOf(address(bidder11)), 1);
         assertEq(drop.balanceOf(address(bidder12)), 1);
         assertEq(drop.balanceOf(address(bidder13)), 1);
+        assertEq(drop.balanceOf(address(bidder14)), 0);
 
         assertEq(address(sellerFundsRecipient).balance, 118 ether);
 
@@ -1076,7 +1126,7 @@ contract VariableSupplyAuctionTest is Test {
             uint16 settledEditionSize
         ) = auctions.auctionForDrop(address(drop));
 
-        assertEq(totalBalance, 82 ether - 18 ether);
+        assertEq(totalBalance, 84 ether - 18 ether);
 
         assertEq(settledRevenue, 18 ether);
         assertEq(settledPricePoint, 6 ether);
@@ -1095,6 +1145,7 @@ contract VariableSupplyAuctionTest is Test {
         (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
         (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
         (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
         assertEq(bidderBalance1, 1 ether);
         assertEq(bidderBalance2, 9 ether);
         assertEq(bidderBalance3, 8 ether);
@@ -1108,10 +1159,11 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance11, 0 ether);
         assertEq(bidderBalance12, 3 ether);
         assertEq(bidderBalance13, 6 ether);
+        assertEq(bidderBalance14, 2 ether);
     }
 
     function test_SettleAuction_WhenSettlingAtHighPriceLowSupply() public setupBasicAuction throughRevealPhaseComplex {
-        _expectSettledAuctionEvent(82 ether, 11 ether, 1);        
+        _expectSettledAuctionEvent(84 ether, 11 ether, 1);        
 
         // When -- seller settles auction at price point of 11 ether
         vm.prank(address(seller));
@@ -1123,7 +1175,7 @@ contract VariableSupplyAuctionTest is Test {
         // 3) auction total balance is sent ether less settled revenue of 11 ether
         // 4) auction settled revenue, price point, and edition size are correct
         // 5) bidder 13 auction balance is their sent ether less settled price point of 11 ether
-        // 6) bidders 1–12 auction balances (available to withdraw) are their full sent ether
+        // 6) bidders 1–12 and 14 balances (available to withdraw) are their full sent ether
 
         assertEq(drop.balanceOf(address(bidder1)), 0);
         assertEq(drop.balanceOf(address(bidder2)), 0);
@@ -1138,6 +1190,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(drop.balanceOf(address(bidder11)), 0);
         assertEq(drop.balanceOf(address(bidder12)), 0);
         assertEq(drop.balanceOf(address(bidder13)), 1);
+        assertEq(drop.balanceOf(address(bidder14)), 0);
 
         assertEq(address(sellerFundsRecipient).balance, 111 ether);
 
@@ -1155,7 +1208,7 @@ contract VariableSupplyAuctionTest is Test {
             uint16 settledEditionSize
         ) = auctions.auctionForDrop(address(drop));
 
-        assertEq(totalBalance, 82 ether - 11 ether);
+        assertEq(totalBalance, 84 ether - 11 ether);
 
         assertEq(settledRevenue, 11 ether);
         assertEq(settledPricePoint, 11 ether);
@@ -1174,6 +1227,7 @@ contract VariableSupplyAuctionTest is Test {
         (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
         (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
         (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
         assertEq(bidderBalance1, 1 ether);
         assertEq(bidderBalance2, 9 ether);
         assertEq(bidderBalance3, 8 ether);
@@ -1187,6 +1241,14 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance11, 6 ether);
         assertEq(bidderBalance12, 9 ether);
         assertEq(bidderBalance13, 1 ether);
+        assertEq(bidderBalance14, 2 ether);
+    }
+
+    function testRevert_SettleAuction_WhenSettlingAtPricePointThatDoesNotMeetMinimumViableRevenue() public setupBasicAuction throughRevealPhaseComplex {
+        vm.expectRevert("DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 2 ether);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1199,7 +1261,7 @@ contract VariableSupplyAuctionTest is Test {
                         CLAIM REFUND
     //////////////////////////////////////////////////////////////*/
 
-    function test_CheckAvailableRefund() public setupBasicAuction {
+    function test_CheckAvailableRefund() public setupBasicAuctionWithLowMinimumViableRevenue {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
         vm.prank(address(bidder2));
@@ -1231,7 +1293,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(auctions.checkAvailableRefund(address(drop)), 1 ether); // = 3 ether sent - 2 ether winning bid
     }
 
-    function test_ClaimRefund_WhenWinner() public setupBasicAuction {
+    function test_ClaimRefund_WhenWinner() public setupBasicAuctionWithLowMinimumViableRevenue {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
 
@@ -1258,7 +1320,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance, 0 ether);
     }
 
-    function test_ClaimRefund_WhenNotWinner() public setupBasicAuction {
+    function test_ClaimRefund_WhenNotWinner() public setupBasicAuctionWithLowMinimumViableRevenue {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
         vm.prank(address(bidder2));
@@ -1289,7 +1351,7 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance, 0 ether);
     }
 
-    function testEvent_ClaimRefund() public setupBasicAuction {
+    function testEvent_ClaimRefund() public setupBasicAuctionWithLowMinimumViableRevenue {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
             minimumViableRevenue: 1 ether,
@@ -1324,11 +1386,8 @@ contract VariableSupplyAuctionTest is Test {
         auctions.claimRefund(address(drop));
     }
 
-    function testRevert_ClaimRefund_WhenNoBidPlaced() public setupBasicAuction {
+    function testRevert_ClaimRefund_WhenNoBidPlaced() public setupBasicAuctionWithLowMinimumViableRevenue {
         vm.warp(TIME0 + 3 days + 2 days);
-
-        vm.prank(address(seller));
-        auctions.settleAuction(address(drop), 1 ether);
 
         vm.expectRevert("NO_REFUND_AVAILABLE");
 
@@ -1340,7 +1399,7 @@ contract VariableSupplyAuctionTest is Test {
     //     // TODO x
     // }
 
-    function testRevert_ClaimRefund_WhenAlreadyClaimed() public setupBasicAuction {
+    function testRevert_ClaimRefund_WhenAlreadyClaimed() public setupBasicAuctionWithLowMinimumViableRevenue {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
 
@@ -1371,6 +1430,20 @@ contract VariableSupplyAuctionTest is Test {
 
     // TODO parameterize modifier pattern to support fuzzing
     modifier setupBasicAuction() {
+        vm.prank(address(seller));
+        auctions.createAuction({
+            _tokenContract: address(drop),
+            _minimumViableRevenue: 10 ether,
+            _sellerFundsRecipient: address(sellerFundsRecipient),
+            _startTime: TIME0,
+            _bidPhaseDuration: 3 days,
+            _revealPhaseDuration: 2 days,
+            _settlePhaseDuration: 1 days
+        });
+
+        _;
+    }
+    modifier setupBasicAuctionWithLowMinimumViableRevenue() {
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
@@ -1416,7 +1489,11 @@ contract VariableSupplyAuctionTest is Test {
 
         // 10 bids at 1 ether
         vm.prank(address(bidder13));
-        auctions.placeBid{value: 12 ether}(address(drop), _genSealedBid(11 ether, salt13));     
+        auctions.placeBid{value: 12 ether}(address(drop), _genSealedBid(11 ether, salt13));
+
+        // 1 bid at 2 ether
+        vm.prank(address(bidder14));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(2 ether, salt14));
 
         vm.warp(TIME0 + 3 days);
         
@@ -1446,6 +1523,8 @@ contract VariableSupplyAuctionTest is Test {
         auctions.revealBid(address(drop), 6 ether, salt12);
         vm.prank(address(bidder13));
         auctions.revealBid(address(drop), 11 ether, salt13);
+        vm.prank(address(bidder14));
+        auctions.revealBid(address(drop), 2 ether, salt14);
 
         vm.warp(TIME0 + 3 days + 2 days);        
 
@@ -1458,7 +1537,7 @@ contract VariableSupplyAuctionTest is Test {
 
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
-            minimumViableRevenue: 1 ether,
+            minimumViableRevenue: 10 ether,
             sellerFundsRecipient: address(sellerFundsRecipient),
             startTime: uint32(TIME0),
             endOfBidPhase: uint32(TIME0 + 3 days),

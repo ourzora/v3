@@ -7,7 +7,8 @@ pragma solidity 0.8.10;
 interface IVariableSupplyAuction {
     //
 
-    // TODO x add NatSpec here also
+    // TODO x add NatSpec here
+
     ///
     function createAuction(
         address _tokenContract,

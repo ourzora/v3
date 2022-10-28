@@ -5,6 +5,8 @@ participant ERC721Drop
 
 Seller -> VariableSupplyAuction : settleAuction()
 
+TODO x update to consolidate biz logic and add minimum viable revenue
+
 VariableSupplyAuction -> VariableSupplyAuction : validate auction is in settle phase 
 VariableSupplyAuction -> VariableSupplyAuction : validate auction not settled yet
 VariableSupplyAuction -> VariableSupplyAuction : based on chosen price point, calculate and store final edition size and winning bidders
