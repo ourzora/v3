@@ -122,22 +122,22 @@ contract AsksOmnibusTest is DSTest {
         assertEq(ask.expiry, 0);
         assertEq(ask.findersFeeBps, 0);
         assertEq(ask.price, 1 ether);
-        assertEq(ask.tokenGate.token, address(0));
-        assertEq(ask.tokenGate.minAmount, 0);
-        assertEq(ask.listingFee.listingFeeBps, 0);
-        assertEq(ask.listingFee.listingFeeRecipient, address(0));
+        assertEq(ask.tokenGateToken, address(0));
+        assertEq(ask.tokenGateMinAmount, 0);
+        assertEq(ask.listingFeeBps, 0);
+        assertEq(ask.listingFeeRecipient, address(0));
     }
 
     function testRevert_CreateAskMinimalNotTokenOwnerOrOperator() public {
         vm.prank(address(other));
-        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
         asks.createAskMinimal(address(token), 0, 1 ether);
     }
 
     function testRevert_CreateAskMinimalModuleNotApproved() public {
         vm.startPrank(address(seller));
         seller.setApprovalForModule(address(asks), false);
-        vm.expectRevert("MODULE_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("MODULE_NOT_APPROVED()"));
         asks.createAskMinimal(address(token), 0, 1 ether);
         vm.stopPrank();
     }
@@ -145,7 +145,7 @@ contract AsksOmnibusTest is DSTest {
     function testRevert_CreateAskMinimalTransferHelperNotApproved() public {
         vm.startPrank(address(seller));
         token.setApprovalForAll(address(erc721TransferHelper), false);
-        vm.expectRevert("TRANSFER_HELPER_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("TRANSFER_HELPER_NOT_APPROVED()"));
         asks.createAskMinimal(address(token), 0, 1 ether);
         vm.stopPrank();
     }
@@ -159,28 +159,30 @@ contract AsksOmnibusTest is DSTest {
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
-            address(buyer),
+            address(0),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         AsksDataStorage.FullAsk memory ask = asks.getFullAsk(address(token), 0);
         assertEq(ask.seller, address(seller));
         assertEq(ask.sellerFundsRecipient, address(sellerFundsRecipient));
         assertEq(ask.currency, address(weth));
-        assertEq(ask.buyer, address(buyer));
+        assertEq(ask.buyer, address(0));
         assertEq(ask.expiry, uint96(block.timestamp + 1 days));
         assertEq(ask.findersFeeBps, 1000);
         assertEq(ask.price, 1 ether);
-        assertEq(ask.tokenGate.token, address(erc20));
-        assertEq(ask.tokenGate.minAmount, 1);
-        assertEq(ask.listingFee.listingFeeBps, 1);
-        assertEq(ask.listingFee.listingFeeRecipient, address(listingFeeRecipient));
+        assertEq(ask.tokenGateToken, address(erc20));
+        assertEq(ask.tokenGateMinAmount, 1);
+        assertEq(ask.listingFeeBps, 1);
+        assertEq(ask.listingFeeRecipient, address(listingFeeRecipient));
     }
 
     function testRevert_CreateAskNotTokenOwnerOrOperator() public {
         vm.prank(address(other));
-        vm.expectRevert("ONLY_TOKEN_OWNER_OR_OPERATOR");
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
         asks.createAsk(
             address(token),
             0,
@@ -188,17 +190,19 @@ contract AsksOmnibusTest is DSTest {
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
-            address(buyer),
+            address(0),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
     }
 
     function testRevert_CreateAskModuleNotApproved() public {
         vm.startPrank(address(seller));
         seller.setApprovalForModule(address(asks), false);
-        vm.expectRevert("MODULE_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("MODULE_NOT_APPROVED()"));
         asks.createAsk(
             address(token),
             0,
@@ -206,10 +210,12 @@ contract AsksOmnibusTest is DSTest {
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
-            address(buyer),
+            address(0),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         vm.stopPrank();
     }
@@ -217,7 +223,7 @@ contract AsksOmnibusTest is DSTest {
     function testRevert_CreateAskTransferHelperNotApproved() public {
         vm.startPrank(address(seller));
         token.setApprovalForAll(address(erc721TransferHelper), false);
-        vm.expectRevert("TRANSFER_HELPER_NOT_APPROVED");
+        vm.expectRevert(abi.encodeWithSignature("TRANSFER_HELPER_NOT_APPROVED()"));
         asks.createAsk(
             address(token),
             0,
@@ -225,12 +231,139 @@ contract AsksOmnibusTest is DSTest {
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
-            address(buyer),
+            address(0),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         vm.stopPrank();
+    }
+
+    function testRevert_CreateAskInvalidListingFee() public {
+        vm.startPrank(address(seller));
+        vm.expectRevert(abi.encodeWithSignature("INVALID_LISTING_FEE()"));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            1,
+            address(0),
+            address(erc20),
+            1
+        );
+        vm.expectRevert(abi.encodeWithSignature("INVALID_LISTING_FEE()"));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            0,
+            address(sellerFundsRecipient),
+            address(erc20),
+            1
+        );
+        vm.stopPrank();
+    }
+
+    function testRevert_CreateAskInvalidFees() public {
+        vm.startPrank(address(seller));
+        vm.expectRevert(abi.encodeWithSignature("INVALID_FEES()"));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            5001,
+            5000,
+            address(sellerFundsRecipient),
+            address(erc20),
+            1
+        );
+        vm.expectRevert(abi.encodeWithSignature("INVALID_FEES()"));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            5000,
+            5001,
+            address(sellerFundsRecipient),
+            address(erc20),
+            1
+        );
+        vm.stopPrank();
+    }
+
+    function testRevert_CreateAskInvalidTokenGate() public {
+        vm.startPrank(address(seller));
+        vm.expectRevert(abi.encodeWithSignature("INVALID_TOKEN_GATE()"));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1,
+            1,
+            address(other),
+            address(erc20),
+            0
+        );
+        vm.expectRevert(abi.encodeWithSignature("INVALID_TOKEN_GATE()"));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1,
+            1,
+            address(other),
+            address(0),
+            1
+        );
+        vm.stopPrank();
+    }
+
+    function testRevert_CreateAskInvalidExpiry() public {
+        vm.prank(address(seller));
+        vm.warp(2 days);
+        vm.expectRevert(abi.encodeWithSignature("INVALID_EXPIRY()"));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp - 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1,
+            1,
+            address(other),
+            address(0),
+            0
+        );
     }
 
     /// ------------ FILL ASK ------------ ///
@@ -244,10 +377,12 @@ contract AsksOmnibusTest is DSTest {
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
-            address(buyer),
+            address(0),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
 
         vm.prank(address(buyer));
@@ -260,9 +395,13 @@ contract AsksOmnibusTest is DSTest {
         assertEq(token.ownerOf(0), address(buyer));
     }
 
-    /// ------------ SET PRICE ------------ ///
+    function testRevert_FillAskInactive() public {
+        vm.prank(address(buyer));
+        vm.expectRevert(abi.encodeWithSignature("ASK_INACTIVE()"));
+        asks.fillAsk(address(token), 0, 1 ether, address(weth), address(finder));
+    }
 
-    function test_SetPrice() public {
+    function testRevert_FillAskWrongCurrencyOrAmount() public {
         vm.startPrank(address(seller));
         asks.createAsk(
             address(token),
@@ -271,10 +410,106 @@ contract AsksOmnibusTest is DSTest {
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
-            address(buyer),
+            address(0),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            0,
+            address(0),
+            address(0),
+            0
+        );
+        asks.setAskPrice(address(token), 0, 2 ether, address(erc20));
+        vm.stopPrank();
+
+        vm.prank(address(buyer));
+        vm.expectRevert(abi.encodeWithSignature("INCORRECT_CURRENCY_OR_AMOUNT()"));
+        asks.fillAsk(address(token), 0, 1 ether, address(weth), address(finder));
+    }
+
+    function testRevert_FillAskExpired() public {
+        vm.warp(1 days);
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            0,
+            address(0),
+            address(0),
+            0
+        );
+
+        vm.warp(3 days);
+        vm.prank(address(buyer));
+        vm.expectRevert(abi.encodeWithSignature("ASK_EXPIRED()"));
+        asks.fillAsk(address(token), 0, 1 ether, address(weth), address(finder));
+    }
+
+    function testRevert_FillAskTokenGateInsufficientBalance() public {
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            0,
+            address(0),
+            address(erc20),
+            1
+        );
+
+        vm.prank(address(other));
+        vm.expectRevert(abi.encodeWithSignature("TOKEN_GATE_INSUFFICIENT_BALANCE()"));
+        asks.fillAsk(address(token), 0, 1 ether, address(weth), address(finder));
+    }
+
+    function testRevert_FillAskNotPrivateBuyer() public {
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(other),
+            1000,
+            0,
+            address(0),
+            address(0),
+            0
+        );
+
+        vm.prank(address(buyer));
+        vm.expectRevert(abi.encodeWithSignature("NOT_DESIGNATED_BUYER()"));
+        asks.fillAsk(address(token), 0, 1 ether, address(weth), address(finder));
+    }
+
+    /// ------------ SET PRICE ------------ ///
+
+    function test_SetAskPrice() public {
+        vm.startPrank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
         asks.setAskPrice(address(token), 0, 2 ether, address(weth));
         vm.stopPrank();
@@ -283,14 +518,34 @@ contract AsksOmnibusTest is DSTest {
         assertEq(ask.seller, address(seller));
         assertEq(ask.sellerFundsRecipient, address(sellerFundsRecipient));
         assertEq(ask.currency, address(weth));
-        assertEq(ask.buyer, address(buyer));
+        assertEq(ask.buyer, address(0));
         assertEq(ask.expiry, uint96(block.timestamp + 1 days));
         assertEq(ask.findersFeeBps, 1000);
         assertEq(ask.price, 2 ether);
-        assertEq(ask.tokenGate.token, address(erc20));
-        assertEq(ask.tokenGate.minAmount, 1);
-        assertEq(ask.listingFee.listingFeeBps, 1);
-        assertEq(ask.listingFee.listingFeeRecipient, address(listingFeeRecipient));
+        assertEq(ask.tokenGateToken, address(erc20));
+        assertEq(ask.tokenGateMinAmount, 1);
+        assertEq(ask.listingFeeBps, 1);
+        assertEq(ask.listingFeeRecipient, address(listingFeeRecipient));
+    }
+
+    function testRevert_SetAskPriceOnlyTokenOwnerOrOperator() public {
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
+        );
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
+        asks.setAskPrice(address(token), 0, 2 ether, address(weth));
     }
 
     /// ------------ CANCEL ASK ------------ ///
@@ -305,10 +560,12 @@ contract AsksOmnibusTest is DSTest {
             1 ether,
             address(sellerFundsRecipient),
             address(weth),
-            address(buyer),
+            address(0),
             1000,
-            AsksDataStorage.ListingFee({listingFeeBps: 1, listingFeeRecipient: address(listingFeeRecipient)}),
-            AsksDataStorage.TokenGate({token: address(erc20), minAmount: 1})
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
         );
 
         asks.cancelAsk(address(token), 0);
@@ -321,14 +578,59 @@ contract AsksOmnibusTest is DSTest {
         assertEq(ask.expiry, 0);
         assertEq(ask.findersFeeBps, 0);
         assertEq(ask.price, 0);
-        assertEq(ask.tokenGate.token, address(0));
-        assertEq(ask.tokenGate.minAmount, 0);
-        assertEq(ask.listingFee.listingFeeBps, 0);
-        assertEq(ask.listingFee.listingFeeRecipient, address(0));
+        assertEq(ask.tokenGateToken, address(0));
+        assertEq(ask.tokenGateMinAmount, 0);
+        assertEq(ask.listingFeeBps, 0);
+        assertEq(ask.listingFeeRecipient, address(0));
         vm.stopPrank();
 
         vm.startPrank(address(buyer));
-        vm.expectRevert("INACTIVE_ASK");
+        vm.expectRevert(abi.encodeWithSignature("ASK_INACTIVE()"));
         asks.fillAsk(address(token), 0, 1 ether, address(weth), address(0));
+    }
+
+    function test_CancelAskAnyoneCanCallIfAskInvalid() public {
+        vm.startPrank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
+        );
+        token.safeTransferFrom(address(seller), address(other), 0);
+        vm.stopPrank();
+
+        vm.prank(address(buyer));
+        asks.cancelAsk(address(token), 0);
+    }
+
+    function testRevert_CancelAskOnlyTokenOwnerOrOperator() public {
+        vm.prank(address(seller));
+        asks.createAsk(
+            address(token),
+            0,
+            uint96(block.timestamp + 1 days),
+            1 ether,
+            address(sellerFundsRecipient),
+            address(weth),
+            address(0),
+            1000,
+            1,
+            address(listingFeeRecipient),
+            address(erc20),
+            1
+        );
+
+        vm.prank(address(buyer));
+        vm.expectRevert(abi.encodeWithSignature("NOT_TOKEN_OWNER_OR_OPERATOR()"));
+        asks.cancelAsk(address(token), 0);
     }
 }

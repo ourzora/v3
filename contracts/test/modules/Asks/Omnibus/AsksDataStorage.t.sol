@@ -103,10 +103,10 @@ contract AsksDataStorageTest is DSTest {
         assertEq(ask.buyer, address(0), "incorrect buyer");
         assertEq(ask.expiry, 0, "incorrect expiry");
         assertEq(ask.findersFeeBps, 0, "incorrect finders fee");
-        assertEq(ask.tokenGate.token, address(0), "incorrect token gate");
-        assertEq(ask.tokenGate.minAmount, 0, "incorrect token gate");
-        assertEq(ask.listingFee.listingFeeBps, 0, "incorrect listing fee");
-        assertEq(ask.listingFee.listingFeeRecipient, address(0), "incorrect listing fee");
+        assertEq(ask.tokenGateToken, address(0), "incorrect token gate");
+        assertEq(ask.tokenGateMinAmount, 0, "incorrect token gate");
+        assertEq(ask.listingFeeBps, 0, "incorrect listing fee");
+        assertEq(ask.listingFeeRecipient, address(0), "incorrect listing fee");
     }
 
     function test_AskStorageInit() public {
@@ -120,10 +120,10 @@ contract AsksDataStorageTest is DSTest {
         assertEq(ask.buyer, address(0x116), "incorrect buyer");
         assertEq(ask.expiry, block.timestamp + 1_000, "incorrect expiry");
         assertEq(ask.findersFeeBps, 2, "incorrect finders fee");
-        assertEq(ask.tokenGate.token, address(0x114), "incorrect token gate");
-        assertEq(ask.tokenGate.minAmount, 0.1 ether, "incorrect token gate");
-        assertEq(ask.listingFee.listingFeeBps, 1, "incorrect listing fee");
-        assertEq(ask.listingFee.listingFeeRecipient, address(0x115), "incorrect listing fee");
+        assertEq(ask.tokenGateToken, address(0x114), "incorrect token gate");
+        assertEq(ask.tokenGateMinAmount, 0.1 ether, "incorrect token gate");
+        assertEq(ask.listingFeeBps, 1, "incorrect listing fee");
+        assertEq(ask.listingFeeRecipient, address(0x115), "incorrect listing fee");
     }
 
     function test_AskStorageUpdatePrice() public {
