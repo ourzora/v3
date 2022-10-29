@@ -17,10 +17,6 @@ import {TestERC721} from "../../utils/tokens/TestERC721.sol";
 import {WETH} from "../../utils/tokens/WETH.sol";
 import {VM} from "../../utils/VM.sol";
 
-// TODO x more temporal checks
-// TODO x improve settle auction biz logic and storage
-// TODO x review
-
 /// @title VariableSupplyAuctionTest
 /// @notice Unit Tests for Variable Supply Auctions
 contract VariableSupplyAuctionTest is Test {
@@ -181,6 +177,7 @@ contract VariableSupplyAuctionTest is Test {
         bidder14.setApprovalForModule(address(auctions), true);
         bidder15.setApprovalForModule(address(auctions), true);
 
+        // TODO determine pattern for seller approving auction house to set edition size + mint
         // Seller approve ERC721TransferHelper
         // vm.prank(address(seller));
         // token.setApprovalForAll(address(erc721TransferHelper), true);
@@ -286,6 +283,8 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(endOfSettlePhase, 1 days + 3 days + 2 days + 1 days);
     }
 
+    // TODO add tests that exercise other actions for auctions that don't start instantly
+
     function testEvent_createAuction() public {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
@@ -371,8 +370,54 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
 
+        // Then auction has been deleted
         (
             sellerStored,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+        ) = auctions.auctionForDrop(address(drop));
+        assertEq(sellerStored, address(0));
+    }
+
+    function test_CancelAuction_WhenInSettlePhaseButMinimumViableRevenueNotMet() public setupBasicAuction {        
+        bytes32 commitment1 = _genSealedBid(1 ether, salt1);
+        bytes32 commitment2 = _genSealedBid(2 ether, salt2);
+        bytes32 commitment3 = _genSealedBid(3 ether, salt3);
+
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment1);
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 3 ether}(address(drop), commitment2);
+        vm.prank(address(bidder3));
+        auctions.placeBid{value: 5 ether}(address(drop), commitment3);        
+
+        vm.warp(TIME0 + 3 days);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 2 ether, salt2);
+        vm.prank(address(bidder3));
+        auctions.revealBid(address(drop), 3 ether, salt3);
+
+        vm.warp(TIME0 + 3 days + 2 days);
+
+        vm.prank(address(seller));
+        auctions.calculateSettleOptions(address(drop)); // first, consider the settle options
+
+        vm.prank(address(seller));
+        auctions.cancelAuction(address(drop));
+
+        // Then auction has been deleted
+        (
+            address sellerStored,
             ,
             ,
             ,
@@ -408,10 +453,78 @@ contract VariableSupplyAuctionTest is Test {
         auctions.cancelAuction(address(drop));
     }
 
+    function testRevert_CancelAuction_WhenAuctionDoesNotExist() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+
+        vm.prank(address(seller));
+        auctions.cancelAuction(address(drop));
+    }
+
     function testRevert_CancelAuction_WhenNotSeller() public setupBasicAuction {
         vm.expectRevert("ONLY_SELLER");
 
         vm.prank(address(bidder1));
+        auctions.cancelAuction(address(drop));
+    }
+
+    function testRevert_CancelAuction_WhenInSettlePhaseButHaveNotCalculatedSettleOptionsYet() public setupBasicAuction {        
+        bytes32 commitment1 = _genSealedBid(10 ether, salt1);
+        bytes32 commitment2 = _genSealedBid(2 ether, salt2);
+        bytes32 commitment3 = _genSealedBid(3 ether, salt3);
+
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 10 ether}(address(drop), commitment1);
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 3 ether}(address(drop), commitment2);
+        vm.prank(address(bidder3));
+        auctions.placeBid{value: 5 ether}(address(drop), commitment3);        
+
+        vm.warp(TIME0 + 3 days);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 10 ether, salt1);
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 2 ether, salt2);
+        vm.prank(address(bidder3));
+        auctions.revealBid(address(drop), 3 ether, salt3);
+
+        vm.warp(TIME0 + 3 days + 2 days);
+
+        vm.expectRevert("CANNOT_CANCEL_AUCTION_BEFORE_CALCULATING_SETTLE_OPTIONS");
+
+        vm.prank(address(seller));
+        auctions.cancelAuction(address(drop));
+    }
+
+    function testRevert_CancelAuction_WhenInSettlePhaseAndMinimumViableRevenueWasMet() public setupBasicAuction {        
+        bytes32 commitment1 = _genSealedBid(10 ether, salt1);
+        bytes32 commitment2 = _genSealedBid(2 ether, salt2);
+        bytes32 commitment3 = _genSealedBid(3 ether, salt3);
+
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 10 ether}(address(drop), commitment1);
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 3 ether}(address(drop), commitment2);
+        vm.prank(address(bidder3));
+        auctions.placeBid{value: 5 ether}(address(drop), commitment3);        
+
+        vm.warp(TIME0 + 3 days);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 10 ether, salt1);
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 2 ether, salt2);
+        vm.prank(address(bidder3));
+        auctions.revealBid(address(drop), 3 ether, salt3);
+
+        vm.warp(TIME0 + 3 days + 2 days);
+
+        vm.prank(address(seller));
+        auctions.calculateSettleOptions(address(drop));
+
+        vm.expectRevert("CANNOT_CANCEL_AUCTION_WITH_VIABLE_PRICE_POINT");
+
+        vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
     }
 
@@ -426,18 +539,9 @@ contract VariableSupplyAuctionTest is Test {
         auctions.cancelAuction(address(drop));
     }
 
-    // function test_CancelAuction_WhenMinimumViableRevenueNotMet() public {
-        // TODO x
-    // }
-
-    // TODO x update biz logic to allow one other case -- cancelling auctions
-    // in settle phase that did not meet minimum viable revenue goal
-
     /*//////////////////////////////////////////////////////////////
                         PLACE BID
     //////////////////////////////////////////////////////////////*/
-
-    // TODO x add more assertions around new storage variables
 
     function test_PlaceBid_WhenSingle() public setupBasicAuction {  
         bytes32 commitment = _genSealedBid(1 ether, salt1);
@@ -570,15 +674,15 @@ contract VariableSupplyAuctionTest is Test {
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
     }
 
-    // TODO x once settleAuction is written
-    // function testRevert_PlaceBid_WhenAuctionIsCompleted() public setupBasicAuction {
-        
-    // }
+    function testRevert_PlaceBid_WhenAuctionInCleanupPhase() public setupBasicAuction {
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
-    // TODO x once cancelAuction is written
-    // function testRevert_PlaceBid_WhenAuctionIsCancelled() public setupBasicAuction {
-        
-    // }
+        vm.expectRevert("BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+
+        bytes32 commitment = _genSealedBid(1 ether, salt1);
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1 ether}(address(drop), commitment);
+    }
 
     function testRevert_PlaceBid_WhenBidderAlreadyPlacedBid() public setupBasicAuction {
         bytes32 commitment = _genSealedBid(1 ether, salt1);
@@ -599,7 +703,9 @@ contract VariableSupplyAuctionTest is Test {
         auctions.placeBid(address(drop), commitment);
     }
 
-    // TODO revisit -– may become relevant if we move minter role granting into an ERC721DropTransferHelper
+    // TODO revisit, may become relevant if we move role granting for
+    // edition sizing / minting into an ERC721DropTransferHelper
+
     // function testRevert_PlaceBid_WhenSellerDidNotApproveModule() public setupBasicAuction {
     //     seller.setApprovalForModule(address(auctions), false);
 
@@ -715,7 +821,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days);
 
-        // We can assert all events at once, bc stored auction does not change
+        // We can assert all events without changing Auction struct, bc stored auction does not change
         vm.expectEmit(true, true, true, true);
         emit BidRevealed(address(drop), address(bidder1), 1 ether,  auction);
         vm.expectEmit(true, true, true, true);
@@ -729,6 +835,13 @@ contract VariableSupplyAuctionTest is Test {
         auctions.revealBid(address(drop), 2 ether, salt2);
         vm.prank(address(bidder3));
         auctions.revealBid(address(drop), 3 ether, salt3);
+    }
+
+    function testRevert_RevealBid_WhenAuctionDoesNotExist() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1 ether, salt1);
     }
 
     function testRevert_RevealBid_WhenAuctionInBidPhase() public setupBasicAuction {
@@ -747,7 +860,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
 
-        vm.warp(TIME0 + 3 days + 2 days);
+        vm.warp(TIME0 + 3 days + 2 days); // settle phase
 
         vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
 
@@ -755,15 +868,18 @@ contract VariableSupplyAuctionTest is Test {
         auctions.revealBid(address (drop), 1 ether, salt1);
     }
 
-    // TODO x once settleAuction is written
-    // function testRevert_RevealBid_WhenAuctionIsCompleted() public setupBasicAuction {
-        
-    // }
+    function testRevert_RevealBid_WhenAuctionInCleanupPhase() public setupBasicAuction {
+        bytes32 commitment = _genSealedBid(1 ether, salt1);
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
 
-    // TODO x once cancelAuction is written
-    // function testRevert_RevealBid_WhenAuctionIsCancelled() public setupBasicAuction {
-        
-    // }
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
+
+        vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address (drop), 1 ether, salt1);
+    }
 
     function testRevert_RevealBid_WhenNoCommittedBid() public setupBasicAuction {
         vm.warp(TIME0 + 3 days);
@@ -824,6 +940,55 @@ contract VariableSupplyAuctionTest is Test {
     /*//////////////////////////////////////////////////////////////
                         SETTLE AUCTION
     //////////////////////////////////////////////////////////////*/
+
+    /*
+
+    Checks for each action
+
+    Create Auction
+    - check there is no live auction for the drop contract already
+    - check the funds recipient is not zero address
+
+    Cancel Auction
+    - check the auction exists
+    - check the caller is the seller
+    - check there are no bids placed yet
+    - OR, if in settle phase:
+    -     check that seller has first considered the settle price points
+    -     check that no settle price points meet minimum viable revenue
+
+    Place Bid
+    - check the auction exists
+    - check the auction is in bid phase
+    - check the bidder has not placed a bid yet
+    - check the bid is valid
+
+    Reveal Bid
+    - check the auction exists
+    - check the auction is in reveal phase
+    - check the bidder placed a bid in the auction
+    - check the revealed amount is not greater than sent ether
+    - check the revealed bid matches the sealed bid
+
+    Calculate Settle Options
+    - check the auction exists
+    - check the auction is in settle phase
+    - check the auction has at least 1 revealed bid
+
+    Settle Auction
+    - (includes checks from calling calculate settle options, either in this call or previously)
+    - check that price point is a valid settle option (exists and meets minimum viable revenue)
+
+    Check Available Refund
+    - check the auction exists
+    - check the auction is in cleanup phase
+
+    Claim Refund
+    - check the auction exists
+    - check the auction is in cleanup phase
+    - check the bidder has a leftover balance
+
+    */
 
     function test_CalculateSettleOptions() public setupBasicAuction throughRevealPhaseComplex {
         (uint96[] memory pricePoints, uint16[] memory editionSizes, uint96[] memory revenues) = 
@@ -895,6 +1060,47 @@ contract VariableSupplyAuctionTest is Test {
         auctions.calculateSettleOptions(address(drop));
         auctions.calculateSettleOptions(address(drop));
         auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOptions(address(drop));
+    }
+
+    function testRevert_CalculateSettleOptions_WhenAuctionDoesNotExist() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+
+        vm.prank(address(seller));
+        auctions.calculateSettleOptions(address(drop));
+    }
+
+    function testRevert_CalculateSettleOptions_WhenAuctionInBidPhase() public setupBasicAuction {
+        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+
+        vm.prank(address(seller));
+        auctions.calculateSettleOptions(address(drop));
+    }
+
+    function testRevert_CalculateSettleOptions_WhenAuctionInRevealPhase() public setupBasicAuction {
+        vm.warp(TIME0 + 3 days); // reveal phase
+        
+        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+
+        vm.prank(address(seller));
+        auctions.calculateSettleOptions(address(drop));
+    }
+
+    function testRevert_CalculateSettleOptions_WhenAuctionInCleanupPhase() public setupBasicAuction {
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
+
+        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+
+        vm.prank(address(seller));
+        auctions.calculateSettleOptions(address(drop));
+    }
+
+    function testRevert_CalculateSettleOptions_WhenAuctionHasZeroRevealedBids() public setupBasicAuction {
+        vm.warp(TIME0 + 3 days + 2 days);
+
+        vm.expectRevert("NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
+
+        vm.prank(address(seller));
         auctions.calculateSettleOptions(address(drop));
     }
 
@@ -1244,11 +1450,59 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance14, 2 ether);
     }
 
+    function testRevert_SettleAuction_WhenAuctionDoesNotExist() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 1 ether);
+    }
+
+    function testRevert_SettleAuction_WhenAuctionInBidPhase() public setupBasicAuction {
+        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 2 ether);
+    }
+
+    function testRevert_SettleAuction_WhenAuctionInRevealPhase() public setupBasicAuction {
+        vm.warp(TIME0 + 3 days); // reveal phase
+        
+        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 2 ether);
+    }
+
+    function testRevert_SettleAuction_WhenAuctionInCleanupPhase() public setupBasicAuction {
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
+
+        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 2 ether);
+    }
+
+    function testRevert_SettleAuction_WhenAuctionHasZeroRevealedBids() public setupBasicAuction {
+        vm.warp(TIME0 + 3 days + 2 days);
+
+        vm.expectRevert("NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 2 ether);
+    }
+
     function testRevert_SettleAuction_WhenSettlingAtPricePointThatDoesNotMeetMinimumViableRevenue() public setupBasicAuction throughRevealPhaseComplex {
         vm.expectRevert("DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
 
         vm.prank(address(seller));
-        auctions.settleAuction(address(drop), 2 ether);
+        auctions.settleAuction(address(drop), 2 ether); // does not meet minimum viable revenue
+    }
+
+    function testRevert_SettleAuction_WhenSettlingAtInvalidPricePoint() public setupBasicAuction throughRevealPhaseComplex {
+        vm.expectRevert("DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");        
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 3 ether); // non-existent settle price point
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -1283,6 +1537,8 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 2 ether);
 
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
+
         vm.prank(address(bidder1));
         assertEq(auctions.checkAvailableRefund(address(drop)), 2 ether); // = full amount sent, not winning bid
 
@@ -1291,6 +1547,55 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.prank(address(bidder3));
         assertEq(auctions.checkAvailableRefund(address(drop)), 1 ether); // = 3 ether sent - 2 ether winning bid
+    }
+
+    function testRevert_CheckAvailableRefund_WhenAuctionDoesNotExist() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+
+        vm.prank(address(bidder1));
+        auctions.checkAvailableRefund(address(drop));
+    }
+
+    function testRevert_CheckAvailableRefund_WhenAuctionInBidPhase() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
+
+        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.checkAvailableRefund(address(drop));
+    }
+
+    function testRevert_CheckAvailableRefund_WhenAuctionInRevealPhase() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
+
+        vm.warp(TIME0 + 3 days); // reveal phase
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);
+
+        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.checkAvailableRefund(address(drop));
+    }
+
+    function testRevert_CheckAvailableRefund_WhenAuctionInSettlePhase() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
+
+        vm.warp(TIME0 + 3 days);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);
+
+        vm.warp(TIME0 + 3 days + 2 days); // settle phase
+
+        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.checkAvailableRefund(address(drop));
     }
 
     function test_ClaimRefund_WhenWinner() public setupBasicAuctionWithLowMinimumViableRevenue {
@@ -1306,6 +1611,8 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 1 ether);
+
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
         // Precondition checks        
         assertEq(address(bidder1).balance, 98 ether);
@@ -1337,6 +1644,8 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 2 ether);
+
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
         // Precondition checks        
         assertEq(address(bidder1).balance, 98 ether);
@@ -1379,6 +1688,8 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 1 ether);
 
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
+
         vm.expectEmit(true, true, true, true);
         emit RefundClaimed(address(drop), address(bidder1), 1 ether, auction);
 
@@ -1386,8 +1697,57 @@ contract VariableSupplyAuctionTest is Test {
         auctions.claimRefund(address(drop));
     }
 
+    function testRevert_ClaimRefund_WhenAuctionDoesNotExist() public {
+        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
+
+    function testRevert_ClaimRefund_WhenAuctionInBidPhase() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
+
+        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
+
+    function testRevert_ClaimRefund_WhenAuctionInRevealPhase() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
+
+        vm.warp(TIME0 + 3 days); // reveal phase
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);
+
+        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
+
+    function testRevert_ClaimRefund_WhenAuctionInSettlePhase() public setupBasicAuction {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
+
+        vm.warp(TIME0 + 3 days);
+
+        vm.prank(address(bidder1));
+        auctions.revealBid(address(drop), 1 ether, salt1);
+
+        vm.warp(TIME0 + 3 days + 2 days); // settle phase
+
+        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
+
     function testRevert_ClaimRefund_WhenNoBidPlaced() public setupBasicAuctionWithLowMinimumViableRevenue {
-        vm.warp(TIME0 + 3 days + 2 days);
+        vm.warp(TIME0 + 3 days + 2 days + 1 days);
 
         vm.expectRevert("NO_REFUND_AVAILABLE");
 
@@ -1395,9 +1755,31 @@ contract VariableSupplyAuctionTest is Test {
         auctions.claimRefund(address(drop));
     }
 
-    // function testRevert_ClaimRefund_WhenNoBidRevealed() public setupBasicAuction {
-    //     // TODO x
-    // }
+    function testRevert_ClaimRefund_WhenNoBidRevealed() public setupBasicAuctionWithLowMinimumViableRevenue {
+        vm.prank(address(bidder1));
+        auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1)); 
+        vm.prank(address(bidder2));
+        auctions.placeBid{value: 1 ether}(address(drop), _genSealedBid(1 ether, salt2)); 
+
+        vm.warp(TIME0 + 3 days);
+
+        // bidder1 never revealed =(
+        // note bidder2 must reveal in this test, otherwise seller can't settle when no revealed bids
+        vm.prank(address(bidder2));
+        auctions.revealBid(address(drop), 1 ether, salt2);
+
+        vm.warp(TIME0 + 3 days + 2 days);
+
+        vm.prank(address(seller));
+        auctions.settleAuction(address(drop), 1 ether);
+
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
+
+        vm.expectRevert("NO_REFUND_AVAILABLE");
+
+        vm.prank(address(bidder1));
+        auctions.claimRefund(address(drop));
+    }
 
     function testRevert_ClaimRefund_WhenAlreadyClaimed() public setupBasicAuctionWithLowMinimumViableRevenue {
         vm.prank(address(bidder1));
@@ -1413,6 +1795,8 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 1 ether);
 
+        vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
+
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
 
@@ -1422,13 +1806,12 @@ contract VariableSupplyAuctionTest is Test {
         auctions.claimRefund(address(drop));
     }
 
-    // TODO x add temporal sad paths
-
     /*//////////////////////////////////////////////////////////////
                         TEST HELPERS
     //////////////////////////////////////////////////////////////*/
 
     // TODO parameterize modifier pattern to support fuzzing
+
     modifier setupBasicAuction() {
         vm.prank(address(seller));
         auctions.createAuction({
@@ -1553,7 +1936,8 @@ contract VariableSupplyAuctionTest is Test {
         emit AuctionSettled(address(drop), auction);
     }
 
-    // IDEA could this be moved onto the hyperstructure module for better bidder usability ?!
+    // IDEA could genSealedBid be moved onto the hyperstructure module for better bidder usability ?!
+
     function _genSealedBid(uint256 _amount, string memory _salt) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(_amount, bytes(_salt)));
     }

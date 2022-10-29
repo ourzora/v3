@@ -179,7 +179,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     //     | ----------------------->|                                
     //     |                         |                                
     //     |                         ----.                            
-    //     |                             | validate no bids placed yet TODO x add validate minimum viable revenue check
+    //     |                             | validate no bids placed yet
     //     |                         <---'                            
     //     |                         |                                
     //     |                         ----.                            
@@ -207,11 +207,30 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Get the auction for the specified drop
         Auction memory auction = auctionForDrop[_tokenContract];
 
-        // Ensure that no bids have been placed in this auction yet
-        require(auction.totalBalance == 0, "CANNOT_CANCEL_AUCTION_WITH_BIDS");        
+        // Ensure the auction exists
+        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
 
         // Ensure the caller is the seller
         require(msg.sender == auction.seller, "ONLY_SELLER");
+
+        // Ensure that no bids have been placed in this auction yet, or, if in
+        // settle phase, that no price points meet auction minimum viable revenue
+        if (block.timestamp >= auction.endOfRevealPhase && block.timestamp < auction.endOfSettlePhase) {
+            // Get the settle price points
+            uint96[] storage settlePricePoints = _settlePricePointsForAuction[_tokenContract];
+
+            // Ensure seller has first considered the settle price points before attempting to cancel
+            require(settlePricePoints.length > 0, "CANNOT_CANCEL_AUCTION_BEFORE_CALCULATING_SETTLE_OPTIONS");
+
+            // Ensure none of the price point options meet minimum viable revenue
+            for (uint256 i = 0; i < settlePricePoints.length; i++) {
+                SettleOption storage settleOption = _settleOptionsForPricePoint[_tokenContract][settlePricePoints[i]];
+                
+                require(settleOption.revenue < auction.minimumViableRevenue, "CANNOT_CANCEL_AUCTION_WITH_VIABLE_PRICE_POINT");
+            }
+        } else {
+            require(auction.totalBalance == 0, "CANNOT_CANCEL_AUCTION_WITH_BIDS");        
+        }
 
         emit AuctionCanceled(_tokenContract, auction);
 
@@ -269,13 +288,13 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Ensure the auction exists
         require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
 
-        // Ensure the auction is still in bid phase
+        // Ensure the auction is in bid phase
         require(block.timestamp < auction.endOfBidPhase, "BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
 
         // Ensure the bidder has not placed a bid in auction already
         require(bidsForDrop[_tokenContract][msg.sender].bidderBalance == 0, "ALREADY_PLACED_BID_IN_AUCTION");
 
-        // Ensure the bid is valid and includes some ether
+        // Ensure the bid is valid
         require(msg.value > 0 ether, "VALID_BIDS_MUST_INCLUDE_ETHER");
 
         // Update the total balance for auction
@@ -342,7 +361,10 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
 
-        // Ensure auction is in reveal phase
+        // Ensure the auction exists
+        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+
+        // Ensure the auction is in reveal phase
         require(block.timestamp >= auction.endOfBidPhase && block.timestamp < auction.endOfRevealPhase, "REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
 
         // Get the bid for the specified bidder
@@ -442,19 +464,33 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     mapping(address => mapping(uint96 => SettleOption)) public _settleOptionsForPricePoint;
 
     /// @notice Calculate edition size and revenue for each possible price point
-    /// @dev Cheaper on subsequent calls, after the initial call when
-    /// calculations have been performed and saved
+    /// @dev Cheaper on subsequent calls but idempotent -- after the initial call when
+    /// calculations have been performed and stored, the settle options will not change.
+    /// Function visibility is public instead of external, to support settleAuction calling it.
     /// @param _tokenContract The address of the ERC-721 drop contract
     /// @return A tuple of 3 arrays representing the settle options --
     /// the possible price points at which to settle, along with the 
     /// resulting edition sizes and amounts of revenue generated
     function calculateSettleOptions(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
 
-        // TODO x gas optimization -- algorithm =P
-        // TODO x gas optimization -- consider other, less storage-intensive options
+        // TODO x improve algorithm =P
+        // TODO x gas optimizations -- consider other, less storage-intensive options
 
+        // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
+
+        // Ensure the auction exists
+        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+
+        // Ensure the auction is in settle phase
+        require(block.timestamp >= auction.endOfRevealPhase && block.timestamp < auction.endOfSettlePhase, "SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+
+        // Get the revealed bidders for the auction
         address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
+
+        // Ensure the auction has at least 1 revealed bid
+        require(bidders.length > 0, "NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
+
         uint96[] storage settlePricePoints = _settlePricePointsForAuction[_tokenContract];
         mapping(uint96 => SettleOption) storage settleOptions = _settleOptionsForPricePoint[_tokenContract];
 
@@ -513,26 +549,23 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// @param _settlePricePoint The price point at which to settle the auction
     function settleAuction(address _tokenContract, uint96 _settlePricePoint) external nonReentrant {
 
-        // TODO x checks
         // TODO x gas optimizations
-        // TODO x look for more ways to consolidate business logic with calculateSettleOptions
         // TODO x document pragmatic max edition size / winning bidders
         // TODO x consider storing winningBidders during calculateSettleOptions
+        // TODO x look for more ways to consolidate business logic with calculateSettleOptions
 
         // Get the auction
         Auction storage auction = auctionForDrop[_tokenContract];
 
-        // Get the bidders who revealed in this auction
-        address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
-
+        // Calculate settle options, if not done yet (also includes check for auction existence)
         if (_settlePricePointsForAuction[_tokenContract].length == 0) {
             calculateSettleOptions(_tokenContract);
         }
 
         // Get the settle option at this price point
         SettleOption storage settleOption = _settleOptionsForPricePoint[_tokenContract][_settlePricePoint];
-
-        // Check that revenue meets minimum viable revenue
+        
+        // Ensure that revenue meets minimum viable revenue
         require(settleOption.revenue >= auction.minimumViableRevenue, "DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
 
         // Store the current total balance and final auction details
@@ -541,10 +574,15 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         auction.settledPricePoint = _settlePricePoint;
         auction.settledEditionSize = settleOption.editionSize;
 
-        // TODO x store the fact that an auction has been settled and clean up unneeded storage
+        // TODO store the fact that an auction has been settled and (1) update endOfSettlePhase
+        // to enter cleanup phase immediately and (2) clean up unneeded storage (and allow
+        // bidders to claim refunds ASAP)
 
         // Get the bids for this auction
         mapping(address => Bid) storage bids = bidsForDrop[_tokenContract];
+
+        // Get the bidders who revealed in this auction
+        address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
 
         // Loop through bids to determine winning bidders and update bidder balances
         uint256 index;
@@ -621,37 +659,46 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// bid amount; if not winner, the full amount of ether sent with your bid
     /// @param _tokenContract The address of the ERC-721 drop contract    
     function checkAvailableRefund(address _tokenContract) external view returns (uint96) {
-        
-        // TODO x add checks, including cleanup phase
-        // TODO x consolidate with claimRefund
+        // Get the auction
+        Auction storage auction = auctionForDrop[_tokenContract];
 
-        // Get the balance for the specified bidder
-        Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
+        // Ensure the auction exists
+        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
 
-        return bid.bidderBalance;
+        // Ensure the auction is in cleanup phase
+        require(block.timestamp >= auction.endOfSettlePhase, "REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+
+        // Return the balance for the specified bidder
+        return bidsForDrop[_tokenContract][msg.sender].bidderBalance;
     }
 
     /// @notice Claim refund -- if winner, any additional ether sent above your
     /// bid amount; if not winner, the full amount of ether sent with your bid
+    /// @dev Some duplicated business logic between claimRefund and checkAvailableRefund,
+    /// to eliminate additional (warm) SLOADs and keep checkAvailableRefund user-friendly
     /// @param _tokenContract The address of the ERC-721 drop contract
     function claimRefund(address _tokenContract) external nonReentrant {
         // Get the auction
         Auction storage auction = auctionForDrop[_tokenContract];
 
-        // TODO x add temporal checks
+        // Ensure the auction exists
+        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+
+        // Ensure the auction is in cleanup phase
+        require(block.timestamp >= auction.endOfSettlePhase, "REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
 
         // Get the balance for the specified bidder
         Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
         uint96 bidderBalance = bid.bidderBalance;
 
-        // Ensure bidder has balance
-        require(bidderBalance > 0, "NO_REFUND_AVAILABLE");
+        // Ensure bidder revealed a bid and has a leftover balance
+        require(bid.revealedBidAmount > 0 && bidderBalance > 0, "NO_REFUND_AVAILABLE");
 
         // Clear bidder balance
         bid.bidderBalance = 0;
 
         // Transfer the bidder's available refund balance to the bidder
-        _handleOutgoingTransfer(msg.sender, bidderBalance, address(0), 50_000);        
+        _handleOutgoingTransfer(msg.sender, bidderBalance, address(0), 50_000);
 
         emit RefundClaimed(_tokenContract, msg.sender, bidderBalance, auction);
     }

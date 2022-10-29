@@ -5,6 +5,7 @@ participant ERC721Drop
 
 Seller -> VariableSupplyAuction : settleAuction()
 
+TODO x review all UML diagrams
 TODO x update to consolidate biz logic and add minimum viable revenue
 
 VariableSupplyAuction -> VariableSupplyAuction : validate auction is in settle phase 
