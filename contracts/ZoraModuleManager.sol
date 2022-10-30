@@ -17,8 +17,8 @@ contract ZoraModuleManager {
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes("ZORA")),
-                keccak256(bytes("3")),
-                _chainID(),
+                keccak256("3"),
+                block.chainid,
                 address(this)
             )
         );
@@ -196,14 +196,18 @@ contract ZoraModuleManager {
         bytes32 _s
     ) public {
         require(_deadline == 0 || _deadline >= block.timestamp, "ZMM::setApprovalForModuleBySig deadline expired");
-
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                EIP_712_DOMAIN_SEPARATOR,
-                keccak256(abi.encode(SIGNED_APPROVAL_TYPEHASH, _module, _user, _approved, _deadline, sigNonces[_user]++))
-            )
-        );
+        
+        // Unchecked because the only math done is incrementing
+        // the user's nonce which cannot realistically overflow
+        unchecked {
+            bytes32 digest = keccak256(
+                abi.encodePacked(
+                    "\x19\x01",
+                    EIP_712_DOMAIN_SEPARATOR,
+                    keccak256(abi.encode(SIGNED_APPROVAL_TYPEHASH, _module, _user, _approved, _deadline, sigNonces[_user]++))
+                )
+            );
+        }
 
         address recoveredAddress = ecrecover(digest, _v, _r, _s);
 
@@ -297,12 +301,5 @@ contract ZoraModuleManager {
         userApprovals[_user][_module] = _approved;
 
         emit ModuleApprovalSet(msg.sender, _module, _approved);
-    }
-
-    /// @notice The EIP-155 chain id
-    function _chainID() private view returns (uint256 id) {
-        assembly {
-            id := chainid()
-        }
     }
 }
