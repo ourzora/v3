@@ -207,6 +207,15 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     /*//////////////////////////////////////////////////////////////
+                        EIP-165
+    //////////////////////////////////////////////////////////////*/
+
+    function test_SupportsInterface() public {
+        assertTrue(auctions.supportsInterface(0x01ffc9a7)); // EIP-165
+        assertTrue(auctions.supportsInterface(type(IVariableSupplyAuction).interfaceId));
+    }
+
+    /*//////////////////////////////////////////////////////////////
                         CREATE AUCTION
     //////////////////////////////////////////////////////////////*/
 
@@ -410,7 +419,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.warp(TIME0 + 3 days + 2 days);
 
         vm.prank(address(seller));
-        auctions.calculateSettleOptions(address(drop)); // first, consider the settle options
+        auctions.calculateSettleOutcomes(address(drop)); // first, consider the settle outcomes
 
         vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
@@ -467,7 +476,7 @@ contract VariableSupplyAuctionTest is Test {
         auctions.cancelAuction(address(drop));
     }
 
-    function testRevert_CancelAuction_WhenInSettlePhaseButHaveNotCalculatedSettleOptionsYet() public setupBasicAuction {        
+    function testRevert_CancelAuction_WhenInSettlePhaseButHaveNotCalculatedSettleOutcomesYet() public setupBasicAuction {        
         bytes32 commitment1 = _genSealedBid(10 ether, salt1);
         bytes32 commitment2 = _genSealedBid(2 ether, salt2);
         bytes32 commitment3 = _genSealedBid(3 ether, salt3);
@@ -520,7 +529,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.warp(TIME0 + 3 days + 2 days);
 
         vm.prank(address(seller));
-        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
 
         vm.expectRevert("CANNOT_CANCEL_AUCTION_WITH_VIABLE_PRICE_POINT");
 
@@ -549,7 +558,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
         
-        (bytes32 commitmentStored, uint96 bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));
+        (bytes32 commitmentStored, uint96 bidderBalance, ) = auctions.bidsForAuction(address(drop), address(bidder1));
 
         assertEq(address(auctions).balance, 1 ether);
         assertEq(bidderBalance, 1 ether);
@@ -568,9 +577,9 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder3));
         auctions.placeBid{value: 3 ether}(address(drop), commitment3);
 
-        (bytes32 commitmentStored1, uint96 bidderBalance1, ) = auctions.bidsForDrop(address(drop), address(bidder1));
-        (bytes32 commitmentStored2, uint96 bidderBalance2, ) = auctions.bidsForDrop(address(drop), address(bidder2));
-        (bytes32 commitmentStored3, uint96 bidderBalance3, ) = auctions.bidsForDrop(address(drop), address(bidder3));
+        (bytes32 commitmentStored1, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
+        (bytes32 commitmentStored2, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
+        (bytes32 commitmentStored3, uint96 bidderBalance3, ) = auctions.bidsForAuction(address(drop), address(bidder3));
 
         assertEq(address(auctions).balance, 6 ether);
         assertEq(bidderBalance1, 1 ether);
@@ -730,7 +739,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1 ether, salt1);
 
-        (,, uint256 bidAmount) = auctions.bidsForDrop(address(drop), address(bidder1));
+        (,, uint256 bidAmount) = auctions.bidsForAuction(address(drop), address(bidder1));
         
         assertEq(bidAmount, 1 ether);
     }
@@ -756,9 +765,9 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder3));
         auctions.revealBid(address(drop), 3 ether, salt3);
 
-        (,, uint256 bidAmount1) = auctions.bidsForDrop(address(drop), address(bidder1));
-        (,, uint256 bidAmount2) = auctions.bidsForDrop(address(drop), address(bidder2));
-        (,, uint256 bidAmount3) = auctions.bidsForDrop(address(drop), address(bidder3));
+        (,, uint256 bidAmount1) = auctions.bidsForAuction(address(drop), address(bidder1));
+        (,, uint256 bidAmount2) = auctions.bidsForAuction(address(drop), address(bidder2));
+        (,, uint256 bidAmount3) = auctions.bidsForAuction(address(drop), address(bidder3));
 
         assertEq(bidAmount1, 1 ether);
         assertEq(bidAmount2, 2 ether);
@@ -970,14 +979,14 @@ contract VariableSupplyAuctionTest is Test {
     - check the revealed amount is not greater than sent ether
     - check the revealed bid matches the sealed bid
 
-    Calculate Settle Options
+    Calculate Settle Outcomes
     - check the auction exists
     - check the auction is in settle phase
     - check the auction has at least 1 revealed bid
 
     Settle Auction
-    - (includes checks from calling calculate settle options, either in this call or previously)
-    - check that price point is a valid settle option (exists and meets minimum viable revenue)
+    - (includes checks from calling calculate settle outcomes, either in this call or previously)
+    - check that price point is a valid settle outcome (exists and meets minimum viable revenue)
 
     Check Available Refund
     - check the auction exists
@@ -990,15 +999,15 @@ contract VariableSupplyAuctionTest is Test {
 
     */
 
-    function test_CalculateSettleOptions() public setupBasicAuction throughRevealPhaseComplex {
+    function test_CalculateSettleOutcomes() public setupBasicAuction throughRevealPhaseComplex {
         (uint96[] memory pricePoints, uint16[] memory editionSizes, uint96[] memory revenues) = 
-            auctions.calculateSettleOptions(address(drop));
+            auctions.calculateSettleOutcomes(address(drop));
 
         assertEq(editionSizes.length, pricePoints.length);
         assertEq(revenues.length, pricePoints.length);
 
         // for (uint256 i = 0; i < pricePoints.length; i++) {
-        //     emit log_string("Option -------------");
+        //     emit log_string("Outcome -------------");
         //     emit log_named_uint("Price point", pricePoints[i] / 1 ether);
         //     emit log_named_uint("Edition size", editionSizes[i]);
         //     emit log_named_uint("Revenue", revenues[i] / 1 ether);
@@ -1016,7 +1025,7 @@ contract VariableSupplyAuctionTest is Test {
 
         Note that revenue is set to 0 at price point 2 ether
         because 8 ether would not meet minimum viable revenue
-        (and therefore this won't be a viable settle option)
+        (and therefore this won't be a viable settle outcome)
 
          */
 
@@ -1040,68 +1049,68 @@ contract VariableSupplyAuctionTest is Test {
     // 1_794_872-1_691_644 = 103_228 more than once
     // 1_703_719-1_691_757 = 11_962 more than once (with optimization)
 
-    function testGas_AndIdempotent_CalculateSettleOptions_WhenCalledTwice() public setupBasicAuction throughRevealPhaseComplex {
-        auctions.calculateSettleOptions(address(drop));
-        auctions.calculateSettleOptions(address(drop));
+    function testGas_AndIdempotent_CalculateSettleOutcomes_WhenCalledTwice() public setupBasicAuction throughRevealPhaseComplex {
+        auctions.calculateSettleOutcomes(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
     // 1_899_651-1_794_851 = 104_800 more than twice
     // 1_717_252-1_703_719 = 13_533 more than twice (with optimization)
 
-    function testGas_AndIdempotent_CalculateSettleOptions_WhenCalledThrice() public setupBasicAuction throughRevealPhaseComplex {
-        auctions.calculateSettleOptions(address(drop));
-        auctions.calculateSettleOptions(address(drop));
-        auctions.calculateSettleOptions(address(drop));
+    function testGas_AndIdempotent_CalculateSettleOutcomes_WhenCalledThrice() public setupBasicAuction throughRevealPhaseComplex {
+        auctions.calculateSettleOutcomes(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
     // 1_730_788-1_717_253 = 13_535 more than thrice (with optimization)
 
-    function testGas_AndIdempotent_CalculateSettleOptions_WhenCalledFrice() public setupBasicAuction throughRevealPhaseComplex {
-        auctions.calculateSettleOptions(address(drop));
-        auctions.calculateSettleOptions(address(drop));
-        auctions.calculateSettleOptions(address(drop));
-        auctions.calculateSettleOptions(address(drop));
+    function testGas_AndIdempotent_CalculateSettleOutcomes_WhenCalledFrice() public setupBasicAuction throughRevealPhaseComplex {
+        auctions.calculateSettleOutcomes(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
-    function testRevert_CalculateSettleOptions_WhenAuctionDoesNotExist() public {
+    function testRevert_CalculateSettleOutcomes_WhenAuctionDoesNotExist() public {
         vm.expectRevert("AUCTION_DOES_NOT_EXIST");
 
         vm.prank(address(seller));
-        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
-    function testRevert_CalculateSettleOptions_WhenAuctionInBidPhase() public setupBasicAuction {
+    function testRevert_CalculateSettleOutcomes_WhenAuctionInBidPhase() public setupBasicAuction {
         vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
 
         vm.prank(address(seller));
-        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
-    function testRevert_CalculateSettleOptions_WhenAuctionInRevealPhase() public setupBasicAuction {
+    function testRevert_CalculateSettleOutcomes_WhenAuctionInRevealPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days); // reveal phase
         
         vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
 
         vm.prank(address(seller));
-        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
-    function testRevert_CalculateSettleOptions_WhenAuctionInCleanupPhase() public setupBasicAuction {
+    function testRevert_CalculateSettleOutcomes_WhenAuctionInCleanupPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
         vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
 
         vm.prank(address(seller));
-        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
-    function testRevert_CalculateSettleOptions_WhenAuctionHasZeroRevealedBids() public setupBasicAuction {
+    function testRevert_CalculateSettleOutcomes_WhenAuctionHasZeroRevealedBids() public setupBasicAuction {
         vm.warp(TIME0 + 3 days + 2 days);
 
         vm.expectRevert("NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
 
         vm.prank(address(seller));
-        auctions.calculateSettleOptions(address(drop));
+        auctions.calculateSettleOutcomes(address(drop));
     }
 
     /*
@@ -1174,20 +1183,20 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(totalBalance, 84 ether);
 
         // bidder auction balances each still full amount of sent ether
-        (, uint96 bidderBalance1, ) = auctions.bidsForDrop(address(drop), address(bidder1));
-        (, uint96 bidderBalance2, ) = auctions.bidsForDrop(address(drop), address(bidder2));
-        (, uint96 bidderBalance3, ) = auctions.bidsForDrop(address(drop), address(bidder3));
-        (, uint96 bidderBalance4, ) = auctions.bidsForDrop(address(drop), address(bidder4));
-        (, uint96 bidderBalance5, ) = auctions.bidsForDrop(address(drop), address(bidder5));
-        (, uint96 bidderBalance6, ) = auctions.bidsForDrop(address(drop), address(bidder6));
-        (, uint96 bidderBalance7, ) = auctions.bidsForDrop(address(drop), address(bidder7));
-        (, uint96 bidderBalance8, ) = auctions.bidsForDrop(address(drop), address(bidder8));
-        (, uint96 bidderBalance9, ) = auctions.bidsForDrop(address(drop), address(bidder9));
-        (, uint96 bidderBalance10, ) = auctions.bidsForDrop(address(drop), address(bidder10));
-        (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
-        (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
-        (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
-        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
+        (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
+        (, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
+        (, uint96 bidderBalance3, ) = auctions.bidsForAuction(address(drop), address(bidder3));
+        (, uint96 bidderBalance4, ) = auctions.bidsForAuction(address(drop), address(bidder4));
+        (, uint96 bidderBalance5, ) = auctions.bidsForAuction(address(drop), address(bidder5));
+        (, uint96 bidderBalance6, ) = auctions.bidsForAuction(address(drop), address(bidder6));
+        (, uint96 bidderBalance7, ) = auctions.bidsForAuction(address(drop), address(bidder7));
+        (, uint96 bidderBalance8, ) = auctions.bidsForAuction(address(drop), address(bidder8));
+        (, uint96 bidderBalance9, ) = auctions.bidsForAuction(address(drop), address(bidder9));
+        (, uint96 bidderBalance10, ) = auctions.bidsForAuction(address(drop), address(bidder10));
+        (, uint96 bidderBalance11, ) = auctions.bidsForAuction(address(drop), address(bidder11));
+        (, uint96 bidderBalance12, ) = auctions.bidsForAuction(address(drop), address(bidder12));
+        (, uint96 bidderBalance13, ) = auctions.bidsForAuction(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForAuction(address(drop), address(bidder14));
         assertEq(bidderBalance1, 1 ether);
         assertEq(bidderBalance2, 9 ether);
         assertEq(bidderBalance3, 8 ether);
@@ -1256,20 +1265,20 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(settledPricePoint, 1 ether);
         assertEq(settledEditionSize, 14);
 
-        (, uint96 bidderBalance1, ) = auctions.bidsForDrop(address(drop), address(bidder1));
-        (, uint96 bidderBalance2, ) = auctions.bidsForDrop(address(drop), address(bidder2));
-        (, uint96 bidderBalance3, ) = auctions.bidsForDrop(address(drop), address(bidder3));
-        (, uint96 bidderBalance4, ) = auctions.bidsForDrop(address(drop), address(bidder4));
-        (, uint96 bidderBalance5, ) = auctions.bidsForDrop(address(drop), address(bidder5));
-        (, uint96 bidderBalance6, ) = auctions.bidsForDrop(address(drop), address(bidder6));
-        (, uint96 bidderBalance7, ) = auctions.bidsForDrop(address(drop), address(bidder7));
-        (, uint96 bidderBalance8, ) = auctions.bidsForDrop(address(drop), address(bidder8));
-        (, uint96 bidderBalance9, ) = auctions.bidsForDrop(address(drop), address(bidder9));
-        (, uint96 bidderBalance10, ) = auctions.bidsForDrop(address(drop), address(bidder10));
-        (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
-        (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
-        (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
-        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
+        (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
+        (, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
+        (, uint96 bidderBalance3, ) = auctions.bidsForAuction(address(drop), address(bidder3));
+        (, uint96 bidderBalance4, ) = auctions.bidsForAuction(address(drop), address(bidder4));
+        (, uint96 bidderBalance5, ) = auctions.bidsForAuction(address(drop), address(bidder5));
+        (, uint96 bidderBalance6, ) = auctions.bidsForAuction(address(drop), address(bidder6));
+        (, uint96 bidderBalance7, ) = auctions.bidsForAuction(address(drop), address(bidder7));
+        (, uint96 bidderBalance8, ) = auctions.bidsForAuction(address(drop), address(bidder8));
+        (, uint96 bidderBalance9, ) = auctions.bidsForAuction(address(drop), address(bidder9));
+        (, uint96 bidderBalance10, ) = auctions.bidsForAuction(address(drop), address(bidder10));
+        (, uint96 bidderBalance11, ) = auctions.bidsForAuction(address(drop), address(bidder11));
+        (, uint96 bidderBalance12, ) = auctions.bidsForAuction(address(drop), address(bidder12));
+        (, uint96 bidderBalance13, ) = auctions.bidsForAuction(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForAuction(address(drop), address(bidder14));
         assertEq(bidderBalance1, 0 ether);
         assertEq(bidderBalance2, 8 ether);
         assertEq(bidderBalance3, 7 ether);
@@ -1338,20 +1347,20 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(settledPricePoint, 6 ether);
         assertEq(settledEditionSize, 3);
 
-        (, uint96 bidderBalance1, ) = auctions.bidsForDrop(address(drop), address(bidder1));
-        (, uint96 bidderBalance2, ) = auctions.bidsForDrop(address(drop), address(bidder2));
-        (, uint96 bidderBalance3, ) = auctions.bidsForDrop(address(drop), address(bidder3));
-        (, uint96 bidderBalance4, ) = auctions.bidsForDrop(address(drop), address(bidder4));
-        (, uint96 bidderBalance5, ) = auctions.bidsForDrop(address(drop), address(bidder5));
-        (, uint96 bidderBalance6, ) = auctions.bidsForDrop(address(drop), address(bidder6));
-        (, uint96 bidderBalance7, ) = auctions.bidsForDrop(address(drop), address(bidder7));
-        (, uint96 bidderBalance8, ) = auctions.bidsForDrop(address(drop), address(bidder8));
-        (, uint96 bidderBalance9, ) = auctions.bidsForDrop(address(drop), address(bidder9));
-        (, uint96 bidderBalance10, ) = auctions.bidsForDrop(address(drop), address(bidder10));
-        (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
-        (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
-        (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
-        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
+        (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
+        (, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
+        (, uint96 bidderBalance3, ) = auctions.bidsForAuction(address(drop), address(bidder3));
+        (, uint96 bidderBalance4, ) = auctions.bidsForAuction(address(drop), address(bidder4));
+        (, uint96 bidderBalance5, ) = auctions.bidsForAuction(address(drop), address(bidder5));
+        (, uint96 bidderBalance6, ) = auctions.bidsForAuction(address(drop), address(bidder6));
+        (, uint96 bidderBalance7, ) = auctions.bidsForAuction(address(drop), address(bidder7));
+        (, uint96 bidderBalance8, ) = auctions.bidsForAuction(address(drop), address(bidder8));
+        (, uint96 bidderBalance9, ) = auctions.bidsForAuction(address(drop), address(bidder9));
+        (, uint96 bidderBalance10, ) = auctions.bidsForAuction(address(drop), address(bidder10));
+        (, uint96 bidderBalance11, ) = auctions.bidsForAuction(address(drop), address(bidder11));
+        (, uint96 bidderBalance12, ) = auctions.bidsForAuction(address(drop), address(bidder12));
+        (, uint96 bidderBalance13, ) = auctions.bidsForAuction(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForAuction(address(drop), address(bidder14));
         assertEq(bidderBalance1, 1 ether);
         assertEq(bidderBalance2, 9 ether);
         assertEq(bidderBalance3, 8 ether);
@@ -1420,20 +1429,20 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(settledPricePoint, 11 ether);
         assertEq(settledEditionSize, 1);
 
-        (, uint96 bidderBalance1, ) = auctions.bidsForDrop(address(drop), address(bidder1));
-        (, uint96 bidderBalance2, ) = auctions.bidsForDrop(address(drop), address(bidder2));
-        (, uint96 bidderBalance3, ) = auctions.bidsForDrop(address(drop), address(bidder3));
-        (, uint96 bidderBalance4, ) = auctions.bidsForDrop(address(drop), address(bidder4));
-        (, uint96 bidderBalance5, ) = auctions.bidsForDrop(address(drop), address(bidder5));
-        (, uint96 bidderBalance6, ) = auctions.bidsForDrop(address(drop), address(bidder6));
-        (, uint96 bidderBalance7, ) = auctions.bidsForDrop(address(drop), address(bidder7));
-        (, uint96 bidderBalance8, ) = auctions.bidsForDrop(address(drop), address(bidder8));
-        (, uint96 bidderBalance9, ) = auctions.bidsForDrop(address(drop), address(bidder9));
-        (, uint96 bidderBalance10, ) = auctions.bidsForDrop(address(drop), address(bidder10));
-        (, uint96 bidderBalance11, ) = auctions.bidsForDrop(address(drop), address(bidder11));
-        (, uint96 bidderBalance12, ) = auctions.bidsForDrop(address(drop), address(bidder12));
-        (, uint96 bidderBalance13, ) = auctions.bidsForDrop(address(drop), address(bidder13));
-        (, uint96 bidderBalance14, ) = auctions.bidsForDrop(address(drop), address(bidder14));
+        (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
+        (, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
+        (, uint96 bidderBalance3, ) = auctions.bidsForAuction(address(drop), address(bidder3));
+        (, uint96 bidderBalance4, ) = auctions.bidsForAuction(address(drop), address(bidder4));
+        (, uint96 bidderBalance5, ) = auctions.bidsForAuction(address(drop), address(bidder5));
+        (, uint96 bidderBalance6, ) = auctions.bidsForAuction(address(drop), address(bidder6));
+        (, uint96 bidderBalance7, ) = auctions.bidsForAuction(address(drop), address(bidder7));
+        (, uint96 bidderBalance8, ) = auctions.bidsForAuction(address(drop), address(bidder8));
+        (, uint96 bidderBalance9, ) = auctions.bidsForAuction(address(drop), address(bidder9));
+        (, uint96 bidderBalance10, ) = auctions.bidsForAuction(address(drop), address(bidder10));
+        (, uint96 bidderBalance11, ) = auctions.bidsForAuction(address(drop), address(bidder11));
+        (, uint96 bidderBalance12, ) = auctions.bidsForAuction(address(drop), address(bidder12));
+        (, uint96 bidderBalance13, ) = auctions.bidsForAuction(address(drop), address(bidder13));
+        (, uint96 bidderBalance14, ) = auctions.bidsForAuction(address(drop), address(bidder14));
         assertEq(bidderBalance1, 1 ether);
         assertEq(bidderBalance2, 9 ether);
         assertEq(bidderBalance3, 8 ether);
@@ -1616,14 +1625,14 @@ contract VariableSupplyAuctionTest is Test {
 
         // Precondition checks        
         assertEq(address(bidder1).balance, 98 ether);
-        (, uint96 bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        (, uint96 bidderBalance, ) = auctions.bidsForAuction(address(drop), address(bidder1));        
         assertEq(bidderBalance, 1 ether);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
 
         assertEq(address(bidder1).balance, 99 ether);
-        (, bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        (, bidderBalance, ) = auctions.bidsForAuction(address(drop), address(bidder1));        
         assertEq(bidderBalance, 0 ether);
     }
 
@@ -1649,14 +1658,14 @@ contract VariableSupplyAuctionTest is Test {
 
         // Precondition checks        
         assertEq(address(bidder1).balance, 98 ether);
-        (, uint96 bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        (, uint96 bidderBalance, ) = auctions.bidsForAuction(address(drop), address(bidder1));        
         assertEq(bidderBalance, 2 ether);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
 
         assertEq(address(bidder1).balance, 100 ether); // claim their full amount of sent ether
-        (, bidderBalance, ) = auctions.bidsForDrop(address(drop), address(bidder1));        
+        (, bidderBalance, ) = auctions.bidsForAuction(address(drop), address(bidder1));        
         assertEq(bidderBalance, 0 ether);
     }
 

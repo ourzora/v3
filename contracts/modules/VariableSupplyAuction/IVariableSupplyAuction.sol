@@ -30,7 +30,7 @@ interface IVariableSupplyAuction {
     function revealBid(address _tokenContract, uint256 _bidAmount, string calldata _salt) external;
 
     ///
-    function calculateSettleOptions(address _tokenContract) external returns (uint96[] memory, uint16[] memory, uint96[] memory);
+    function calculateSettleOutcomes(address _tokenContract) external returns (uint96[] memory, uint16[] memory, uint96[] memory);
 
     ///
     function settleAuction(address _tokenContract, uint96 _settlePricePoint) external;

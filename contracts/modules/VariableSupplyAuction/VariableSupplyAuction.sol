@@ -28,7 +28,25 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     )
         FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _weth, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
         ModuleNamingSupportV1("Variable Supply Auction")
-    {}
+    {
+        // TODO consider other approaches that keep VSA module ignorant of
+        // ERC-721 Drop implementation specifics, e.g., wrapping in an
+        // ERC721DropHelper which could extend BaseTransferHelper
+
+        // erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        EIP-165
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice Implements EIP-165 for standard interface detection
+    /// @dev `0x01ffc9a7` is the IERC165 interface id
+    /// @param _interfaceId The identifier of a given interface
+    /// @return If the given interface is supported
+    function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
+        return _interfaceId == type(IVariableSupplyAuction).interfaceId || _interfaceId == 0x01ffc9a7;
+    }
 
     /*//////////////////////////////////////////////////////////////
                         AUCTION STORAGE
@@ -75,18 +93,36 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         uint96 revealedBidAmount;
     }
 
+    /// @notice A possible outcome if settling an auction at a given price point
+    /// @param editionSize The total number of NFTs which would be minted
+    /// @param revenue The amount of revenue which would be generated
+    struct SettleOutcome {
+        uint16 editionSize;
+        uint96 revenue;
+    }
+
+    // TODO storage optimization
+
     /// @notice The auction for a given ERC-721 drop contract, if one exists
     /// (only one auction per token contract is allowed at one time)
-    /// @dev ERC-721 token contract => Auction    
+    /// @dev ERC-721 token contract address => Auction    
     mapping(address => Auction) public auctionForDrop;
 
     /// @notice The bids which have been placed in a given Auction
-    /// @dev ERC-721 token contract => (bidder address => Bid)
-    mapping(address => mapping(address => Bid)) public bidsForDrop;
+    /// @dev ERC-721 token contract address => (bidder address => Bid)
+    mapping(address => mapping(address => Bid)) public bidsForAuction;
 
     /// @notice The addresses who have placed and revealed a bid in a given auction
-    /// @dev ERC-721 token contract => all bidders who have revealed their bid
-    mapping(address => address[]) internal _revealedBiddersForDrop;
+    /// @dev ERC-721 token contract address => all bidders who have revealed their bid
+    mapping(address => address[]) internal _revealedBiddersForAuction;
+
+    /// @notice All possible price points at which to settle an auction, based on revealed bids
+    /// @dev ERC-721 token contract address => price point
+    mapping(address => uint96[]) public _settlePricePointsForAuction;
+
+    /// @notice All possible outcomes at which to settle an auction, based on revealed bids
+    /// @dev ERC-721 token contract address => (price point => SettleOutcome)
+    mapping(address => mapping(uint96 => SettleOutcome)) public _settleOutcomesForPricePoint;
 
     /*//////////////////////////////////////////////////////////////
                         CREATE AUCTION
@@ -222,11 +258,11 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
             // Ensure seller has first considered the settle price points before attempting to cancel
             require(settlePricePoints.length > 0, "CANNOT_CANCEL_AUCTION_BEFORE_CALCULATING_SETTLE_OPTIONS");
 
-            // Ensure none of the price point options meet minimum viable revenue
+            // Ensure none of the price point outcomes meet minimum viable revenue
             for (uint256 i = 0; i < settlePricePoints.length; i++) {
-                SettleOption storage settleOption = _settleOptionsForPricePoint[_tokenContract][settlePricePoints[i]];
+                SettleOutcome storage settleOutcome = _settleOutcomesForPricePoint[_tokenContract][settlePricePoints[i]];
                 
-                require(settleOption.revenue < auction.minimumViableRevenue, "CANNOT_CANCEL_AUCTION_WITH_VIABLE_PRICE_POINT");
+                require(settleOutcome.revenue < auction.minimumViableRevenue, "CANNOT_CANCEL_AUCTION_WITH_VIABLE_PRICE_POINT");
             }
         } else {
             require(auction.totalBalance == 0, "CANNOT_CANCEL_AUCTION_WITH_BIDS");        
@@ -292,7 +328,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         require(block.timestamp < auction.endOfBidPhase, "BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
 
         // Ensure the bidder has not placed a bid in auction already
-        require(bidsForDrop[_tokenContract][msg.sender].bidderBalance == 0, "ALREADY_PLACED_BID_IN_AUCTION");
+        require(bidsForAuction[_tokenContract][msg.sender].bidderBalance == 0, "ALREADY_PLACED_BID_IN_AUCTION");
 
         // Ensure the bid is valid
         require(msg.value > 0 ether, "VALID_BIDS_MUST_INCLUDE_ETHER");
@@ -301,7 +337,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         auction.totalBalance += uint96(msg.value);
         
         // Store the commitment hash and included ether amount
-        bidsForDrop[_tokenContract][msg.sender] = Bid({
+        bidsForAuction[_tokenContract][msg.sender] = Bid({
             commitmentHash: _commitmentHash,
             bidderBalance: uint96(msg.value),
             revealedBidAmount: 0
@@ -368,7 +404,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         require(block.timestamp >= auction.endOfBidPhase && block.timestamp < auction.endOfRevealPhase, "REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
 
         // Get the bid for the specified bidder
-        Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
+        Bid storage bid = bidsForAuction[_tokenContract][msg.sender];
 
         // Ensure bidder placed bid in auction
         require(bid.bidderBalance > 0 ether, "NO_PLACED_BID_FOUND_FOR_ADDRESS");
@@ -380,7 +416,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         require(keccak256(abi.encodePacked(_bidAmount, bytes(_salt))) == bid.commitmentHash, "REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
 
         // Store the bidder
-        _revealedBiddersForDrop[_tokenContract].push(msg.sender);
+        _revealedBiddersForAuction[_tokenContract].push(msg.sender);
 
         // Store the revealed bid amount
         uint96 bidAmount = uint96(_bidAmount);
@@ -451,30 +487,17 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// @param auction The metadata of the created auction
     event AuctionSettled(address indexed tokenContract, Auction auction);
 
-    /// TODO
-    struct SettleOption {
-        uint16 editionSize;
-        uint96 revenue;
-    }
-
-    /// TODO
-    mapping(address => uint96[]) public _settlePricePointsForAuction;
-
-    /// TODO
-    mapping(address => mapping(uint96 => SettleOption)) public _settleOptionsForPricePoint;
-
     /// @notice Calculate edition size and revenue for each possible price point
     /// @dev Cheaper on subsequent calls but idempotent -- after the initial call when
-    /// calculations have been performed and stored, the settle options will not change.
+    /// calculations have been performed and stored, the settle outcomes will not change.
     /// Function visibility is public instead of external, to support settleAuction calling it.
     /// @param _tokenContract The address of the ERC-721 drop contract
-    /// @return A tuple of 3 arrays representing the settle options --
+    /// @return A tuple of 3 arrays representing the settle outcomes --
     /// the possible price points at which to settle, along with the 
     /// resulting edition sizes and amounts of revenue generated
-    function calculateSettleOptions(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
+    function calculateSettleOutcomes(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
 
-        // TODO x improve algorithm =P
-        // TODO x gas optimizations -- consider other, less storage-intensive options
+        // TODO improve algorithm =P
 
         // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
@@ -486,41 +509,41 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         require(block.timestamp >= auction.endOfRevealPhase && block.timestamp < auction.endOfSettlePhase, "SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
 
         // Get the revealed bidders for the auction
-        address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
+        address[] storage bidders = _revealedBiddersForAuction[_tokenContract];
 
         // Ensure the auction has at least 1 revealed bid
         require(bidders.length > 0, "NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
 
         uint96[] storage settlePricePoints = _settlePricePointsForAuction[_tokenContract];
-        mapping(uint96 => SettleOption) storage settleOptions = _settleOptionsForPricePoint[_tokenContract];
+        mapping(uint96 => SettleOutcome) storage settleOutcomes = _settleOutcomesForPricePoint[_tokenContract];
 
         if (settlePricePoints.length == 0) { // only calculate and store once, otherwise just return from storage
             for (uint256 i = 0; i < bidders.length; i++) {
                 address bidder = bidders[i];
-                uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
-                SettleOption storage settleOption = settleOptions[bidAmount];
+                uint96 bidAmount = bidsForAuction[_tokenContract][bidder].revealedBidAmount;
+                SettleOutcome storage settleOutcome = settleOutcomes[bidAmount];
 
-                if (settleOption.editionSize == 0) {
+                if (settleOutcome.editionSize == 0) {
                     settlePricePoints.push(bidAmount);
-                    settleOption.editionSize = 1;
+                    settleOutcome.editionSize = 1;
                 }
             }
 
             for (uint256 j = 0; j < settlePricePoints.length; j++) {
                 uint96 settlePricePoint = settlePricePoints[j];
-                SettleOption storage settleOption = settleOptions[settlePricePoint];
+                SettleOutcome storage settleOutcome = settleOutcomes[settlePricePoint];
                 
                 for (uint256 k = 0; k < bidders.length; k++) {
                     address bidder = bidders[k];
-                    uint96 bidAmount = bidsForDrop[_tokenContract][bidder].revealedBidAmount;
+                    uint96 bidAmount = bidsForAuction[_tokenContract][bidder].revealedBidAmount;
 
                     if (bidAmount >= settlePricePoint) {
-                        settleOption.editionSize++;
-                        settleOption.revenue += settlePricePoint;
+                        settleOutcome.editionSize++;
+                        settleOutcome.revenue += settlePricePoint;
                     }
                 }
 
-                settleOption.editionSize--; // because 1st bidder at this settle price was double counted
+                settleOutcome.editionSize--; // because 1st bidder at this settle price was double counted
             }
         }
 
@@ -530,15 +553,15 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
         for (uint256 m = 0; m < settlePricePoints.length; m++) {
             uint96 settlePricePoint = settlePricePoints[m];
-            SettleOption storage settleOption = settleOptions[settlePricePoint];
+            SettleOutcome storage settleOutcome = settleOutcomes[settlePricePoint];
 
-            if (settleOption.revenue < auction.minimumViableRevenue) {
-                settleOption.revenue = 0; // zero out, because not viable settle option
+            if (settleOutcome.revenue < auction.minimumViableRevenue) {
+                settleOutcome.revenue = 0; // zero out, because not viable settle outcome
             }
 
             pricePoints[m] = settlePricePoint;
-            editionSizes[m] = settleOption.editionSize;
-            revenues[m] = settleOption.revenue;            
+            editionSizes[m] = settleOutcome.editionSize;
+            revenues[m] = settleOutcome.revenue;            
         }
 
         return (pricePoints, editionSizes, revenues);
@@ -549,40 +572,40 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// @param _settlePricePoint The price point at which to settle the auction
     function settleAuction(address _tokenContract, uint96 _settlePricePoint) external nonReentrant {
 
-        // TODO x gas optimizations
-        // TODO x document pragmatic max edition size / winning bidders
-        // TODO x consider storing winningBidders during calculateSettleOptions
-        // TODO x look for more ways to consolidate business logic with calculateSettleOptions
+        // TODO gas optimization
+        // TODO document pragmatic max edition size / winning bidders
+        // TODO consider storing winningBidders during calculateSettleOutcomes
+        // TODO look for ways to consolidate business logic with calculateSettleOutcomes
 
         // Get the auction
         Auction storage auction = auctionForDrop[_tokenContract];
 
-        // Calculate settle options, if not done yet (also includes check for auction existence)
+        // Calculate settle outcomes, if not done yet (also includes check for auction existence)
         if (_settlePricePointsForAuction[_tokenContract].length == 0) {
-            calculateSettleOptions(_tokenContract);
+            calculateSettleOutcomes(_tokenContract);
         }
 
-        // Get the settle option at this price point
-        SettleOption storage settleOption = _settleOptionsForPricePoint[_tokenContract][_settlePricePoint];
+        // Get the settle outcome at this price point
+        SettleOutcome storage settleOutcome = _settleOutcomesForPricePoint[_tokenContract][_settlePricePoint];
         
         // Ensure that revenue meets minimum viable revenue
-        require(settleOption.revenue >= auction.minimumViableRevenue, "DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
+        require(settleOutcome.revenue >= auction.minimumViableRevenue, "DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
 
         // Store the current total balance and final auction details
-        auction.totalBalance -= settleOption.revenue;
-        auction.settledRevenue = settleOption.revenue;
+        auction.totalBalance -= settleOutcome.revenue;
+        auction.settledRevenue = settleOutcome.revenue;
         auction.settledPricePoint = _settlePricePoint;
-        auction.settledEditionSize = settleOption.editionSize;
+        auction.settledEditionSize = settleOutcome.editionSize;
 
         // TODO store the fact that an auction has been settled and (1) update endOfSettlePhase
         // to enter cleanup phase immediately and (2) clean up unneeded storage (and allow
         // bidders to claim refunds ASAP)
 
         // Get the bids for this auction
-        mapping(address => Bid) storage bids = bidsForDrop[_tokenContract];
+        mapping(address => Bid) storage bids = bidsForAuction[_tokenContract];
 
         // Get the bidders who revealed in this auction
-        address[] storage bidders = _revealedBiddersForDrop[_tokenContract];
+        address[] storage bidders = _revealedBiddersForAuction[_tokenContract];
 
         // Loop through bids to determine winning bidders and update bidder balances
         uint256 index;
@@ -669,7 +692,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         require(block.timestamp >= auction.endOfSettlePhase, "REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
 
         // Return the balance for the specified bidder
-        return bidsForDrop[_tokenContract][msg.sender].bidderBalance;
+        return bidsForAuction[_tokenContract][msg.sender].bidderBalance;
     }
 
     /// @notice Claim refund -- if winner, any additional ether sent above your
@@ -688,7 +711,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         require(block.timestamp >= auction.endOfSettlePhase, "REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
 
         // Get the balance for the specified bidder
-        Bid storage bid = bidsForDrop[_tokenContract][msg.sender];
+        Bid storage bid = bidsForAuction[_tokenContract][msg.sender];
         uint96 bidderBalance = bid.bidderBalance;
 
         // Ensure bidder revealed a bid and has a leftover balance

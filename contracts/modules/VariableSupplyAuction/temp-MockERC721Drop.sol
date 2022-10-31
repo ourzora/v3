@@ -5,10 +5,6 @@ pragma solidity 0.8.10;
                     Temp Mock ERC721Drop interface
 //////////////////////////////////////////////////////////////*/
 
-// TODO consider other approaches that keep VSA module ignorant of ERC-721 Drop
-// implementation specifics, including wrapping in a ERC721DropHelper or similar,
-// which could extend BaseTransferHelper
-
 // TODO improve mocking pattern for OZ AccessControlEnumerable
 
 // TODO use actual function for setting edition sizes post-initialization from Iain
