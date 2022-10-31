@@ -4,7 +4,7 @@ participant VariableSupplyAuction
 
 Seller -> VariableSupplyAuction : cancelAuction()
 
-VariableSupplyAuction -> VariableSupplyAuction : validate no bids placed yet
+VariableSupplyAuction -> VariableSupplyAuction : validate no bids placed yet, or no settle price points meet minimum viable revenue
 VariableSupplyAuction -> VariableSupplyAuction : emit AuctionCanceled()
 VariableSupplyAuction -> VariableSupplyAuction : delete auction
 

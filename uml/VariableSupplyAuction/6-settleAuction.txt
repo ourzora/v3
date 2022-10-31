@@ -2,16 +2,22 @@
 actor Seller
 participant VariableSupplyAuction
 participant ERC721Drop
+skinparam MaxAsciiMessageLength 10
 
 Seller -> VariableSupplyAuction : settleAuction()
 
-TODO x review all UML diagrams
-TODO x update to consolidate biz logic and add minimum viable revenue
+alt Not calculated yet?
 
-VariableSupplyAuction -> VariableSupplyAuction : validate auction is in settle phase 
-VariableSupplyAuction -> VariableSupplyAuction : validate auction not settled yet
-VariableSupplyAuction -> VariableSupplyAuction : based on chosen price point, calculate and store final edition size and winning bidders
-VariableSupplyAuction -> VariableSupplyAuction : update bidder balances to final available refund amounts
+    VariableSupplyAuction -> VariableSupplyAuction : validate auction is in settle phase, and there are revealed bids
+    VariableSupplyAuction ->  VariableSupplyAuction : calculate and store possible settle outcomes
+
+else noop
+
+end
+
+VariableSupplyAuction -> VariableSupplyAuction : validate chosen price point meets minimum viable revenue
+VariableSupplyAuction -> VariableSupplyAuction : store final price point, revenue, and edition size
+VariableSupplyAuction -> VariableSupplyAuction : determine winning bidders and update balances to final available refunds
 VariableSupplyAuction -> ERC721Drop : setEditionSize()
 ERC721Drop -> ERC721Drop : update drop edition size
 VariableSupplyAuction -> ERC721Drop : adminMintAirdrop()

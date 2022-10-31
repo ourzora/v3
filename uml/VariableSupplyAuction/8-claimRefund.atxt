@@ -1,30 +1,30 @@
-        ,-.                                                                  
-        `-'                                                                  
-        /|\                                                                  
-         |             ,---------------------.                               
-        / \            |VariableSupplyAuction|                               
-      Bidder           `----------+----------'                               
-        |      claimRefund()      |                                          
-        | ----------------------->|                                          
-        |                         |                                          
-        |                         ----.                                      
-        |                             | validate auction is in cleanup phase 
-        |                         <---'                                      
-        |                         |                                          
-        |                         ----.                                      
-        |                             | clear bidder available refund        
-        |                         <---'                                      
-        |                         |                                          
-        |                         ----.                                      
-        |                             | handle bidder available refund payout
-        |                         <---'                                      
-        |                         |                                          
-        |                         ----.                                      
-        |                             | emit RefundClaimed()                 
-        |                         <---'                                      
-      Bidder           ,----------+----------.                               
-        ,-.            |VariableSupplyAuction|                               
-        `-'            `---------------------'                               
-        /|\                                                                  
-         |                                                                   
-        / \                                                                  
+        ,-.                                                                                                     
+        `-'                                                                                                     
+        /|\                                                                                                     
+         |             ,---------------------.                                                                  
+        / \            |VariableSupplyAuction|                                                                  
+      Bidder           `----------+----------'                                                                  
+        |      claimRefund()      |                                                                             
+        | ----------------------->|                                                                             
+        |                         |                                                                             
+        |                         ----.                                                                         
+        |                             | validate auction is in cleanup phase, and bidder has an available refund
+        |                         <---'                                                                         
+        |                         |                                                                             
+        |                         ----.                                                                         
+        |                             | clear bidder available refund                                           
+        |                         <---'                                                                         
+        |                         |                                                                             
+        |                         ----.                                                                         
+        |                             | handle bidder available refund payout                                   
+        |                         <---'                                                                         
+        |                         |                                                                             
+        |                         ----.                                                                         
+        |                             | emit RefundClaimed()                                                    
+        |                         <---'                                                                         
+      Bidder           ,----------+----------.                                                                  
+        ,-.            |VariableSupplyAuction|                                                                  
+        `-'            `---------------------'                                                                  
+        /|\                                                                                                     
+         |                                                                                                      
+        / \                                                                                                     

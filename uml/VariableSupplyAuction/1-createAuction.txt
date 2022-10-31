@@ -4,7 +4,7 @@ participant VariableSupplyAuction
 
 Seller -> VariableSupplyAuction : createAuction()
 
-VariableSupplyAuction -> VariableSupplyAuction : calculate phase end times
+VariableSupplyAuction -> VariableSupplyAuction : validate no existing auction for drop yet
 VariableSupplyAuction -> VariableSupplyAuction : store auction metadata
 VariableSupplyAuction -> VariableSupplyAuction : emit AuctionCreated()
 

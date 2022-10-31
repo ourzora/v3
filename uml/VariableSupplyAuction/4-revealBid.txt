@@ -4,8 +4,7 @@ participant VariableSupplyAuction
 
 Bidder -> VariableSupplyAuction : revealBid()
 
-VariableSupplyAuction -> VariableSupplyAuction : validate auction is in reveal phase
-VariableSupplyAuction -> VariableSupplyAuction : validate revealed bid matches sealed bid
+VariableSupplyAuction -> VariableSupplyAuction : validate auction is in reveal phase, and revealed bid matches sealed bid
 VariableSupplyAuction -> VariableSupplyAuction : store revealed bid
 VariableSupplyAuction -> VariableSupplyAuction : emit BidRevealed()
 

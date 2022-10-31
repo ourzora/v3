@@ -73,8 +73,8 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         uint32 endOfRevealPhase;
         uint32 endOfSettlePhase;
         uint96 totalBalance;
-        uint96 settledRevenue;
         uint96 settledPricePoint;
+        uint96 settledRevenue;
         uint16 settledEditionSize;
     }
 
@@ -128,32 +128,32 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                         CREATE AUCTION
     //////////////////////////////////////////////////////////////*/
 
-    //     ,-.                                                      
-    //     `-'                                                      
-    //     /|\                                                      
-    //      |             ,---------------------.                   
-    //     / \            |VariableSupplyAuction|                   
-    //   Seller           `----------+----------'                   
-    //     |     createAuction()     |                              
-    //     | ----------------------->|                              
-    //     |                         |                              
-    //     |                         ----.                          
-    //     |                             | calculate phase end times
-    //     |                         <---'                          
-    //     |                         |                              
-    //     |                         ----.                          
-    //     |                             | store auction metadata   
-    //     |                         <---'                          
-    //     |                         |                              
-    //     |                         ----.                          
-    //     |                             | emit AuctionCreated()    
-    //     |                         <---'                          
-    //   Seller           ,----------+----------.                   
-    //     ,-.            |VariableSupplyAuction|                   
-    //     `-'            `---------------------'                   
-    //     /|\                                                      
-    //      |                                                       
-    //     / \                                                      
+    //     ,-.                                                                      
+    //     `-'                                                                      
+    //     /|\                                                                      
+    //      |             ,---------------------.                                   
+    //     / \            |VariableSupplyAuction|                                   
+    //   Seller           `----------+----------'                                   
+    //     |     createAuction()     |                                              
+    //     | ----------------------->|                                              
+    //     |                         |                                              
+    //     |                         ----.                                          
+    //     |                             | validate no existing auction for drop yet
+    //     |                         <---'                                          
+    //     |                         |                                              
+    //     |                         ----.                                          
+    //     |                             | store auction metadata                   
+    //     |                         <---'                                          
+    //     |                         |                                              
+    //     |                         ----.                                          
+    //     |                             | emit AuctionCreated()                    
+    //     |                         <---'                                          
+    //   Seller           ,----------+----------.                                   
+    //     ,-.            |VariableSupplyAuction|                                   
+    //     `-'            `---------------------'                                   
+    //     /|\                                                                      
+    //      |                                                                       
+    //     / \                                                                                                          
 
     /// @notice Emitted when an auction is created
     /// @param tokenContract The address of the ERC-721 drop contract
@@ -205,32 +205,32 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                         CANCEL AUCTION
     //////////////////////////////////////////////////////////////*/
 
-    //     ,-.                                                        
-    //     `-'                                                        
-    //     /|\                                                        
-    //      |             ,---------------------.                     
-    //     / \            |VariableSupplyAuction|                     
-    //   Seller           `----------+----------'                     
-    //     |     cancelAuction()     |                                
-    //     | ----------------------->|                                
-    //     |                         |                                
-    //     |                         ----.                            
-    //     |                             | validate no bids placed yet
-    //     |                         <---'                            
-    //     |                         |                                
-    //     |                         ----.                            
-    //     |                             | emit AuctionCanceled()     
-    //     |                         <---'                            
-    //     |                         |                                
-    //     |                         ----.                            
-    //     |                             | delete auction             
-    //     |                         <---'                            
-    //   Seller           ,----------+----------.                     
-    //     ,-.            |VariableSupplyAuction|                     
-    //     `-'            `---------------------'                     
-    //     /|\                                                        
-    //      |                                                         
-    //     / \                                                        
+    //     ,-.                                                                                                               
+    //     `-'                                                                                                               
+    //     /|\                                                                                                               
+    //      |             ,---------------------.                                                                            
+    //     / \            |VariableSupplyAuction|                                                                            
+    //   Seller           `----------+----------'                                                                            
+    //     |     cancelAuction()     |                                                                                       
+    //     | ----------------------->|                                                                                       
+    //     |                         |                                                                                       
+    //     |                         ----.                                                                                   
+    //     |                             | validate no bids placed yet, or no settle price points meet minimum viable revenue
+    //     |                         <---'                                                                                   
+    //     |                         |                                                                                       
+    //     |                         ----.                                                                                   
+    //     |                             | emit AuctionCanceled()                                                            
+    //     |                         <---'                                                                                   
+    //     |                         |                                                                                       
+    //     |                         ----.                                                                                   
+    //     |                             | delete auction                                                                    
+    //     |                         <---'                                                                                   
+    //   Seller           ,----------+----------.                                                                            
+    //     ,-.            |VariableSupplyAuction|                                                                            
+    //     `-'            `---------------------'                                                                            
+    //     /|\                                                                                                               
+    //      |                                                                                                                
+    //     / \                                                                                                               
 
     /// @notice Emitted when an auction is canceled
     /// @param tokenContract The address of the ERC-721 drop contract
@@ -280,32 +280,32 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                         PLACE BID
     //////////////////////////////////////////////////////////////*/
 
-    //     ,-.                                                                        
-    //     `-'                                                                        
-    //     /|\                                                                        
-    //      |             ,---------------------.                                     
-    //     / \            |VariableSupplyAuction|                                     
-    //   Bidder           `----------+----------'                                     
-    //     |       placeBid()        |                                                
-    //     | ----------------------->|                                                
-    //     |                         |                                                
-    //     |                         ----.                                            
-    //     |                             | validate auction is in bid phase           
-    //     |                         <---'                                            
-    //     |                         |                                                
-    //     |                         ----.                                            
-    //     |                             | update auction balance and store sealed bid
-    //     |                         <---'                                            
-    //     |                         |                                                
-    //     |                         ----.                                            
-    //     |                             | emit BidPlaced()                           
-    //     |                         <---'                                            
-    //   Bidder           ,----------+----------.                                     
-    //     ,-.            |VariableSupplyAuction|                                     
-    //     `-'            `---------------------'                                     
-    //     /|\                                                                        
-    //      |                                                                         
-    //     / \                                                                        
+    //     ,-.                                                                                    
+    //     `-'                                                                                    
+    //     /|\                                                                                    
+    //      |             ,---------------------.                                                 
+    //     / \            |VariableSupplyAuction|                                                 
+    //   Bidder           `----------+----------'                                                 
+    //     |       placeBid()        |                                                            
+    //     | ----------------------->|                                                            
+    //     |                         |                                                            
+    //     |                         ----.                                                        
+    //     |                             | validate auction is in bid phase, and no bid placed yet
+    //     |                         <---'                                                        
+    //     |                         |                                                            
+    //     |                         ----.                                                        
+    //     |                             | update auction balance and store sealed bid            
+    //     |                         <---'                                                        
+    //     |                         |                                                            
+    //     |                         ----.                                                        
+    //     |                             | emit BidPlaced()                                       
+    //     |                         <---'                                                        
+    //   Bidder           ,----------+----------.                                                 
+    //     ,-.            |VariableSupplyAuction|                                                 
+    //     `-'            `---------------------'                                                 
+    //     /|\                                                                                    
+    //      |                                                                                     
+    //     / \                                                                                    
 
     /// @notice Emitted when a bid is placed
     /// @param tokenContract The address of the ERC-721 drop contract
@@ -352,36 +352,32 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                         REVEAL BID
     //////////////////////////////////////////////////////////////*/
 
-    //     ,-.                                                                     
-    //     `-'                                                                     
-    //     /|\                                                                     
-    //      |             ,---------------------.                                  
-    //     / \            |VariableSupplyAuction|                                  
-    //   Bidder           `----------+----------'                                  
-    //     |       revealBid()       |                                             
-    //     | ----------------------->|                                             
-    //     |                         |                                             
-    //     |                         ----.                                         
-    //     |                             | validate auction is in reveal phase     
-    //     |                         <---'                                         
-    //     |                         |                                             
-    //     |                         ----.                                         
-    //     |                             | validate revealed bid matches sealed bid
-    //     |                         <---'                                         
-    //     |                         |                                             
-    //     |                         ----.                                         
-    //     |                             | store revealed bid                      
-    //     |                         <---'                                         
-    //     |                         |                                             
-    //     |                         ----.                                         
-    //     |                             | emit BidRevealed()                      
-    //     |                         <---'                                         
-    //   Bidder           ,----------+----------.                                  
-    //     ,-.            |VariableSupplyAuction|                                  
-    //     `-'            `---------------------'                                  
-    //     /|\                                                                     
-    //      |                                                                      
-    //     / \                                                                     
+    //     ,-.                                                                                                     
+    //     `-'                                                                                                     
+    //     /|\                                                                                                     
+    //      |             ,---------------------.                                                                  
+    //     / \            |VariableSupplyAuction|                                                                  
+    //   Bidder           `----------+----------'                                                                  
+    //     |       revealBid()       |                                                                             
+    //     | ----------------------->|                                                                             
+    //     |                         |                                                                             
+    //     |                         ----.                                                                         
+    //     |                             | validate auction is in reveal phase, and revealed bid matches sealed bid
+    //     |                         <---'                                                                         
+    //     |                         |                                                                             
+    //     |                         ----.                                                                         
+    //     |                             | store revealed bid                                                      
+    //     |                         <---'                                                                         
+    //     |                         |                                                                             
+    //     |                         ----.                                                                         
+    //     |                             | emit BidRevealed()                                                      
+    //     |                         <---'                                                                         
+    //   Bidder           ,----------+----------.                                                                  
+    //     ,-.            |VariableSupplyAuction|                                                                  
+    //     `-'            `---------------------'                                                                  
+    //     /|\                                                                                                     
+    //      |                                                                                                      
+    //     / \                                                                                                     
 
     /// @notice Emitted when a bid is revealed
     /// @param tokenContract The address of the ERC-721 drop contract
@@ -431,58 +427,68 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                         SETTLE AUCTION
     //////////////////////////////////////////////////////////////*/
 
-    //     ,-.                                                                                                                                                     
-    //     `-'                                                                                                                                                     
-    //     /|\                                                                                                                                                     
-    //      |             ,---------------------.                                                                           ,----------.                           
-    //     / \            |VariableSupplyAuction|                                                                           |ERC721Drop|                           
-    //   Seller           `----------+----------'                                                                           `----+-----'                           
-    //     |     settleAuction()     |                                                                                           |                                 
-    //     | ----------------------->|                                                                                           |                                 
-    //     |                         |                                                                                           |                                 
-    //     |                         ----.                                                                                       |                                 
-    //     |                             | validate auction is in settle phase                                                   |                                 
-    //     |                         <---'                                                                                       |                                 
-    //     |                         |                                                                                           |                                 
-    //     |                         ----.                                                                                       |                                 
-    //     |                             | validate auction not settled yet                                                      |                                 
-    //     |                         <---'                                                                                       |                                 
-    //     |                         |                                                                                           |                                 
-    //     |                         ----.                                                                                                                         
-    //     |                             | based on chosen price point, calculate and store final edition size and winning bidders                                 
-    //     |                         <---'                                                                                                                         
-    //     |                         |                                                                                           |                                 
-    //     |                         ----.                                                                                       |                                 
-    //     |                             | update bidder balances to final available refund amounts                              |                                 
-    //     |                         <---'                                                                                       |                                 
-    //     |                         |                                                                                           |                                 
-    //     |                         |                                     setEditionSize()                                      |                                 
-    //     |                         |------------------------------------------------------------------------------------------->                                 
-    //     |                         |                                                                                           |                                 
-    //     |                         |                                                                                           |----.                            
-    //     |                         |                                                                                           |    | update drop edition size   
-    //     |                         |                                                                                           |<---'                            
-    //     |                         |                                                                                           |                                 
-    //     |                         |                                    adminMintAirdrop()                                     |                                 
-    //     |                         |------------------------------------------------------------------------------------------->                                 
-    //     |                         |                                                                                           |                                 
-    //     |                         |                                                                                           |----.                            
-    //     |                         |                                                                                           |    | mint NFT to winning bidders
-    //     |                         |                                                                                           |<---'                            
-    //     |                         |                                                                                           |                                 
-    //     |                         ----.                                                                                       |                                 
-    //     |                             | handle seller funds recipient payout                                                  |                                 
-    //     |                         <---'                                                                                       |                                 
-    //     |                         |                                                                                           |                                 
-    //     |                         ----.                                                                                       |                                 
-    //     |                             | emit AuctionSettled()                                                                 |                                 
-    //     |                         <---'                                                                                       |                                 
-    //   Seller           ,----------+----------.                                                                           ,----+-----.                           
-    //     ,-.            |VariableSupplyAuction|                                                                           |ERC721Drop|                           
-    //     `-'            `---------------------'                                                                           `----------'                           
-    //     /|\                                                                                                                                                     
-    //      |                                                                                                                                                      
-    //     / \                                                                                                                                                     
+    //      ,-.                                                                                                                              
+    //      `-'                                                                                                                              
+    //      /|\                                                                                                                              
+    //       |     ,---------------------.                                                            ,----------.                           
+    //      / \    |VariableSupplyAuction|                                                            |ERC721Drop|                           
+    //    Seller   `----------+----------'                                                            `----+-----'                           
+    //      | settleAuction() |                                                                            |                                 
+    //      | --------------->|                                                                            |                                 
+    //      |                 |                                                                            |                                 
+    //      |                 |                                                                            |                                 
+    //      |___________________________________________________________________________________________   |                                 
+    //      |! ALT  /  Not calculated yet?                                                              !  |                                 
+    //      |!_____/          |                                                                         !  |                                 
+    //      |!                ----.                                                                     !  |                                 
+    //      |!                    | validate auction is in settle phase, and there are revealed bids    !  |                                 
+    //      |!                <---'                                                                     !  |                                 
+    //      |!                |                                                                         !  |                                 
+    //      |!                ----.                                                                     !  |                                 
+    //      |!                    | calculate and store possible settle outcomes                        !  |                                 
+    //      |!                <---'                                                                     !  |                                 
+    //      |!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!  |                                 
+    //      |!~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!  |                                 
+    //      |                 |                                                                            |                                 
+    //      |                 ----.                                                                        |                                 
+    //      |                     | validate chosen price point meets minimum viable revenue               |                                 
+    //      |                 <---'                                                                        |                                 
+    //      |                 |                                                                            |                                 
+    //      |                 ----.                                                                        |                                 
+    //      |                     | store final price point, revenue, and edition size                     |                                 
+    //      |                 <---'                                                                        |                                 
+    //      |                 |                                                                            |                                 
+    //      |                 ----.                                                                                                          
+    //      |                     | determine winning bidders and update balances to final available refunds                                 
+    //      |                 <---'                                                                                                          
+    //      |                 |                                                                            |                                 
+    //      |                 |                              setEditionSize()                              |                                 
+    //      |                 |---------------------------------------------------------------------------->                                 
+    //      |                 |                                                                            |                                 
+    //      |                 |                                                                            |----.                            
+    //      |                 |                                                                            |    | update drop edition size   
+    //      |                 |                                                                            |<---'                            
+    //      |                 |                                                                            |                                 
+    //      |                 |                             adminMintAirdrop()                             |                                 
+    //      |                 |---------------------------------------------------------------------------->                                 
+    //      |                 |                                                                            |                                 
+    //      |                 |                                                                            |----.                            
+    //      |                 |                                                                            |    | mint NFT to winning bidders
+    //      |                 |                                                                            |<---'                            
+    //      |                 |                                                                            |                                 
+    //      |                 ----.                                                                        |                                 
+    //      |                     | handle seller funds recipient payout                                   |                                 
+    //      |                 <---'                                                                        |                                 
+    //      |                 |                                                                            |                                 
+    //      |                 ----.                                                                        |                                 
+    //      |                     | emit AuctionSettled()                                                  |                                 
+    //      |                 <---'                                                                        |                                 
+    //    Seller   ,----------+----------.                                                            ,----+-----.                           
+    //      ,-.    |VariableSupplyAuction|                                                            |ERC721Drop|                           
+    //      `-'    `---------------------'                                                            `----------'                           
+    //      /|\                                                                                                                              
+    //       |                                                                                                                               
+    //      / \                                                                                                                              
 
     /// @notice Emitted when an auction is settled
     /// @param tokenContract The address of the ERC-721 drop contract
@@ -499,7 +505,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// resulting edition sizes and amounts of revenue generated
     function calculateSettleOutcomes(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
 
-        // TODO improve algorithm =P
+        // TODO x improve algorithm =P
 
         // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
@@ -596,13 +602,13 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
         // Store the current total balance and final auction details
         auction.totalBalance -= settleOutcome.revenue;
-        auction.settledRevenue = settleOutcome.revenue;
         auction.settledPricePoint = _settlePricePoint;
+        auction.settledRevenue = settleOutcome.revenue;
         auction.settledEditionSize = settleOutcome.editionSize;
 
-        // TODO store the fact that an auction has been settled and (1) update endOfSettlePhase
-        // to enter cleanup phase immediately and (2) clean up unneeded storage (and allow
-        // bidders to claim refunds ASAP)
+        // TODO store the fact that an auction has been settled and (1) disallow settling
+        // again, (2) update endOfSettlePhase to enter cleanup phase immediately, and
+        // (3) clean up unneeded storage (and allow bidders to claim refunds ASAP)
 
         // Get the bids for this auction
         mapping(address => Bid) storage bids = bidsForAuction[_tokenContract];
@@ -643,36 +649,36 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                         CLAIM REFUND
     //////////////////////////////////////////////////////////////*/
 
-    //     ,-.                                                                  
-    //     `-'                                                                  
-    //     /|\                                                                  
-    //      |             ,---------------------.                               
-    //     / \            |VariableSupplyAuction|                               
-    //   Bidder           `----------+----------'                               
-    //     |      claimRefund()      |                                          
-    //     | ----------------------->|                                          
-    //     |                         |                                          
-    //     |                         ----.                                      
-    //     |                             | validate auction is in cleanup phase 
-    //     |                         <---'                                      
-    //     |                         |                                          
-    //     |                         ----.                                      
-    //     |                             | clear bidder available refund        
-    //     |                         <---'                                      
-    //     |                         |                                          
-    //     |                         ----.                                      
-    //     |                             | handle bidder available refund payout
-    //     |                         <---'                                      
-    //     |                         |                                          
-    //     |                         ----.                                      
-    //     |                             | emit RefundClaimed()                 
-    //     |                         <---'                                      
-    //   Bidder           ,----------+----------.                               
-    //     ,-.            |VariableSupplyAuction|                               
-    //     `-'            `---------------------'                               
-    //     /|\                                                                  
-    //      |                                                                   
-    //     / \                                                                  
+    //     ,-.                                                                                                     
+    //     `-'                                                                                                     
+    //     /|\                                                                                                     
+    //      |             ,---------------------.                                                                  
+    //     / \            |VariableSupplyAuction|                                                                  
+    //   Bidder           `----------+----------'                                                                  
+    //     |      claimRefund()      |                                                                             
+    //     | ----------------------->|                                                                             
+    //     |                         |                                                                             
+    //     |                         ----.                                                                         
+    //     |                             | validate auction is in cleanup phase, and bidder has an available refund
+    //     |                         <---'                                                                         
+    //     |                         |                                                                             
+    //     |                         ----.                                                                         
+    //     |                             | clear bidder available refund                                           
+    //     |                         <---'                                                                         
+    //     |                         |                                                                             
+    //     |                         ----.                                                                         
+    //     |                             | handle bidder available refund payout                                   
+    //     |                         <---'                                                                         
+    //     |                         |                                                                             
+    //     |                         ----.                                                                         
+    //     |                             | emit RefundClaimed()                                                    
+    //     |                         <---'                                                                         
+    //   Bidder           ,----------+----------.                                                                  
+    //     ,-.            |VariableSupplyAuction|                                                                  
+    //     `-'            `---------------------'                                                                  
+    //     /|\                                                                                                     
+    //      |                                                                                                      
+    //     / \                                                                                                     
 
     /// @notice Emitted when a refund is claimed
     /// @param tokenContract The address of the ERC-721 drop contract
@@ -717,11 +723,13 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Bid storage bid = bidsForAuction[_tokenContract][msg.sender];
         uint96 bidderBalance = bid.bidderBalance;
 
-        // Ensure bidder revealed a bid and has a leftover balance
+        // Ensure bidder has a leftover balance
         require(bid.revealedBidAmount > 0 && bidderBalance > 0, "NO_REFUND_AVAILABLE");
 
         // Clear bidder balance
         bid.bidderBalance = 0;
+
+        // TODO x update totalBalance and add test
 
         // Transfer the bidder's available refund balance to the bidder
         _handleOutgoingTransfer(msg.sender, bidderBalance, address(0), 50_000);

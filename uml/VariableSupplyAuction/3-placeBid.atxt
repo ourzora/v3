@@ -1,26 +1,26 @@
-        ,-.                                                                        
-        `-'                                                                        
-        /|\                                                                        
-         |             ,---------------------.                                     
-        / \            |VariableSupplyAuction|                                     
-      Bidder           `----------+----------'                                     
-        |       placeBid()        |                                                
-        | ----------------------->|                                                
-        |                         |                                                
-        |                         ----.                                            
-        |                             | validate auction is in bid phase           
-        |                         <---'                                            
-        |                         |                                                
-        |                         ----.                                            
-        |                             | update auction balance and store sealed bid
-        |                         <---'                                            
-        |                         |                                                
-        |                         ----.                                            
-        |                             | emit BidPlaced()                           
-        |                         <---'                                            
-      Bidder           ,----------+----------.                                     
-        ,-.            |VariableSupplyAuction|                                     
-        `-'            `---------------------'                                     
-        /|\                                                                        
-         |                                                                         
-        / \                                                                        
+        ,-.                                                                                    
+        `-'                                                                                    
+        /|\                                                                                    
+         |             ,---------------------.                                                 
+        / \            |VariableSupplyAuction|                                                 
+      Bidder           `----------+----------'                                                 
+        |       placeBid()        |                                                            
+        | ----------------------->|                                                            
+        |                         |                                                            
+        |                         ----.                                                        
+        |                             | validate auction is in bid phase, and no bid placed yet
+        |                         <---'                                                        
+        |                         |                                                            
+        |                         ----.                                                        
+        |                             | update auction balance and store sealed bid            
+        |                         <---'                                                        
+        |                         |                                                            
+        |                         ----.                                                        
+        |                             | emit BidPlaced()                                       
+        |                         <---'                                                        
+      Bidder           ,----------+----------.                                                 
+        ,-.            |VariableSupplyAuction|                                                 
+        `-'            `---------------------'                                                 
+        /|\                                                                                    
+         |                                                                                     
+        / \                                                                                    

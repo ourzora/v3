@@ -1,52 +1,62 @@
-        ,-.                                                                                                                                                     
-        `-'                                                                                                                                                     
-        /|\                                                                                                                                                     
-         |             ,---------------------.                                                                           ,----------.                           
-        / \            |VariableSupplyAuction|                                                                           |ERC721Drop|                           
-      Seller           `----------+----------'                                                                           `----+-----'                           
-        |     settleAuction()     |                                                                                           |                                 
-        | ----------------------->|                                                                                           |                                 
-        |                         |                                                                                           |                                 
-        |                         ----.                                                                                       |                                 
-        |                             | validate auction is in settle phase                                                   |                                 
-        |                         <---'                                                                                       |                                 
-        |                         |                                                                                           |                                 
-        |                         ----.                                                                                       |                                 
-        |                             | validate auction not settled yet                                                      |                                 
-        |                         <---'                                                                                       |                                 
-        |                         |                                                                                           |                                 
-        |                         ----.                                                                                                                         
-        |                             | based on chosen price point, calculate and store final edition size and winning bidders                                 
-        |                         <---'                                                                                                                         
-        |                         |                                                                                           |                                 
-        |                         ----.                                                                                       |                                 
-        |                             | update bidder balances to final available refund amounts                              |                                 
-        |                         <---'                                                                                       |                                 
-        |                         |                                                                                           |                                 
-        |                         |                                     setEditionSize()                                      |                                 
-        |                         |------------------------------------------------------------------------------------------->                                 
-        |                         |                                                                                           |                                 
-        |                         |                                                                                           |----.                            
-        |                         |                                                                                           |    | update drop edition size   
-        |                         |                                                                                           |<---'                            
-        |                         |                                                                                           |                                 
-        |                         |                                    adminMintAirdrop()                                     |                                 
-        |                         |------------------------------------------------------------------------------------------->                                 
-        |                         |                                                                                           |                                 
-        |                         |                                                                                           |----.                            
-        |                         |                                                                                           |    | mint NFT to winning bidders
-        |                         |                                                                                           |<---'                            
-        |                         |                                                                                           |                                 
-        |                         ----.                                                                                       |                                 
-        |                             | handle seller funds recipient payout                                                  |                                 
-        |                         <---'                                                                                       |                                 
-        |                         |                                                                                           |                                 
-        |                         ----.                                                                                       |                                 
-        |                             | emit AuctionSettled()                                                                 |                                 
-        |                         <---'                                                                                       |                                 
-      Seller           ,----------+----------.                                                                           ,----+-----.                           
-        ,-.            |VariableSupplyAuction|                                                                           |ERC721Drop|                           
-        `-'            `---------------------'                                                                           `----------'                           
-        /|\                                                                                                                                                     
-         |                                                                                                                                                      
-        / \                                                                                                                                                     
+         ,-.                                                                                                                              
+         `-'                                                                                                                              
+         /|\                                                                                                                              
+          |     ,---------------------.                                                            ,----------.                           
+         / \    |VariableSupplyAuction|                                                            |ERC721Drop|                           
+       Seller   `----------+----------'                                                            `----+-----'                           
+         | settleAuction() |                                                                            |                                 
+         | --------------->|                                                                            |                                 
+         |                 |                                                                            |                                 
+         |                 |                                                                            |                                 
+         |___________________________________________________________________________________________   |                                 
+         |! ALT  /  Not calculated yet?                                                              !  |                                 
+         |!_____/          |                                                                         !  |                                 
+         |!                ----.                                                                     !  |                                 
+         |!                    | validate auction is in settle phase, and there are revealed bids    !  |                                 
+         |!                <---'                                                                     !  |                                 
+         |!                |                                                                         !  |                                 
+         |!                ----.                                                                     !  |                                 
+         |!                    | calculate and store possible settle outcomes                        !  |                                 
+         |!                <---'                                                                     !  |                                 
+         |!~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!  |                                 
+         |!~[noop]~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!  |                                 
+         |                 |                                                                            |                                 
+         |                 ----.                                                                        |                                 
+         |                     | validate chosen price point meets minimum viable revenue               |                                 
+         |                 <---'                                                                        |                                 
+         |                 |                                                                            |                                 
+         |                 ----.                                                                        |                                 
+         |                     | store final price point, revenue, and edition size                     |                                 
+         |                 <---'                                                                        |                                 
+         |                 |                                                                            |                                 
+         |                 ----.                                                                                                          
+         |                     | determine winning bidders and update balances to final available refunds                                 
+         |                 <---'                                                                                                          
+         |                 |                                                                            |                                 
+         |                 |                              setEditionSize()                              |                                 
+         |                 |---------------------------------------------------------------------------->                                 
+         |                 |                                                                            |                                 
+         |                 |                                                                            |----.                            
+         |                 |                                                                            |    | update drop edition size   
+         |                 |                                                                            |<---'                            
+         |                 |                                                                            |                                 
+         |                 |                             adminMintAirdrop()                             |                                 
+         |                 |---------------------------------------------------------------------------->                                 
+         |                 |                                                                            |                                 
+         |                 |                                                                            |----.                            
+         |                 |                                                                            |    | mint NFT to winning bidders
+         |                 |                                                                            |<---'                            
+         |                 |                                                                            |                                 
+         |                 ----.                                                                        |                                 
+         |                     | handle seller funds recipient payout                                   |                                 
+         |                 <---'                                                                        |                                 
+         |                 |                                                                            |                                 
+         |                 ----.                                                                        |                                 
+         |                     | emit AuctionSettled()                                                  |                                 
+         |                 <---'                                                                        |                                 
+       Seller   ,----------+----------.                                                            ,----+-----.                           
+         ,-.    |VariableSupplyAuction|                                                            |ERC721Drop|                           
+         `-'    `---------------------'                                                            `----------'                           
+         /|\                                                                                                                              
+          |                                                                                                                               
+         / \                                                                                                                              

@@ -4,7 +4,7 @@ participant VariableSupplyAuction
 
 Bidder -> VariableSupplyAuction : placeBid()
 
-VariableSupplyAuction -> VariableSupplyAuction : validate auction is in bid phase
+VariableSupplyAuction -> VariableSupplyAuction : validate auction is in bid phase, and no bid placed yet
 VariableSupplyAuction -> VariableSupplyAuction : update auction balance and store sealed bid
 VariableSupplyAuction -> VariableSupplyAuction : emit BidPlaced()
 

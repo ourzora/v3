@@ -304,8 +304,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 0,
-            settledRevenue: 0,
             settledPricePoint: 0,
+            settledRevenue: 0,
             settledEditionSize: 0
         });
 
@@ -450,8 +450,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 0,
-            settledRevenue: 0,
             settledPricePoint: 0,
+            settledRevenue: 0,
             settledEditionSize: 0
         });
 
@@ -600,9 +600,9 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 1 ether,
-            settledRevenue: uint96(0),
-            settledPricePoint: uint96(0),
-            settledEditionSize: uint16(0)
+            settledPricePoint: 0,
+            settledRevenue: 0,
+            settledEditionSize: 0
         });
 
         vm.expectEmit(true, true, true, true);
@@ -623,9 +623,9 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 1 ether,
-            settledRevenue: uint96(0),
-            settledPricePoint: uint96(0),
-            settledEditionSize: uint16(0)
+            settledPricePoint: 0,
+            settledRevenue: 0,
+            settledEditionSize: 0
         });
 
         bytes32 commitment1 = _genSealedBid(1 ether, salt1);
@@ -784,9 +784,9 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 1 ether,
-            settledRevenue: uint96(0),
-            settledPricePoint: uint96(0),
-            settledEditionSize: uint16(0)
+            settledPricePoint: 0,
+            settledRevenue: 0,
+            settledEditionSize: 0
         });
 
         bytes32 commitment = _genSealedBid(1 ether, salt1);
@@ -1679,8 +1679,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 1 ether,
-            settledRevenue: 1 ether,
             settledPricePoint: 1 ether,
+            settledRevenue: 1 ether,
             settledEditionSize: uint16(1)
         });
 
@@ -1936,8 +1936,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: totalBalance,
-            settledRevenue: settledRevenue,
             settledPricePoint: _settledPricePoint,
+            settledRevenue: settledRevenue,
             settledEditionSize: _settledEditionSize
         });
 

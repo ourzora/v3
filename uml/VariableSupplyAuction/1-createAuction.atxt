@@ -1,26 +1,26 @@
-        ,-.                                                      
-        `-'                                                      
-        /|\                                                      
-         |             ,---------------------.                   
-        / \            |VariableSupplyAuction|                   
-      Seller           `----------+----------'                   
-        |     createAuction()     |                              
-        | ----------------------->|                              
-        |                         |                              
-        |                         ----.                          
-        |                             | calculate phase end times
-        |                         <---'                          
-        |                         |                              
-        |                         ----.                          
-        |                             | store auction metadata   
-        |                         <---'                          
-        |                         |                              
-        |                         ----.                          
-        |                             | emit AuctionCreated()    
-        |                         <---'                          
-      Seller           ,----------+----------.                   
-        ,-.            |VariableSupplyAuction|                   
-        `-'            `---------------------'                   
-        /|\                                                      
-         |                                                       
-        / \                                                      
+        ,-.                                                                      
+        `-'                                                                      
+        /|\                                                                      
+         |             ,---------------------.                                   
+        / \            |VariableSupplyAuction|                                   
+      Seller           `----------+----------'                                   
+        |     createAuction()     |                                              
+        | ----------------------->|                                              
+        |                         |                                              
+        |                         ----.                                          
+        |                             | validate no existing auction for drop yet
+        |                         <---'                                          
+        |                         |                                              
+        |                         ----.                                          
+        |                             | store auction metadata                   
+        |                         <---'                                          
+        |                         |                                              
+        |                         ----.                                          
+        |                             | emit AuctionCreated()                    
+        |                         <---'                                          
+      Seller           ,----------+----------.                                   
+        ,-.            |VariableSupplyAuction|                                   
+        `-'            `---------------------'                                   
+        /|\                                                                      
+         |                                                                       
+        / \                                                                      
