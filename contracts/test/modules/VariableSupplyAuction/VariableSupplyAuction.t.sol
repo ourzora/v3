@@ -305,8 +305,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 0,
             settledPricePoint: 0,
-            settledRevenue: 0,
-            settledEditionSize: 0
+            settledEditionSize: 0,
+            settledRevenue: 0
         });
 
         vm.expectEmit(false, false, false, false);
@@ -451,8 +451,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 0,
             settledPricePoint: 0,
-            settledRevenue: 0,
-            settledEditionSize: 0
+            settledEditionSize: 0,
+            settledRevenue: 0
         });
 
         vm.expectEmit(true, true, true, true);
@@ -601,8 +601,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 1 ether,
             settledPricePoint: 0,
-            settledRevenue: 0,
-            settledEditionSize: 0
+            settledEditionSize: 0,
+            settledRevenue: 0
         });
 
         vm.expectEmit(true, true, true, true);
@@ -624,8 +624,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 1 ether,
             settledPricePoint: 0,
-            settledRevenue: 0,
-            settledEditionSize: 0
+            settledEditionSize: 0,
+            settledRevenue: 0
         });
 
         bytes32 commitment1 = _genSealedBid(1 ether, salt1);
@@ -785,8 +785,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 1 ether,
             settledPricePoint: 0,
-            settledRevenue: 0,
-            settledEditionSize: 0
+            settledEditionSize: 0,
+            settledRevenue: 0
         });
 
         bytes32 commitment = _genSealedBid(1 ether, salt1);
@@ -812,9 +812,9 @@ contract VariableSupplyAuctionTest is Test {
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 9 ether,
-            settledRevenue: uint96(0),
-            settledPricePoint: uint96(0),
-            settledEditionSize: uint16(0)
+            settledPricePoint: 0,
+            settledEditionSize: 0,
+            settledRevenue: 0
         });
 
         bytes32 commitment1 = _genSealedBid(1 ether, salt1);
@@ -1206,15 +1206,15 @@ contract VariableSupplyAuctionTest is Test {
             ,
             uint96 totalBalance,
             uint96 settledPricePoint,
-            uint96 settledRevenue,
-            uint16 settledEditionSize
+            uint16 settledEditionSize,
+            uint96 settledRevenue
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(totalBalance, 84 ether - 14 ether);
 
         assertEq(settledPricePoint, 1 ether);
-        assertEq(settledRevenue, 14 ether);
         assertEq(settledEditionSize, 14);
+        assertEq(settledRevenue, 14 ether);
 
         (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
         (, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
@@ -1288,15 +1288,15 @@ contract VariableSupplyAuctionTest is Test {
             ,
             uint96 totalBalance,
             uint96 settledPricePoint,
-            uint96 settledRevenue,
-            uint16 settledEditionSize
+            uint16 settledEditionSize,
+            uint96 settledRevenue
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(totalBalance, 84 ether - 18 ether);
 
         assertEq(settledPricePoint, 6 ether);
-        assertEq(settledRevenue, 18 ether);
         assertEq(settledEditionSize, 3);
+        assertEq(settledRevenue, 18 ether);
 
         (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
         (, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
@@ -1370,15 +1370,15 @@ contract VariableSupplyAuctionTest is Test {
             ,
             uint96 totalBalance,
             uint96 settledPricePoint,
-            uint96 settledRevenue,
-            uint16 settledEditionSize
+            uint16 settledEditionSize,
+            uint96 settledRevenue
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(totalBalance, 84 ether - 11 ether);
 
         assertEq(settledPricePoint, 11 ether);
-        assertEq(settledRevenue, 11 ether);
         assertEq(settledEditionSize, 1);
+        assertEq(settledRevenue, 11 ether);
 
         (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
         (, uint96 bidderBalance2, ) = auctions.bidsForAuction(address(drop), address(bidder2));
@@ -1661,8 +1661,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: 0,
             settledPricePoint: 1 ether,
-            settledRevenue: 1 ether,
-            settledEditionSize: uint16(1)
+            settledEditionSize: uint16(1),
+            settledRevenue: 1 ether
         });
 
         vm.prank(address(bidder1));
@@ -1849,7 +1849,7 @@ contract VariableSupplyAuctionTest is Test {
 
     */
 
-    // TODO parameterize modifier pattern to support fuzzing
+    // TODO parameterize modifier pattern to enable easier fuzzing
 
     modifier setupBasicAuction() {
         vm.prank(address(seller));
@@ -1967,8 +1967,8 @@ contract VariableSupplyAuctionTest is Test {
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
             totalBalance: totalBalance,
             settledPricePoint: _settledPricePoint,
-            settledRevenue: settledRevenue,
-            settledEditionSize: _settledEditionSize
+            settledEditionSize: _settledEditionSize,
+            settledRevenue: settledRevenue
         });
 
         vm.expectEmit(true, true, true, true);

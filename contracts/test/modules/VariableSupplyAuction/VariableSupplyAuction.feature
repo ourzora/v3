@@ -1,16 +1,45 @@
 Feature: Variable Supply Auctions
 
-    As a creator
-    I want to run a Variable Supply Auction
+    ## User Story
+
+    As a Creator,
+    I want to run a Variable Supply Auction,
     so that I can conduct price discovery and right-size the market when selling my work
 
     Auction phases:
-    - Created
-    - Bid Phase
-    - Reveal Phase
-    - Settle Phase
-    - Cleanup Phase
-    - Completed / Cancelled
+    - Created                   = when auction start time is in the future
+    - Bid Phase                 = when bidders can place sealed bids
+    - Reveal Phase              = when bidders must reveal their true bid amounts
+    - Settle Phase              = when seller must choose a price point at which to settle the auction
+    - Cleanup Phase             = when bidders can claim available refunds
+    - Completed / Cancelled     = when an auction has been settled and all available refunds claimed / when an auction has been cancelled
+
+    ## Job-to-be-done
+    ## (how does the user story fit into the seller's broader workflow)
+
+    Job Executor: Creator
+
+    Core Functional Job-to-be-done: To discover optimal price point and edition size when selling a digital product
+
+    Job Map:
+    1. (Define) Create digital product
+    2. (Prepare) Decide on drop parameters:
+    -- a. Content: _HMW help seller preview their content to potential bidders?_
+    -- b. Metadata: name, symbol, initial owner, royalty bips, funds recipient, metadata renderer, and sales config
+    3. (Prepare) Decide on auction parameters:
+    -- a. Money: minimum viable revenue and seller funds recipient
+    -- b. Time: start time, bid phase duration, reveal phase duration, settle phase duration
+    4. (Confirm) Confirm drop and auction parameters look good
+    5. (Execute) Create Variable Supply Auction
+    6. (Monitor) Review possible settle outcomes based on revealed bids
+    7. (Modify) Settle auction at a given price point, revenue, and edition size
+    8. (Conclude) Share results of auction with fanbase
+
+    ## Module Invariants
+
+    Invariant 1: contract balance == Σ all auction totalBalances
+    Invariant 2: auction settledRevenue == auction settledPricePoint * auction settledEditionSize
+    Invariant 3: auction totalBalance == Σ all bidder balances, while now <= auction endOfRevealPhase
 
     Background: VSA creation and bidding
         Given Seller creates a Variable Supply Auction
@@ -144,10 +173,11 @@ Feature: Variable Supply Auctions
         And Seller settles auction at 2 ETH
         Then The Seller should receive a Does Not Meet Minimum Revenue error
 
+# TODO add Cucumber scenarios for bidder functionality
 # TODO handle additional bid space bounding, beyond minimum viable revenue
 ## Seller sets maximum edition size commitment
 ## Bidder sets maximum edition size interest
 # TODO address failure to reveal sad paths
 # TODO address failure to settle sad paths
 # TODO consider Cleanup function to delete auction, once all refunds have been claimed
-# TODO add Cucumber scenarios for bidder functionality
+# TODO run workshop for generating more VSA invariants
