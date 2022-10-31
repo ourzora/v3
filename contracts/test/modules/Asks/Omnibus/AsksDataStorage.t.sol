@@ -80,8 +80,6 @@ contract StorageTestBaseMinimal is AsksDataStorage {
     }
 }
 
-/// @title
-/// @notice
 contract AsksDataStorageTest is DSTest {
     VM internal vm;
 
