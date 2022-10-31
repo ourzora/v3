@@ -721,20 +721,19 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
 
         // Get the balance for the specified bidder
         Bid storage bid = bidsForAuction[_tokenContract][msg.sender];
-        uint96 bidderBalance = bid.bidderBalance;
+        uint96 availableRefund = bid.bidderBalance;
 
         // Ensure bidder has a leftover balance
-        require(bid.revealedBidAmount > 0 && bidderBalance > 0, "NO_REFUND_AVAILABLE");
+        require(bid.revealedBidAmount > 0 && availableRefund > 0, "NO_REFUND_AVAILABLE");
 
-        // Clear bidder balance
+        // Clear bidder balance and update auction total balance
         bid.bidderBalance = 0;
-
-        // TODO x update totalBalance and add test
+        auction.totalBalance -= availableRefund;
 
         // Transfer the bidder's available refund balance to the bidder
-        _handleOutgoingTransfer(msg.sender, bidderBalance, address(0), 50_000);
+        _handleOutgoingTransfer(msg.sender, availableRefund, address(0), 50_000);
 
-        emit RefundClaimed(_tokenContract, msg.sender, bidderBalance, auction);
+        emit RefundClaimed(_tokenContract, msg.sender, availableRefund, auction);
     }
 
     /*//////////////////////////////////////////////////////////////

@@ -950,55 +950,6 @@ contract VariableSupplyAuctionTest is Test {
                         SETTLE AUCTION
     //////////////////////////////////////////////////////////////*/
 
-    /*
-
-    Checks for each action
-
-    Create Auction
-    - check there is no live auction for the drop contract already
-    - check the funds recipient is not zero address
-
-    Cancel Auction
-    - check the auction exists
-    - check the caller is the seller
-    - check there are no bids placed yet
-    - OR, if in settle phase:
-    -     check that seller has first considered the settle price points
-    -     check that no settle price points meet minimum viable revenue
-
-    Place Bid
-    - check the auction exists
-    - check the auction is in bid phase
-    - check the bidder has not placed a bid yet
-    - check the bid is valid
-
-    Reveal Bid
-    - check the auction exists
-    - check the auction is in reveal phase
-    - check the bidder placed a bid in the auction
-    - check the revealed amount is not greater than sent ether
-    - check the revealed bid matches the sealed bid
-
-    Calculate Settle Outcomes
-    - check the auction exists
-    - check the auction is in settle phase
-    - check the auction has at least 1 revealed bid
-
-    Settle Auction
-    - (includes checks from calling calculate settle outcomes, either in this call or previously)
-    - check that price point is a valid settle outcome (exists and meets minimum viable revenue)
-
-    Check Available Refund
-    - check the auction exists
-    - check the auction is in cleanup phase
-
-    Claim Refund
-    - check the auction exists
-    - check the auction is in cleanup phase
-    - check the bidder has a leftover balance
-
-    */
-
     function test_CalculateSettleOutcomes() public setupBasicAuction throughRevealPhaseComplex {
         (uint96[] memory pricePoints, uint16[] memory editionSizes, uint96[] memory revenues) = 
             auctions.calculateSettleOutcomes(address(drop));
@@ -1254,15 +1205,15 @@ contract VariableSupplyAuctionTest is Test {
             ,
             ,
             uint96 totalBalance,
-            uint96 settledRevenue,
             uint96 settledPricePoint,
+            uint96 settledRevenue,
             uint16 settledEditionSize
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(totalBalance, 84 ether - 14 ether);
 
-        assertEq(settledRevenue, 14 ether);
         assertEq(settledPricePoint, 1 ether);
+        assertEq(settledRevenue, 14 ether);
         assertEq(settledEditionSize, 14);
 
         (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
@@ -1336,15 +1287,15 @@ contract VariableSupplyAuctionTest is Test {
             ,
             ,
             uint96 totalBalance,
-            uint96 settledRevenue,
             uint96 settledPricePoint,
+            uint96 settledRevenue,
             uint16 settledEditionSize
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(totalBalance, 84 ether - 18 ether);
 
-        assertEq(settledRevenue, 18 ether);
         assertEq(settledPricePoint, 6 ether);
+        assertEq(settledRevenue, 18 ether);
         assertEq(settledEditionSize, 3);
 
         (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
@@ -1418,15 +1369,15 @@ contract VariableSupplyAuctionTest is Test {
             ,
             ,
             uint96 totalBalance,
-            uint96 settledRevenue,
             uint96 settledPricePoint,
+            uint96 settledRevenue,
             uint16 settledEditionSize
         ) = auctions.auctionForDrop(address(drop));
 
         assertEq(totalBalance, 84 ether - 11 ether);
 
-        assertEq(settledRevenue, 11 ether);
         assertEq(settledPricePoint, 11 ether);
+        assertEq(settledRevenue, 11 ether);
         assertEq(settledEditionSize, 1);
 
         (, uint96 bidderBalance1, ) = auctions.bidsForAuction(address(drop), address(bidder1));
@@ -1634,6 +1585,21 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(address(bidder1).balance, 99 ether);
         (, bidderBalance, ) = auctions.bidsForAuction(address(drop), address(bidder1));        
         assertEq(bidderBalance, 0 ether);
+
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint96 totalBalance,
+            ,
+            ,
+            
+        ) = auctions.auctionForDrop(address(drop));
+        assertEq(totalBalance, 0); // no balance remaining for auction
     }
 
     function test_ClaimRefund_WhenNotWinner() public setupBasicAuctionWithLowMinimumViableRevenue {
@@ -1667,6 +1633,21 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(address(bidder1).balance, 100 ether); // claim their full amount of sent ether
         (, bidderBalance, ) = auctions.bidsForAuction(address(drop), address(bidder1));        
         assertEq(bidderBalance, 0 ether);
+
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            uint96 totalBalance,
+            ,
+            ,
+            
+        ) = auctions.auctionForDrop(address(drop));
+        assertEq(totalBalance, 0); // no balance remaining for auction
     }
 
     function testEvent_ClaimRefund() public setupBasicAuctionWithLowMinimumViableRevenue {
@@ -1678,7 +1659,7 @@ contract VariableSupplyAuctionTest is Test {
             endOfBidPhase: uint32(TIME0 + 3 days),
             endOfRevealPhase: uint32(TIME0 + 3 days + 2 days),
             endOfSettlePhase: uint32(TIME0 + 3 days + 2 days + 1 days),
-            totalBalance: 1 ether,
+            totalBalance: 0,
             settledPricePoint: 1 ether,
             settledRevenue: 1 ether,
             settledEditionSize: uint16(1)
@@ -1773,7 +1754,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.warp(TIME0 + 3 days);
 
         // bidder1 never revealed =(
-        // note bidder2 must reveal in this test, otherwise seller can't settle when no revealed bids
+        // note bidder2 must reveal in this test, otherwise seller can't settle bc no revealed bids
         vm.prank(address(bidder2));
         auctions.revealBid(address(drop), 1 ether, salt2);
 
@@ -1818,6 +1799,55 @@ contract VariableSupplyAuctionTest is Test {
     /*//////////////////////////////////////////////////////////////
                         TEST HELPERS
     //////////////////////////////////////////////////////////////*/
+
+    /*
+
+    Checks for each action
+
+    Create Auction
+    - check there is no live auction for the drop contract already
+    - check the funds recipient is not zero address
+
+    Cancel Auction
+    - check the auction exists
+    - check the caller is the seller
+    - check there are no bids placed yet
+    - OR, if in settle phase:
+    -     check that seller has first considered the settle price points
+    -     check that no settle price points meet minimum viable revenue
+
+    Place Bid
+    - check the auction exists
+    - check the auction is in bid phase
+    - check the bidder has not placed a bid yet
+    - check the bid is valid
+
+    Reveal Bid
+    - check the auction exists
+    - check the auction is in reveal phase
+    - check the bidder placed a bid in the auction
+    - check the revealed amount is not greater than sent ether
+    - check the revealed bid matches the sealed bid
+
+    Calculate Settle Outcomes
+    - check the auction exists
+    - check the auction is in settle phase
+    - check the auction has at least 1 revealed bid
+
+    Settle Auction
+    - (includes checks from calling calculate settle outcomes, either in this call or previously)
+    - check that price point is a valid settle outcome (exists and meets minimum viable revenue)
+
+    Check Available Refund
+    - check the auction exists
+    - check the auction is in cleanup phase
+
+    Claim Refund
+    - check the auction exists
+    - check the auction is in cleanup phase
+    - check the bidder has a leftover balance
+
+    */
 
     // TODO parameterize modifier pattern to support fuzzing
 
