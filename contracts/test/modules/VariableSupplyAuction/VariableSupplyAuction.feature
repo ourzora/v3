@@ -17,9 +17,9 @@ Feature: Variable Supply Auctions
     ## Job-to-be-done
     ## (how does the user story fit into the seller's broader workflow)
 
-    Job Executor: Creator
+    Who's it for: Creator
 
-    Core Functional Job-to-be-done: To discover optimal price point and edition size when selling a digital product
+    What's it for: To discover optimal price point and edition size when selling a digital product
 
     Job Map:
     1. (Define) Create digital product
