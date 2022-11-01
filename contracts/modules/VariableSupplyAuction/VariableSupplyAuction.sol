@@ -496,7 +496,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     event AuctionSettled(address indexed tokenContract, Auction auction);
 
     /// @notice Calculate edition size and revenue for each possible price point
-    /// @dev Cheaper on subsequent calls but idempotent -- after the initial call when
+    /// @dev Cheaper on subsequent calls and idempotent -- after the initial call when
     /// calculations have been performed and stored, the settle outcomes will not change.
     /// Function visibility is public instead of external, to support settleAuction calling it.
     /// @param _tokenContract The address of the ERC-721 drop contract
@@ -505,7 +505,9 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     /// resulting edition sizes and amounts of revenue generated
     function calculateSettleOutcomes(address _tokenContract) public returns (uint96[] memory, uint16[] memory, uint96[] memory) {
 
-        // TODO x improve algorithm =P
+        // TODO we could pre-cache price points and/or edition sizes at reveal time,
+        // which could reduce complexity from O(n^2) to O(n) but shift some of the 
+        // gas cost from seller to each bidder
 
         // Get the auction for the specified drop
         Auction storage auction = auctionForDrop[_tokenContract];
@@ -522,10 +524,13 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Ensure the auction has at least 1 revealed bid
         require(bidders.length > 0, "NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
 
+        // Get the settle outcome data structures
         uint96[] storage settlePricePoints = _settlePricePointsForAuction[_tokenContract];
         mapping(uint96 => SettleOutcome) storage settleOutcomes = _settleOutcomesForPricePoint[_tokenContract];
 
-        if (settlePricePoints.length == 0) { // only calculate and store once, otherwise just return from storage
+        // Only calculate and store once, otherwise just return from storage
+        if (settlePricePoints.length == 0) {
+            // Determine all possible price points
             for (uint256 i = 0; i < bidders.length; i++) {
                 address bidder = bidders[i];
                 uint96 bidAmount = bidsForAuction[_tokenContract][bidder].revealedBidAmount;
@@ -537,6 +542,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                 }
             }
 
+            // Calculate edition size and revenue for each price point
             for (uint256 j = 0; j < settlePricePoints.length; j++) {
                 uint96 settlePricePoint = settlePricePoints[j];
                 SettleOutcome storage settleOutcome = settleOutcomes[settlePricePoint];
@@ -551,10 +557,12 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
                     }
                 }
 
-                settleOutcome.editionSize--; // because 1st bidder at this settle price was double counted
+                // Decrement edition size because 1st bidder at this price point was double counted
+                settleOutcome.editionSize--;
             }
         }
 
+        // Prepare the return values
         uint96[] memory pricePoints = new uint96[](settlePricePoints.length);
         uint16[] memory editionSizes = new uint16[](settlePricePoints.length);
         uint96[] memory revenues = new uint96[](settlePricePoints.length);
@@ -563,8 +571,9 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
             uint96 settlePricePoint = settlePricePoints[m];
             SettleOutcome storage settleOutcome = settleOutcomes[settlePricePoint];
 
+            // Zero out as not a viable settle outcome, because minimum viable revenue would be met
             if (settleOutcome.revenue < auction.minimumViableRevenue) {
-                settleOutcome.revenue = 0; // zero out, because not viable settle outcome
+                settleOutcome.revenue = 0;
             }
 
             pricePoints[m] = settlePricePoint;
@@ -581,9 +590,9 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     function settleAuction(address _tokenContract, uint96 _settlePricePoint) external nonReentrant {
 
         // TODO gas optimization
-        // TODO document pragmatic max edition size / winning bidders
+        // TODO document pragmatic max edition size / number of bids
         // TODO consider storing winningBidders during calculateSettleOutcomes
-        // TODO look for ways to consolidate business logic with calculateSettleOutcomes
+        // TODO look for more ways to consolidate business logic with calculateSettleOutcomes
         // TODO allow sellers to settle at a price point below minimum viable revenue if they so choose
 
         // Get the auction

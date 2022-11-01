@@ -25,7 +25,6 @@ contract VariableSupplyAuctionTest is Test {
     ZoraRegistrar internal registrar;
     ZoraProtocolFeeSettings internal ZPFS;
     ZoraModuleManager internal ZMM;
-    // ERC20TransferHelper internal erc20TransferHelper;
     ERC721TransferHelper internal erc721TransferHelper;
     RoyaltyEngine internal royaltyEngine;
 
@@ -71,14 +70,13 @@ contract VariableSupplyAuctionTest is Test {
     string internal constant salt14 = "my cots earstones";
     string internal constant salt15 = "easternmost coy";
 
-    uint32 internal constant TIME0 = 1_666_000_000; // now-ish
+    uint32 internal constant TIME0 = 1_666_000_000; // now-ish, Autumn 2022
 
     function setUp() public {
         // Deploy V3
         registrar = new ZoraRegistrar();
         ZPFS = new ZoraProtocolFeeSettings();
         ZMM = new ZoraModuleManager(address(registrar), address(ZPFS));
-        // erc20TransferHelper = new ERC20TransferHelper(address(ZMM));
         erc721TransferHelper = new ERC721TransferHelper(address(ZMM));
 
         // Init V3
@@ -177,7 +175,8 @@ contract VariableSupplyAuctionTest is Test {
         bidder14.setApprovalForModule(address(auctions), true);
         bidder15.setApprovalForModule(address(auctions), true);
 
-        // TODO determine pattern for seller approving auction house to set edition size + mint
+        // TODO determine pattern for seller approving module to set edition size and mint
+
         // Seller approve ERC721TransferHelper
         // vm.prank(address(seller));
         // token.setApprovalForAll(address(erc721TransferHelper), true);
@@ -220,7 +219,7 @@ contract VariableSupplyAuctionTest is Test {
     //////////////////////////////////////////////////////////////*/
 
     function testGas_CreateAuction() public {
-        // Note this basic setup is applied to other tests via the setupBasicAuction modifier
+        // Note this same basic setup is applied to other tests via the setupBasicAuction modifier
         vm.prank(address(seller));
         auctions.createAuction({
             _tokenContract: address(drop),
@@ -292,8 +291,6 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(endOfSettlePhase, 1 days + 3 days + 2 days + 1 days);
     }
 
-    // TODO add tests that exercise other actions for auctions that don't start instantly
-
     function testEvent_createAuction() public {
         VariableSupplyAuction.Auction memory auction = VariableSupplyAuction.Auction({
             seller: address(seller),
@@ -355,6 +352,8 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     // TODO add tests for multiple valid auctions at once
+
+    // TODO add tests that exercise other actions for auctions that don't start instantly
 
     /*//////////////////////////////////////////////////////////////
                         CANCEL AUCTION
@@ -1066,7 +1065,7 @@ contract VariableSupplyAuctionTest is Test {
 
     /*
 
-    Scenario for the following 4 settleAuction tests
+    Scenario for the following settleAuction tests
 
         Given The following sealed bids are placed
             | account  | bid amount | sent value |
@@ -1092,7 +1091,7 @@ contract VariableSupplyAuctionTest is Test {
             | 3            | 18 ether          |
             | 1            | 11 ether          |
 
-    Note settle auction tests use throughRevealPhaseComplex modifier for further test setup
+    Note settleAuction tests use throughRevealPhaseComplex modifier for further test setup
 
     */
 
@@ -1754,7 +1753,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.warp(TIME0 + 3 days);
 
         // bidder1 never revealed =(
-        // note bidder2 must reveal in this test, otherwise seller can't settle bc no revealed bids
+        // Note bidder2 must reveal in this test, otherwise seller can't settle bc no revealed bids
         vm.prank(address(bidder2));
         auctions.revealBid(address(drop), 1 ether, salt2);
 

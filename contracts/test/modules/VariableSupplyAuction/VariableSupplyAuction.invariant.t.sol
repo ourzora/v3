@@ -1,3 +1,5 @@
+// TODO setup actor-based target senders and implement remaining invariants
+// 
 // // SPDX-License-Identifier: GPL-3.0
 // pragma solidity 0.8.10;
 
@@ -208,7 +210,7 @@
 
 //         targetContract(address(auctions));
 
-//         // TODO x setup invariant target senders (for actor-based invariant testing)
+//         
 
 //         // Setup one auction
 //         vm.prank(address(seller));
@@ -222,6 +224,8 @@
 //             _settlePhaseDuration: 1 days
 //         });
 //     }
+
+//     
 
 //     // function invariant_true_eq_true() public {
 //     //     assertTrue(true);
