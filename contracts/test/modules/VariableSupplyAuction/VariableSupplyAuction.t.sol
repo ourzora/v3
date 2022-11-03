@@ -322,7 +322,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_CreateAuction_WhenDropHasLiveAuction() public setupBasicAuction {
-        vm.expectRevert("ONLY_ONE_LIVE_AUCTION_PER_DROP");
+        vm.expectRevert(IVariableSupplyAuction.Auction_AlreadyLiveAuctionForDrop.selector);
 
         vm.prank(address(seller));
         auctions.createAuction({
@@ -337,7 +337,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_CreateAuction_WhenDidNotSpecifySellerFundsRecipient() public {
-        vm.expectRevert("INVALID_FUNDS_RECIPIENT");
+        vm.expectRevert(IVariableSupplyAuction.Auction_InvalidFundsRecipient.selector);
 
         vm.prank(address(seller));
         auctions.createAuction({
@@ -462,14 +462,14 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_CancelAuction_WhenAuctionDoesNotExist() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+        vm.expectRevert(IVariableSupplyAuction.Auction_AuctionDoesNotExist.selector);
 
         vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
     }
 
     function testRevert_CancelAuction_WhenNotSeller() public setupBasicAuction {
-        vm.expectRevert("ONLY_SELLER");
+        vm.expectRevert(IVariableSupplyAuction.Access_OnlySeller.selector);
 
         vm.prank(address(bidder1));
         auctions.cancelAuction(address(drop));
@@ -498,7 +498,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days + 2 days);
 
-        vm.expectRevert("CANNOT_CANCEL_AUCTION_BEFORE_CALCULATING_SETTLE_OPTIONS");
+        vm.expectRevert(IVariableSupplyAuction.Seller_CannotCancelAuctionDuringSettlePhaseWithoutCalculatingOutcomes.selector);
 
         vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
@@ -530,7 +530,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(seller));
         auctions.calculateSettleOutcomes(address(drop));
 
-        vm.expectRevert("CANNOT_CANCEL_AUCTION_WITH_VIABLE_PRICE_POINT");
+        vm.expectRevert(IVariableSupplyAuction.Seller_CannotCancelAuctionWithViablePricePoint.selector);
 
         vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
@@ -541,7 +541,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
 
-        vm.expectRevert("CANNOT_CANCEL_AUCTION_WITH_BIDS");
+        vm.expectRevert(IVariableSupplyAuction.Seller_CannotCancelAuctionWithBidsBeforeSettlePhase.selector);
 
         vm.prank(address(seller));
         auctions.cancelAuction(address(drop));
@@ -655,7 +655,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_PlaceBid_WhenAuctionDoesNotExist() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+        vm.expectRevert(IVariableSupplyAuction.Auction_AuctionDoesNotExist.selector);
 
         bytes32 commitment = _genSealedBid(1 ether, salt1);
         vm.prank(address(bidder1));
@@ -665,7 +665,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_PlaceBid_WhenAuctionInRevealPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days); // reveal phase
 
-        vm.expectRevert("BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_BidsOnlyAllowedDuringBidPhase.selector);
 
         bytes32 commitment = _genSealedBid(1 ether, salt1);
         vm.prank(address(bidder1));
@@ -675,7 +675,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_PlaceBid_WhenAuctionInSettlePhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days + 2 days); // settle phase
 
-        vm.expectRevert("BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_BidsOnlyAllowedDuringBidPhase.selector);
 
         bytes32 commitment = _genSealedBid(1 ether, salt1);
         vm.prank(address(bidder1));
@@ -685,7 +685,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_PlaceBid_WhenAuctionInCleanupPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
-        vm.expectRevert("BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_BidsOnlyAllowedDuringBidPhase.selector);
 
         bytes32 commitment = _genSealedBid(1 ether, salt1);
         vm.prank(address(bidder1));
@@ -697,14 +697,14 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
 
-        vm.expectRevert("ALREADY_PLACED_BID_IN_AUCTION");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_AlreadyPlacedBidInAuction.selector);
 
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1 ether}(address(drop), commitment);
     }
 
     function testRevert_PlaceBid_WhenNoEtherIncluded() public setupBasicAuction {
-        vm.expectRevert("VALID_BIDS_MUST_INCLUDE_ETHER");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_BidsMustIncludeEther.selector);
 
         bytes32 commitment = _genSealedBid(1 ether, salt1);
         vm.prank(address(bidder1));
@@ -846,7 +846,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_RevealBid_WhenAuctionDoesNotExist() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+        vm.expectRevert(IVariableSupplyAuction.Auction_AuctionDoesNotExist.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1 ether, salt1);
@@ -857,7 +857,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 1.1 ether}(address(drop), commitment);
 
-        vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RevealsOnlyAllowedDuringRevealPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1 ether, salt1);
@@ -870,7 +870,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days + 2 days); // settle phase
 
-        vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RevealsOnlyAllowedDuringRevealPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1 ether, salt1);
@@ -883,7 +883,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
-        vm.expectRevert("REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RevealsOnlyAllowedDuringRevealPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1 ether, salt1);
@@ -892,7 +892,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_RevealBid_WhenNoCommittedBid() public setupBasicAuction {
         vm.warp(TIME0 + 3 days);
 
-        vm.expectRevert("NO_PLACED_BID_FOUND_FOR_ADDRESS");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_NoPlacedBidByAddressInThisAuction.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1.1 ether, salt1);
@@ -907,7 +907,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days);
 
-        vm.expectRevert("REVEALED_BID_CANNOT_BE_GREATER_THAN_SENT_ETHER");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RevealedBidCannotBeGreaterThanEtherSentWithSealedBid.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1.1 ether, salt1);
@@ -920,7 +920,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days);
 
-        vm.expectRevert("REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RevealedBidDoesNotMatchSealedBid.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 0.9 ether, salt1); // wrong amount
@@ -933,7 +933,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days);
 
-        vm.expectRevert("REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RevealedBidDoesNotMatchSealedBid.selector);
 
         vm.prank(address(bidder1));
         auctions.revealBid(address (drop), 1 ether, salt2); // wrong salt
@@ -1023,14 +1023,14 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_CalculateSettleOutcomes_WhenAuctionDoesNotExist() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+        vm.expectRevert(IVariableSupplyAuction.Auction_AuctionDoesNotExist.selector);
 
         vm.prank(address(seller));
         auctions.calculateSettleOutcomes(address(drop));
     }
 
     function testRevert_CalculateSettleOutcomes_WhenAuctionInBidPhase() public setupBasicAuction {
-        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Seller_SettleAuctionOnlyAllowedDuringSettlePhase.selector);
 
         vm.prank(address(seller));
         auctions.calculateSettleOutcomes(address(drop));
@@ -1039,7 +1039,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_CalculateSettleOutcomes_WhenAuctionInRevealPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days); // reveal phase
         
-        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Seller_SettleAuctionOnlyAllowedDuringSettlePhase.selector);
 
         vm.prank(address(seller));
         auctions.calculateSettleOutcomes(address(drop));
@@ -1048,16 +1048,16 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_CalculateSettleOutcomes_WhenAuctionInCleanupPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
-        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Seller_SettleAuctionOnlyAllowedDuringSettlePhase.selector);
 
         vm.prank(address(seller));
         auctions.calculateSettleOutcomes(address(drop));
     }
 
     function testRevert_CalculateSettleOutcomes_WhenAuctionHasZeroRevealedBids() public setupBasicAuction {
-        vm.warp(TIME0 + 3 days + 2 days);
+        vm.warp(TIME0 + 3 days + 2 days);        
 
-        vm.expectRevert("NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
+        vm.expectRevert(IVariableSupplyAuction.Seller_CannotSettleWithNoRevealedBids.selector);
 
         vm.prank(address(seller));
         auctions.calculateSettleOutcomes(address(drop));
@@ -1409,15 +1409,23 @@ contract VariableSupplyAuctionTest is Test {
         assertEq(bidderBalance14, 2 ether);
     }
 
-    function testRevert_SettleAuction_WhenAuctionDoesNotExist() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+    // TODO consider different ordering of checks
 
-        vm.prank(address(seller));
+    // function testRevert_SettleAuction_WhenAuctionDoesNotExist() public {
+    //     vm.expectRevert(IVariableSupplyAuction.Auction_AuctionDoesNotExist.selector);
+
+    //     vm.prank(address(seller));
+    //     auctions.settleAuction(address(drop), 1 ether);
+    // }
+
+    function testRevert_SettleAuction_WhenNotSeller() public setupBasicAuction throughRevealPhaseComplex {
+        vm.expectRevert(IVariableSupplyAuction.Access_OnlySeller.selector);
+
         auctions.settleAuction(address(drop), 1 ether);
     }
 
     function testRevert_SettleAuction_WhenAuctionInBidPhase() public setupBasicAuction {
-        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Seller_SettleAuctionOnlyAllowedDuringSettlePhase.selector);
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 2 ether);
@@ -1426,7 +1434,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_SettleAuction_WhenAuctionInRevealPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days); // reveal phase
         
-        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Seller_SettleAuctionOnlyAllowedDuringSettlePhase.selector);
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 2 ether);
@@ -1435,7 +1443,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_SettleAuction_WhenAuctionInCleanupPhase() public setupBasicAuction {
         vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
-        vm.expectRevert("SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Seller_SettleAuctionOnlyAllowedDuringSettlePhase.selector);
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 2 ether);
@@ -1444,21 +1452,21 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_SettleAuction_WhenAuctionHasZeroRevealedBids() public setupBasicAuction {
         vm.warp(TIME0 + 3 days + 2 days);
 
-        vm.expectRevert("NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
+        vm.expectRevert(IVariableSupplyAuction.Seller_CannotSettleWithNoRevealedBids.selector);
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 2 ether);
     }
 
     function testRevert_SettleAuction_WhenSettlingAtPricePointThatDoesNotMeetMinimumViableRevenue() public setupBasicAuction throughRevealPhaseComplex {
-        vm.expectRevert("DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
+        vm.expectRevert(IVariableSupplyAuction.Seller_PricePointDoesNotMeetMinimumViableRevenue.selector);
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 2 ether); // does not meet minimum viable revenue
     }
 
     function testRevert_SettleAuction_WhenSettlingAtInvalidPricePoint() public setupBasicAuction throughRevealPhaseComplex {
-        vm.expectRevert("DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");        
+        vm.expectRevert(IVariableSupplyAuction.Seller_PricePointDoesNotMeetMinimumViableRevenue.selector);
 
         vm.prank(address(seller));
         auctions.settleAuction(address(drop), 3 ether); // non-existent settle price point
@@ -1509,7 +1517,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_CheckAvailableRefund_WhenAuctionDoesNotExist() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+        vm.expectRevert(IVariableSupplyAuction.Auction_AuctionDoesNotExist.selector);
 
         vm.prank(address(bidder1));
         auctions.checkAvailableRefund(address(drop));
@@ -1519,7 +1527,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
 
-        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RefundsOnlyAllowedDuringCleanupPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.checkAvailableRefund(address(drop));
@@ -1534,7 +1542,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.revealBid(address(drop), 1 ether, salt1);
 
-        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RefundsOnlyAllowedDuringCleanupPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.checkAvailableRefund(address(drop));
@@ -1551,7 +1559,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days + 2 days); // settle phase
 
-        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RefundsOnlyAllowedDuringCleanupPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.checkAvailableRefund(address(drop));
@@ -1687,7 +1695,7 @@ contract VariableSupplyAuctionTest is Test {
     }
 
     function testRevert_ClaimRefund_WhenAuctionDoesNotExist() public {
-        vm.expectRevert("AUCTION_DOES_NOT_EXIST");
+        vm.expectRevert(IVariableSupplyAuction.Auction_AuctionDoesNotExist.selector);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
@@ -1697,7 +1705,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.placeBid{value: 2 ether}(address(drop), _genSealedBid(1 ether, salt1));
 
-        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RefundsOnlyAllowedDuringCleanupPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
@@ -1712,7 +1720,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.revealBid(address(drop), 1 ether, salt1);
 
-        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RefundsOnlyAllowedDuringCleanupPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
@@ -1729,7 +1737,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days + 2 days); // settle phase
 
-        vm.expectRevert("REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_RefundsOnlyAllowedDuringCleanupPhase.selector);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
@@ -1738,7 +1746,7 @@ contract VariableSupplyAuctionTest is Test {
     function testRevert_ClaimRefund_WhenNoBidPlaced() public setupBasicAuctionWithLowMinimumViableRevenue {
         vm.warp(TIME0 + 3 days + 2 days + 1 days);
 
-        vm.expectRevert("NO_REFUND_AVAILABLE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_NoRefundAvailableForAuction.selector);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
@@ -1764,7 +1772,7 @@ contract VariableSupplyAuctionTest is Test {
 
         vm.warp(TIME0 + 3 days + 2 days + 1 days); // cleanup phase
 
-        vm.expectRevert("NO_REFUND_AVAILABLE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_NoRefundAvailableForAuction.selector);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
@@ -1789,7 +1797,7 @@ contract VariableSupplyAuctionTest is Test {
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));
 
-        vm.expectRevert("NO_REFUND_AVAILABLE");
+        vm.expectRevert(IVariableSupplyAuction.Bidder_NoRefundAvailableForAuction.selector);
 
         vm.prank(address(bidder1));
         auctions.claimRefund(address(drop));

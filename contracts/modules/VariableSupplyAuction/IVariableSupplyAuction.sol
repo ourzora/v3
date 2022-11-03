@@ -7,6 +7,71 @@ pragma solidity 0.8.10;
 interface IVariableSupplyAuction {
     //
 
+    /*//////////////////////////////////////////////////////////////
+                        ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @notice A given ERC-721 drop contract can have only 1 live auction at a time
+    error Auction_AlreadyLiveAuctionForDrop();
+
+    /// @notice Seller funds recipient cannot be zero address
+    error Auction_InvalidFundsRecipient();
+
+    /// @notice Auction does not exist
+    error Auction_AuctionDoesNotExist();
+
+    /// @notice Only seller can access this function
+    error Access_OnlySeller();
+
+    /// @notice Cannot cancel an auction with bids before settle phase
+    error Seller_CannotCancelAuctionWithBidsBeforeSettlePhase();
+
+    /// @notice Cannot cancel an auction during settle phase without first calculating outcomes
+    error Seller_CannotCancelAuctionDuringSettlePhaseWithoutCalculatingOutcomes();
+
+    /// @notice Cannot cancel an auction during settle phase with at least one viable price point
+    error Seller_CannotCancelAuctionWithViablePricePoint();
+
+    /// @notice Settling the auction only allowed during settle phase
+    error Seller_SettleAuctionOnlyAllowedDuringSettlePhase();
+
+    /// @notice Cannot settle an auction with no revealed bids
+    error Seller_CannotSettleWithNoRevealedBids();
+
+    /// @notice Cannot settle an auction at a price point that does not meet minimum viable revenue
+    error Seller_PricePointDoesNotMeetMinimumViableRevenue();
+
+    /// @notice Placing bids only allowed during bid phase
+    error Bidder_BidsOnlyAllowedDuringBidPhase();
+
+    /// @notice Cannot place more than 1 bid in any given auction
+    error Bidder_AlreadyPlacedBidInAuction();
+
+    /// @notice Valid bids must include some ether
+    error Bidder_BidsMustIncludeEther();
+
+    /// @notice Revealing bids only allowed during reveal phase
+    error Bidder_RevealsOnlyAllowedDuringRevealPhase();
+
+    /// @notice No bid placed by address in this auction
+    error Bidder_NoPlacedBidByAddressInThisAuction();
+
+    /// @notice Revealed bid cannot be greater than amount of ether sent with sealed bid
+    error Bidder_RevealedBidCannotBeGreaterThanEtherSentWithSealedBid();
+
+    /// @notice Revealed bid does not match sealed bid
+    error Bidder_RevealedBidDoesNotMatchSealedBid();
+
+    /// @notice Refunds only allowed during cleanup phase
+    error Bidder_RefundsOnlyAllowedDuringCleanupPhase();
+    
+    /// @notice No refund available for this address in this auction
+    error Bidder_NoRefundAvailableForAuction();
+
+    /*//////////////////////////////////////////////////////////////
+                        FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
     /// @notice Creates a variable supply auction
     /// @param _tokenContract The address of the ERC-721 drop contract
     /// @param _minimumViableRevenue The minimum revenue the seller aims to generate in this auction --

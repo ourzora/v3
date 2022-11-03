@@ -161,7 +161,7 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
     event AuctionCreated(address indexed tokenContract, Auction auction);
 
     /// @notice Creates a variable supply auction
-    /// @dev Note that a given ERC-721 drop contract can have only one live auction at a time.
+    /// @dev Note that a given ERC-721 drop contract can have only 1 live auction at a time.
     /// @param _tokenContract The address of the ERC-721 drop contract
     /// @param _minimumViableRevenue The minimum revenue the seller aims to generate in this auction --
     /// they can settle the auction below this value, but they cannot _not_ settle if the revenue
@@ -181,10 +181,14 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         uint256 _settlePhaseDuration
     ) external nonReentrant {
         // Ensure the drop does not already have a live auction
-        require(auctionForDrop[_tokenContract].startTime == 0, "ONLY_ONE_LIVE_AUCTION_PER_DROP");
+        if (auctionForDrop[_tokenContract].startTime > 0) {
+            revert Auction_AlreadyLiveAuctionForDrop();
+        }
 
         // Ensure the funds recipient is specified
-        require(_sellerFundsRecipient != address(0), "INVALID_FUNDS_RECIPIENT");
+        if (_sellerFundsRecipient == address(0)) {
+            revert Auction_InvalidFundsRecipient();
+        }
 
         // Get the auction's storage pointer
         Auction storage auction = auctionForDrop[_tokenContract];
@@ -246,10 +250,14 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Auction memory auction = auctionForDrop[_tokenContract];
 
         // Ensure the auction exists
-        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+        if (auction.seller == address(0)) {
+            revert Auction_AuctionDoesNotExist();
+        }
 
         // Ensure the caller is the seller
-        require(msg.sender == auction.seller, "ONLY_SELLER");
+        if (msg.sender != auction.seller) {
+            revert Access_OnlySeller();
+        }
 
         // Ensure that no bids have been placed in this auction yet, or, if in
         // settle phase, that no price points meet auction minimum viable revenue
@@ -257,17 +265,23 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
             // Get the settle price points
             uint96[] storage settlePricePoints = _settlePricePointsForAuction[_tokenContract];
 
-            // Ensure seller has first considered the settle price points before attempting to cancel
-            require(settlePricePoints.length > 0, "CANNOT_CANCEL_AUCTION_BEFORE_CALCULATING_SETTLE_OPTIONS");
+            // Ensure seller has first considered the possible settle outcomes before attempting to cancel
+            if (settlePricePoints.length == 0) {
+                revert Seller_CannotCancelAuctionDuringSettlePhaseWithoutCalculatingOutcomes();
+            }
 
             // Ensure none of the price point outcomes meet minimum viable revenue
             for (uint256 i = 0; i < settlePricePoints.length; i++) {
                 SettleOutcome storage settleOutcome = _settleOutcomesForPricePoint[_tokenContract][settlePricePoints[i]];
                 
-                require(settleOutcome.revenue < auction.minimumViableRevenue, "CANNOT_CANCEL_AUCTION_WITH_VIABLE_PRICE_POINT");
+                if (settleOutcome.revenue >= auction.minimumViableRevenue) {
+                    revert Seller_CannotCancelAuctionWithViablePricePoint();
+                }
             }
         } else {
-            require(auction.totalBalance == 0, "CANNOT_CANCEL_AUCTION_WITH_BIDS");        
+            if (auction.totalBalance > 0) {
+                revert Seller_CannotCancelAuctionWithBidsBeforeSettlePhase();
+            }
         }
 
         emit AuctionCanceled(_tokenContract, auction);
@@ -324,16 +338,24 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Auction storage auction = auctionForDrop[_tokenContract];
 
         // Ensure the auction exists
-        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+        if (auction.seller == address(0)) {
+            revert Auction_AuctionDoesNotExist();
+        }
 
         // Ensure the auction is in bid phase
-        require(block.timestamp < auction.endOfBidPhase, "BIDS_ONLY_ALLOWED_DURING_BID_PHASE");
+        if (block.timestamp >= auction.endOfBidPhase) {
+            revert Bidder_BidsOnlyAllowedDuringBidPhase();
+        }
 
         // Ensure the bidder has not placed a bid in auction already
-        require(bidsForAuction[_tokenContract][msg.sender].bidderBalance == 0, "ALREADY_PLACED_BID_IN_AUCTION");
+        if (bidsForAuction[_tokenContract][msg.sender].bidderBalance > 0) {
+            revert Bidder_AlreadyPlacedBidInAuction();
+        }
 
         // Ensure the bid is valid
-        require(msg.value > 0 ether, "VALID_BIDS_MUST_INCLUDE_ETHER");
+        if (msg.value == 0 ether) {
+            revert Bidder_BidsMustIncludeEther();
+        }
 
         // Update the total balance for auction
         auction.totalBalance += uint96(msg.value);
@@ -396,22 +418,32 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Auction storage auction = auctionForDrop[_tokenContract];
 
         // Ensure the auction exists
-        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+        if (auction.seller == address(0)) {
+            revert Auction_AuctionDoesNotExist();
+        }
 
         // Ensure the auction is in reveal phase
-        require(block.timestamp >= auction.endOfBidPhase && block.timestamp < auction.endOfRevealPhase, "REVEALS_ONLY_ALLOWED_DURING_REVEAL_PHASE");
+        if (block.timestamp < auction.endOfBidPhase || block.timestamp >= auction.endOfRevealPhase) {
+            revert Bidder_RevealsOnlyAllowedDuringRevealPhase();
+        }
 
         // Get the bid for the specified bidder
         Bid storage bid = bidsForAuction[_tokenContract][msg.sender];
 
         // Ensure bidder placed bid in auction
-        require(bid.bidderBalance > 0 ether, "NO_PLACED_BID_FOUND_FOR_ADDRESS");
+        if (bid.bidderBalance == 0) {
+            revert Bidder_NoPlacedBidByAddressInThisAuction();
+        }
 
         // Ensure revealed bid amount is not greater than sent ether
-        require(_bidAmount <= bid.bidderBalance, "REVEALED_BID_CANNOT_BE_GREATER_THAN_SENT_ETHER");
+        if (_bidAmount > bid.bidderBalance) {
+            revert Bidder_RevealedBidCannotBeGreaterThanEtherSentWithSealedBid();
+        }
 
         // Ensure revealed bid matches sealed bid
-        require(keccak256(abi.encodePacked(_bidAmount, bytes(_salt))) == bid.commitmentHash, "REVEALED_BID_DOES_NOT_MATCH_SEALED_BID");
+        if (keccak256(abi.encodePacked(_bidAmount, bytes(_salt))) != bid.commitmentHash) {
+            revert Bidder_RevealedBidDoesNotMatchSealedBid();
+        }
 
         // Store the bidder
         _revealedBiddersForAuction[_tokenContract].push(msg.sender);
@@ -513,16 +545,22 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Auction storage auction = auctionForDrop[_tokenContract];
 
         // Ensure the auction exists
-        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+        if (auction.seller == address(0)) {
+            revert Auction_AuctionDoesNotExist();
+        }
 
         // Ensure the auction is in settle phase
-        require(block.timestamp >= auction.endOfRevealPhase && block.timestamp < auction.endOfSettlePhase, "SETTLE_ONLY_ALLOWED_DURING_SETTLE_PHASE");
+        if (block.timestamp < auction.endOfRevealPhase || block.timestamp >= auction.endOfSettlePhase) {
+            revert Seller_SettleAuctionOnlyAllowedDuringSettlePhase();
+        }
 
         // Get the revealed bidders for the auction
         address[] storage bidders = _revealedBiddersForAuction[_tokenContract];
 
         // Ensure the auction has at least 1 revealed bid
-        require(bidders.length > 0, "NO_REVEALED_BIDS_TO_SETTLE_AUCTION");
+        if (bidders.length == 0) {
+            revert Seller_CannotSettleWithNoRevealedBids();
+        }
 
         // Get the settle outcome data structures
         uint96[] storage settlePricePoints = _settlePricePointsForAuction[_tokenContract];
@@ -598,6 +636,11 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Get the auction
         Auction storage auction = auctionForDrop[_tokenContract];
 
+        // Ensure the caller is the seller
+        if (msg.sender != auction.seller) {
+            revert Access_OnlySeller();
+        }
+
         // Calculate settle outcomes, if not done yet (also includes check for auction existence)
         if (_settlePricePointsForAuction[_tokenContract].length == 0) {
             calculateSettleOutcomes(_tokenContract);
@@ -606,8 +649,10 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         // Get the settle outcome at this price point
         SettleOutcome storage settleOutcome = _settleOutcomesForPricePoint[_tokenContract][_settlePricePoint];
         
-        // Ensure that revenue meets minimum viable revenue
-        require(settleOutcome.revenue >= auction.minimumViableRevenue, "DOES_NOT_MEET_MINIMUM_VIABLE_REVENUE");
+        // Ensure that revenue meets minimum viable revenue        
+        if (settleOutcome.revenue < auction.minimumViableRevenue) {
+            revert Seller_PricePointDoesNotMeetMinimumViableRevenue();
+        }
 
         // Store the current total balance and final auction details
         auction.totalBalance -= settleOutcome.revenue;
@@ -704,10 +749,14 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Auction storage auction = auctionForDrop[_tokenContract];
 
         // Ensure the auction exists
-        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+        if (auction.seller == address(0)) {
+            revert Auction_AuctionDoesNotExist();
+        }
 
         // Ensure the auction is in cleanup phase
-        require(block.timestamp >= auction.endOfSettlePhase, "REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        if (block.timestamp < auction.endOfSettlePhase) {
+            revert Bidder_RefundsOnlyAllowedDuringCleanupPhase();
+        }
 
         // Return the balance for the specified bidder
         return bidsForAuction[_tokenContract][msg.sender].bidderBalance;
@@ -723,17 +772,23 @@ contract VariableSupplyAuction is IVariableSupplyAuction, ReentrancyGuard, FeePa
         Auction storage auction = auctionForDrop[_tokenContract];
 
         // Ensure the auction exists
-        require(auction.seller != address(0), "AUCTION_DOES_NOT_EXIST");
+        if (auction.seller == address(0)) {
+            revert Auction_AuctionDoesNotExist();
+        }
 
         // Ensure the auction is in cleanup phase
-        require(block.timestamp >= auction.endOfSettlePhase, "REFUNDS_ONLY_ALLOWED_DURING_CLEANUP_PHASE");
+        if (block.timestamp < auction.endOfSettlePhase) {
+            revert Bidder_RefundsOnlyAllowedDuringCleanupPhase();
+        }
 
         // Get the balance for the specified bidder
         Bid storage bid = bidsForAuction[_tokenContract][msg.sender];
         uint96 availableRefund = bid.bidderBalance;
 
         // Ensure bidder has a leftover balance
-        require(bid.revealedBidAmount > 0 && availableRefund > 0, "NO_REFUND_AVAILABLE");
+        if (bid.revealedBidAmount == 0 || availableRefund == 0) {
+            revert Bidder_NoRefundAvailableForAuction();
+        }
 
         // Clear bidder balance and update auction total balance
         bid.bidderBalance = 0;
