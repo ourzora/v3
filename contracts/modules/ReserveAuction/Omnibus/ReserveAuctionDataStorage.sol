@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.10;
 
 uint32 constant FEATURE_MASK_LISTING_FEE = 1 << 3;
