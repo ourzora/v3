@@ -35,6 +35,7 @@
     "build": "forge build && yarn typechain",
     "clean": "forge clean && rm -rf ./dist",
     "prepublishOnly": "rm -rf ./dist && forge clean && forge build && yarn typechain && cp -R contracts dist && cp -R addresses dist",
+    "prettier": "prettier --config \"./.prettierrc\" --write \"**/*.{js,md,sol,yml}\"",
     "test": "forge test",
     "typechain": "typechain --target=ethers-v5 'dist/artifacts/*/*.json' --out-dir dist/typechain"
   }
