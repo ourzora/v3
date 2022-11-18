@@ -88,7 +88,7 @@ contract ZoraModuleManagerTest is DSTest {
     function testRevert_ModuleAlreadyRegistered() public {
         registrar.registerModule(module);
 
-        vm.expectRevert("ZMM::registerModule module already registered");
+        vm.expectRevert("ZMM__registerModule_module_already_registered");
         registrar.registerModule(module);
     }
 
@@ -100,7 +100,7 @@ contract ZoraModuleManagerTest is DSTest {
     }
 
     function testRevert_CannotSetRegistrarToAddressZero() public {
-        vm.expectRevert("ZMM::setRegistrar must set registrar to non-zero address");
+        vm.expectRevert("ZMM__must_set_registrar_to_nonZero_address");
         registrar.setRegistrar(address(0));
     }
 }
