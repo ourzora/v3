@@ -50,7 +50,7 @@ contract ReserveAuctionListingAdjustableBufferIncrementEth is
         address _weth
     )
         FeePayoutSupportV1(_royaltyEngine, _protocolFeeSettings, _weth, ERC721TransferHelper(_erc721TransferHelper).ZMM().registrar())
-        ModuleNamingSupportV1("Reserve Auction Listing ETH")
+        ModuleNamingSupportV1("Reserve Auction Listing Adjustable Buffer Increment ETH")
     {
         erc721TransferHelper = ERC721TransferHelper(_erc721TransferHelper);
     }
