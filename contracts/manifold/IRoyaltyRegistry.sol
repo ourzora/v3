@@ -19,7 +19,7 @@ interface IRoyaltyRegistry is IERC165 {
      * @param tokenAddress    - The token address you wish to override
      * @param royaltyAddress  - The royalty override address
      */
-    function setRoyaltyLookupAddress(address tokenAddress, address royaltyAddress) external returns (bool);
+    function setRoyaltyLookupAddress(address tokenAddress, address royaltyAddress) external;
 
     /**
      * Returns royalty address location.  Returns the tokenAddress by default, or the override if it exists
@@ -27,14 +27,6 @@ interface IRoyaltyRegistry is IERC165 {
      * @param tokenAddress    - The token address you are looking up the royalty for
      */
     function getRoyaltyLookupAddress(address tokenAddress) external view returns (address);
-
-    /**
-     * Returns the token address that an overrideAddress is set for.
-     * Note: will not be accurate if the override was created before this function was added.
-     *
-     * @param overrideAddress - The override address you are looking up the token for
-     */
-    function getOverrideLookupTokenAddress(address overrideAddress) external view returns (address);
 
     /**
      * Whether or not the message sender can override the royalty address for the given token address

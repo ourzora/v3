@@ -3,12 +3,15 @@ pragma solidity 0.8.10;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {BaseTransferHelper} from "./BaseTransferHelper.sol";
+import {ITurnstile} from "../csr/ITurnstile.sol";
 
 /// @title ERC-721 Transfer Helper
 /// @author tbtstl <t@zora.co>
 /// @notice This contract provides modules the ability to transfer ZORA user ERC-721s with their permission
 contract ERC721TransferHelper is BaseTransferHelper {
-    constructor(address _approvalsManager) BaseTransferHelper(_approvalsManager) {}
+    constructor(address _approvalsManager) BaseTransferHelper(_approvalsManager) {
+        ITurnstile(0xEcf044C5B4b867CFda001101c617eCd347095B44).assign(22); //sets Canto CSR parameters
+    }
 
     function safeTransferFrom(
         address _token,
