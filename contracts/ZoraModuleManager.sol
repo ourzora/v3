@@ -9,19 +9,19 @@ import {ZoraProtocolFeeSettings} from "./auxiliary/ZoraProtocolFeeSettings/ZoraP
 contract ZoraModuleManager {
     /// @notice The EIP-712 type for a signed approval
     /// @dev keccak256("SignedApproval(address module,address user,bool approved,uint256 deadline,uint256 nonce)")
-    bytes32 private constant SIGNED_APPROVAL_TYPEHASH = 0x8413132cc7aa5bd2ce1a1b142a3f09e2baeda86addf4f9a5dacd4679f56e7cec;
+    bytes32 private constant SIGNED_APPROVAL_TYPEHASH =
+        0x8413132cc7aa5bd2ce1a1b142a3f09e2baeda86addf4f9a5dacd4679f56e7cec;
 
     /// @notice The EIP-712 domain separator
-    bytes32 private immutable EIP_712_DOMAIN_SEPARATOR =
-        keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes("ZORA")),
-                keccak256("3"),
-                block.chainid,
-                address(this)
-            )
-        );
+    bytes32 private immutable EIP_712_DOMAIN_SEPARATOR = keccak256(
+        abi.encode(
+            keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+            keccak256(bytes("ZORA")),
+            keccak256("3"),
+            block.chainid,
+            address(this)
+        )
+    );
 
     /// @notice The module fee NFT contract to mint from upon module registration
     ZoraProtocolFeeSettings public immutable moduleFeeToken;
@@ -141,7 +141,7 @@ contract ZoraModuleManager {
         uint256 numModules = _modules.length;
 
         // Loop through each address
-        for (uint256 i = 0; i < numModules; ) {
+        for (uint256 i = 0; i < numModules;) {
             // Ensure that it's a registered module and set the approval
             _setApprovalForModule(_modules[i], msg.sender, _approved);
 
@@ -196,22 +196,29 @@ contract ZoraModuleManager {
         bytes32 _s
     ) public {
         require(_deadline == 0 || _deadline >= block.timestamp, "ZMM::setApprovalForModuleBySig deadline expired");
-        
+
+        bytes32 digest;
+
         // Unchecked because the only math done is incrementing
         // the user's nonce which cannot realistically overflow
         unchecked {
-            bytes32 digest = keccak256(
+            digest = keccak256(
                 abi.encodePacked(
                     "\x19\x01",
                     EIP_712_DOMAIN_SEPARATOR,
-                    keccak256(abi.encode(SIGNED_APPROVAL_TYPEHASH, _module, _user, _approved, _deadline, sigNonces[_user]++))
+                    keccak256(
+                        abi.encode(SIGNED_APPROVAL_TYPEHASH, _module, _user, _approved, _deadline, sigNonces[_user]++)
+                    )
                 )
             );
         }
 
         address recoveredAddress = ecrecover(digest, _v, _r, _s);
 
-        require(recoveredAddress != address(0) && recoveredAddress == _user, "ZMM::setApprovalForModuleBySig invalid signature");
+        require(
+            recoveredAddress != address(0) && recoveredAddress == _user,
+            "ZMM::setApprovalForModuleBySig invalid signature"
+        );
 
         _setApprovalForModule(_module, _user, _approved);
     }
@@ -291,11 +298,7 @@ contract ZoraModuleManager {
     /// @param _module The address of the module
     /// @param _user The address of the user
     /// @param _approved Whether the user is adding or removing approval
-    function _setApprovalForModule(
-        address _module,
-        address _user,
-        bool _approved
-    ) private {
+    function _setApprovalForModule(address _module, address _user, bool _approved) private {
         require(moduleRegistered[_module], "ZMM::must be registered module");
 
         userApprovals[_user][_module] = _approved;
