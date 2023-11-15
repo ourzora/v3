@@ -90,6 +90,9 @@ contract FeePayoutSupportV1 is OutgoingTransferSupportV1 {
         address _payoutCurrency,
         uint256 _gasLimit
     ) internal returns (uint256, bool) {
+        // Early return if no royalty engine.
+        if (address(royaltyEngine) == address(0)) return (_amount, false);
+
         // If no gas limit was provided or provided gas limit greater than gas left, just pass the remaining gas.
         uint256 gas = (_gasLimit == 0 || _gasLimit > gasleft()) ? gasleft() : _gasLimit;
 
