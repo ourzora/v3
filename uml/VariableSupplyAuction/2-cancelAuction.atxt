@@ -1,0 +1,26 @@
+        ,-.                                                                                                               
+        `-'                                                                                                               
+        /|\                                                                                                               
+         |             ,---------------------.                                                                            
+        / \            |VariableSupplyAuction|                                                                            
+      Seller           `----------+----------'                                                                            
+        |     cancelAuction()     |                                                                                       
+        | ----------------------->|                                                                                       
+        |                         |                                                                                       
+        |                         ----.                                                                                   
+        |                             | validate no bids placed yet, or no settle price points meet minimum viable revenue
+        |                         <---'                                                                                   
+        |                         |                                                                                       
+        |                         ----.                                                                                   
+        |                             | emit AuctionCanceled()                                                            
+        |                         <---'                                                                                   
+        |                         |                                                                                       
+        |                         ----.                                                                                   
+        |                             | delete auction                                                                    
+        |                         <---'                                                                                   
+      Seller           ,----------+----------.                                                                            
+        ,-.            |VariableSupplyAuction|                                                                            
+        `-'            `---------------------'                                                                            
+        /|\                                                                                                               
+         |                                                                                                                
+        / \                                                                                                               

@@ -1,0 +1,26 @@
+        ,-.                                                                      
+        `-'                                                                      
+        /|\                                                                      
+         |             ,---------------------.                                   
+        / \            |VariableSupplyAuction|                                   
+      Seller           `----------+----------'                                   
+        |     createAuction()     |                                              
+        | ----------------------->|                                              
+        |                         |                                              
+        |                         ----.                                          
+        |                             | validate no existing auction for drop yet
+        |                         <---'                                          
+        |                         |                                              
+        |                         ----.                                          
+        |                             | store auction metadata                   
+        |                         <---'                                          
+        |                         |                                              
+        |                         ----.                                          
+        |                             | emit AuctionCreated()                    
+        |                         <---'                                          
+      Seller           ,----------+----------.                                   
+        ,-.            |VariableSupplyAuction|                                   
+        `-'            `---------------------'                                   
+        /|\                                                                      
+         |                                                                       
+        / \                                                                      
