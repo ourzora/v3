@@ -1,0 +1,22 @@
+        ,-.                                                     
+        `-'                                                     
+        /|\                                                     
+         |              ,------------------.                    
+        / \             |CollectionOffersV1|                    
+      zoraDAO           `--------+---------'                    
+         |   setFindersFee()     |                              
+         |---------------------->|                              
+         |                       |                              
+         |                       |----.                         
+         |                       |    | update finders fee      
+         |                       |<---'                         
+         |                       |                              
+         |                       |----.                         
+         |                       |    | emit FindersFeeUpdated()
+         |                       |<---'                         
+      zoraDAO           ,--------+---------.                    
+        ,-.             |CollectionOffersV1|                    
+        `-'             `------------------'                    
+        /|\                                                     
+         |                                                      
+        / \                                                     

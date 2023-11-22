@@ -1,0 +1,22 @@
+@startuml
+actor Caller
+participant CollectionOffersV1
+participant ERC20TransferHelper
+
+Caller -> CollectionOffersV1 : setOfferAmount()
+
+alt increase offer?
+
+    CollectionOffersV1 -> ERC20TransferHelper : transfer msg.value to escrow
+
+else  decrease offer
+
+    CollectionOffersV1 -> ERC20TransferHelper : refund decrease amount
+
+end
+
+CollectionOffersV1 -> CollectionOffersV1 : _updateOffer()
+
+CollectionOffersV1 -> CollectionOffersV1 : emit CollectionOfferUpdated()
+
+@enduml
