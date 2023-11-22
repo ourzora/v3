@@ -56,8 +56,6 @@ contract StorageTestBaseMinimal is ReserveAuctionDataStorage {
     }
 }
 
-/// @title
-/// @notice
 contract AuctionDataStorageTest is DSTest {
     uint32 constant FEATURE_MASK_LISTING_FEE = 1 << 3;
     uint32 constant FEATURE_MASK_FINDERS_FEE = 1 << 4;
