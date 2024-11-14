@@ -1,0 +1,30 @@
+@startuml
+actor Caller
+participant CollectionOffersV1
+participant ERC721TransferHelper
+
+Caller -> CollectionOffersV1 : fillOffer()
+
+CollectionOffersV1 -> CollectionOffersV1 : validate token owner
+
+CollectionOffersV1 -> CollectionOffersV1 : _getMatchingOffer()
+
+alt offer exists satisfying minimum?
+
+    CollectionOffersV1 -> CollectionOffersV1 : (continue)
+
+else revert
+
+end
+
+CollectionOffersV1 -> CollectionOffersV1 : handle royalty payouts
+CollectionOffersV1 -> CollectionOffersV1 : handle finders fee payout
+
+CollectionOffersV1 -> ERC721TransferHelper : transferFrom()
+ERC721TransferHelper -> ERC721TransferHelper : transfer NFT from taker to maker
+
+CollectionOffersV1 -> CollectionOffersV1 : emit ExchangeExecuted()
+CollectionOffersV1 -> CollectionOffersV1 : emit CollectionOfferFilled()
+CollectionOffersV1 -> CollectionOffersV1 : _removeOffer()
+
+@enduml
