@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 import {ReentrancyGuard} from "@rari-capital/solmate/src/utils/ReentrancyGuard.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 import {ERC721TransferHelper} from "../../../transferHelpers/ERC721TransferHelper.sol";
 import {IncomingTransferSupportV1} from "../../../common/IncomingTransferSupport/V1/IncomingTransferSupportV1.sol";
@@ -66,11 +67,10 @@ contract AsksOmnibus is IAsksOmnibus, ReentrancyGuard, IncomingTransferSupportV1
     }
 
     /// @notice Implements EIP-165 for standard interface detection
-    /// @dev `0x01ffc9a7` is the IERC165 interface id
     /// @param _interfaceId The identifier of a given interface
     /// @return If the given interface is supported
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
-        return _interfaceId == type(IAsksOmnibus).interfaceId || _interfaceId == 0x01ffc9a7;
+        return _interfaceId == type(IAsksOmnibus).interfaceId || _interfaceId == type(IERC165).interfaceId;
     }
 
     /// @notice Creates a simple ETH ask for a given NFT

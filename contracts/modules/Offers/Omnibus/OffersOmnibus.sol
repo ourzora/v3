@@ -74,7 +74,6 @@ contract OffersOmnibus is IOffersOmnibus, ReentrancyGuard, IncomingTransferSuppo
     }
 
     /// @notice Implements EIP-165 for standard interface detection
-    /// @dev `0x01ffc9a7` is the IERC165 interface id
     /// @param _interfaceId The identifier of a given interface
     /// @return If the given interface is supported
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
