@@ -6,3 +6,4 @@ dist
 coverage
 coverage.json
 .idea
+.vscode

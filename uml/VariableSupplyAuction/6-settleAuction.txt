@@ -1,0 +1,28 @@
+@startuml
+actor Seller
+participant VariableSupplyAuction
+participant ERC721Drop
+skinparam MaxAsciiMessageLength 10
+
+Seller -> VariableSupplyAuction : settleAuction()
+
+alt Not calculated yet?
+
+    VariableSupplyAuction -> VariableSupplyAuction : validate auction is in settle phase, and there are revealed bids
+    VariableSupplyAuction ->  VariableSupplyAuction : calculate and store possible settle outcomes
+
+else noop
+
+end
+
+VariableSupplyAuction -> VariableSupplyAuction : validate chosen price point meets minimum viable revenue
+VariableSupplyAuction -> VariableSupplyAuction : store final price point, revenue, and edition size
+VariableSupplyAuction -> VariableSupplyAuction : determine winning bidders and update balances to final available refunds
+VariableSupplyAuction -> ERC721Drop : setEditionSize()
+ERC721Drop -> ERC721Drop : update drop edition size
+VariableSupplyAuction -> ERC721Drop : adminMintAirdrop()
+ERC721Drop -> ERC721Drop : mint NFT to winning bidders
+VariableSupplyAuction -> VariableSupplyAuction : handle seller funds recipient payout
+VariableSupplyAuction -> VariableSupplyAuction : emit AuctionSettled()
+
+@enduml

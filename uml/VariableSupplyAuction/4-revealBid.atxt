@@ -1,0 +1,26 @@
+        ,-.                                                                                                     
+        `-'                                                                                                     
+        /|\                                                                                                     
+         |             ,---------------------.                                                                  
+        / \            |VariableSupplyAuction|                                                                  
+      Bidder           `----------+----------'                                                                  
+        |       revealBid()       |                                                                             
+        | ----------------------->|                                                                             
+        |                         |                                                                             
+        |                         ----.                                                                         
+        |                             | validate auction is in reveal phase, and revealed bid matches sealed bid
+        |                         <---'                                                                         
+        |                         |                                                                             
+        |                         ----.                                                                         
+        |                             | store revealed bid                                                      
+        |                         <---'                                                                         
+        |                         |                                                                             
+        |                         ----.                                                                         
+        |                             | emit BidRevealed()                                                      
+        |                         <---'                                                                         
+      Bidder           ,----------+----------.                                                                  
+        ,-.            |VariableSupplyAuction|                                                                  
+        `-'            `---------------------'                                                                  
+        /|\                                                                                                     
+         |                                                                                                      
+        / \                                                                                                     
