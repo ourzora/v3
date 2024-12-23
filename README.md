@@ -1,3 +1,9 @@
+### Deprecation Notice
+
+This is a legacy NFT protocol which ZORA does not use anymore but is still alive onchain due to the nature of decentralized applications.
+
+The media onchain is supported by multiple NFT platforms (including ZORA) for historical purposes, trading, and display but we strongly recommend using other approaches to mint and sell NFTs today (including our newer https://github.com/ourzora/zora-protocol protocol monorepo).
+
 # V3 𓀨
 
 This repository contains the core contracts that compose the ZORA V3 Protocol.
@@ -66,24 +72,7 @@ In this stage, the ZORA community is able to give design feedback and start disc
 
 #### Community Audit
 
-Once a module has been designed, built, tested and documented, the module can undergo community audits. If a vulnerability is found during this phase, feel free to leave a comment directly in the PR. If the module has been audited by a third party, the audit report can be included in the PR.
-
-Modules that are written by the ZORA core team are open to our bug bounty program, which allows community auditors to claim up to 25 ETH for vulnerabilities that may have been missed during development. The rubric we use to determine bug bounties is inspired by [ImmuneFi](https://immunefi.com/severity-updated/) and is as follows:
-
-| **Level**   | **Example**                                                                                                                                                             | **Maximum Bug Bounty** |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 5. Critical | - Empty or freeze the protocol's holdings (e.g. economic attacks, flash loans, reentrancy, MEV, logic errors)                                                           | Up to 25 ETH           |
-| 4. High     | - Token holders temporarily unable to transfer holdings<br>- Users spoof each other<br>- Transient Consensus Failures                                                   | Up to 10 ETH           |
-| 3. Medium   | - Contract consumes unbounded gas<br>- Block stuffing<br>- Griefing denial of service (i.e. attacker spends as much in gas as damage to the contract)<br>- Gas griefing | Up to 5 ETH            |
-| 2. Low      | - Contract fails to deliver promised returns, but doesn't lose value                                                                                                    | Up to 1 ETH            |
-| 1. None     | - Best practices                                                                                                                                                        |                        |
-| Not sure?   |                                                                                                                                                                         | Let's talk :~)         |
-
-The ZORA Core team will commit to publicly disclosing all bug bounty payouts for applicable modules, as defined above.
-
-Although not required, developers outside the ZORA core team are able to create and fund their own bug bounty programs, if desired. Feel free to outline your audit program in your PR description.
-
-After a module has undergone a community audit (ideally about 3-7 days), the module can be deployed and registered. If a vulnerability is found post-deployment, you can email [t@zora.co](mailto:t@zora.co) directly.
+The ZORA v3 system has been deprecated and is no longer eligible for a community audit. Any usage of these protocols for other systems is on a AS-IS no warranty basis and this repository is no longer being maintained.
 
 #### Registering a Module
 
